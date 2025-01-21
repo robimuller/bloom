@@ -1,31 +1,21 @@
-// WomenFeedScreen.js
-// This screen displays all "open" dates created by men. Women can tap "Request" to join a date.
-// The request is stored in the "requests" collection in Firestore with status = "pending".
-// We now use React Native Paper components (Card, Button, etc.) and Ionicons for an enhanced UI.
-
 import React, { useEffect, useState, useContext } from 'react';
 import { View, FlatList, Alert, StyleSheet } from 'react-native';
 import { Card, Title, Paragraph, Button } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-    collection,
-    query,
-    where,
-    onSnapshot,
-    doc,
-    setDoc,
-    serverTimestamp
-} from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
 import { db } from '../../../config/firebase';
-import { AppContext } from '../../context/AppContext';
+import { AuthContext } from '../../contexts/AuthContext';
+import { RequestsContext } from '../../contexts/RequestsContext'; // <-- new import
 
 export default function WomenFeedScreen() {
-    const { user } = useContext(AppContext); // current logged-in user (female)
+    const { user } = useContext(AuthContext);
+    const { sendRequest } = useContext(RequestsContext); // <--
     const [dates, setDates] = useState([]);
-    const [unsubscribeDates, setUnsubscribeDates] = useState(null);
 
     useEffect(() => {
-        // Listen to all "open" dates from the Firestore "dates" collection.
+        // Listen to all "open" dates in Firestore
+        // (Could also live in DatesContext)
         const datesRef = collection(db, 'dates');
         const q = query(datesRef, where('status', '==', 'open'));
 
@@ -37,58 +27,39 @@ export default function WomenFeedScreen() {
             setDates(fetched);
         });
 
-        // Store the unsubscribe function in state, so we can clean up on unmount
-        setUnsubscribeDates(() => unsubscribe);
-
-        return () => {
-            // Prevent memory leaks by unsubscribing the snapshot listener
-            if (unsubscribeDates) unsubscribeDates();
-        };
+        return () => unsubscribe();
     }, []);
 
-    // Handle when a woman requests to join a date
     const handleRequest = async (dateId, hostId) => {
         try {
-            // doc(collection(db, 'requests')) will auto-generate a new doc ID
-            const requestDocRef = doc(collection(db, 'requests'));
-
-            await setDoc(requestDocRef, {
-                dateId: dateId,
-                hostId: hostId,
-                requesterId: user.uid,  // current logged-in user (female)
-                status: 'pending',
-                createdAt: serverTimestamp(),
-            });
-
+            await sendRequest({ dateId, hostId });
             Alert.alert('Request Sent', 'Your request to join this date has been sent!');
         } catch (error) {
-            console.log('Error requesting date:', error);
+            console.error('Error requesting date:', error);
             Alert.alert('Error', 'Could not send request. Please try again.');
         }
     };
 
-    const renderItem = ({ item }) => {
-        return (
-            <Card style={styles.card}>
-                <Card.Title title={item.title} subtitle={item.category} />
-                <Card.Content>
-                    <Paragraph>Location: {item.location}</Paragraph>
-                    <Paragraph>Time: {item.time}</Paragraph>
-                </Card.Content>
-                <Card.Actions>
-                    <Button
-                        icon={() => <Ionicons name="paper-plane" size={18} color="#fff" />}
-                        mode="contained"
-                        onPress={() => handleRequest(item.id, item.hostId)}
-                        style={styles.requestButton}
-                        labelStyle={styles.requestButtonText}
-                    >
-                        Request
-                    </Button>
-                </Card.Actions>
-            </Card>
-        );
-    };
+    const renderItem = ({ item }) => (
+        <Card style={styles.card}>
+            <Card.Title title={item.title} subtitle={item.category} />
+            <Card.Content>
+                <Paragraph>Location: {item.location}</Paragraph>
+                <Paragraph>Time: {item.time}</Paragraph>
+            </Card.Content>
+            <Card.Actions>
+                <Button
+                    icon={() => <Ionicons name="paper-plane" size={18} color="#fff" />}
+                    mode="contained"
+                    onPress={() => handleRequest(item.id, item.hostId)}
+                    style={styles.requestButton}
+                    labelStyle={styles.requestButtonText}
+                >
+                    Request
+                </Button>
+            </Card.Actions>
+        </Card>
+    );
 
     return (
         <View style={styles.container}>
