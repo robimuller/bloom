@@ -1,28 +1,31 @@
-// LoginScreen.js
-// This screen handles user login with Firebase Auth (email/password).
-
-import React, { useState } from 'react';
+// src/screens/auth/LoginScreen.js
+import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../config/firebase'; // Adjust path as needed
+import { AuthContext } from '../../contexts/AuthContext';
 
 export default function LoginScreen({ navigation }) {
+    const { login, authError } = useContext(AuthContext);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState(null);
+    const [localError, setLocalError] = useState(null);
 
     const handleLogin = async () => {
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // On successful login, the onAuthStateChanged observer in AppContext (or similar) will redirect the user
-        } catch (err) {
-            setError(err.message);
+        // Clear local error
+        setLocalError(null);
+
+        if (!email || !password) {
+            setLocalError('Please enter both email and password.');
+            return;
         }
+
+        // Call AuthContext login
+        await login(email, password);
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Login</Text>
+
             <TextInput
                 placeholder="Email"
                 autoCapitalize="none"
@@ -31,6 +34,7 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setEmail}
                 style={styles.input}
             />
+
             <TextInput
                 placeholder="Password"
                 secureTextEntry
@@ -39,9 +43,12 @@ export default function LoginScreen({ navigation }) {
                 style={styles.input}
             />
 
-            {error && <Text style={styles.error}>{error}</Text>}
+            {/* Display local or context auth errors */}
+            {localError && <Text style={styles.error}>{localError}</Text>}
+            {authError && <Text style={styles.error}>{authError}</Text>}
 
             <Button title="Login" onPress={handleLogin} />
+
             <Text style={styles.switchText}>
                 Don’t have an account?{' '}
                 <Text style={styles.link} onPress={() => navigation.navigate('SignUp')}>

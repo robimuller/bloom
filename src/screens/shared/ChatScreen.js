@@ -12,21 +12,28 @@ import {
     orderBy,
     serverTimestamp
 } from 'firebase/firestore';
+
 import { db } from '../../../config/firebase';
-import { AppContext } from '../../context/AppContext';
+// Import AuthContext instead of AppContext
+import { AuthContext } from '../../contexts/AuthContext';
 
 export default function ChatScreen({ route }) {
-    const { user } = useContext(AppContext);
+    // Pull the current user from AuthContext
+    const { user } = useContext(AuthContext);
+
+    // Destructure any params passed from navigation
     const { chatId, dateId, hostId, requesterId } = route.params || {};
 
     const [messages, setMessages] = useState([]);
-    const [unsubscribeFn, setUnsubscribeFn] = useState(null);
 
     useEffect(() => {
-        if (!chatId) return; // or handle finding/creating chat
+        if (!chatId) return; // if there's no chatId, either create one or show loader
+
+        // Reference to the 'messages' subcollection inside 'chats/{chatId}'
         const msgsRef = collection(db, 'chats', chatId, 'messages');
         const q = query(msgsRef, orderBy('createdAt', 'desc'));
 
+        // Subscribe to real-time updates
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const loaded = snapshot.docs.map((docSnap) => {
                 const data = docSnap.data();
@@ -39,27 +46,31 @@ export default function ChatScreen({ route }) {
             });
             setMessages(loaded);
         });
-        setUnsubscribeFn(() => unsubscribe);
 
-        return () => {
-            if (unsubscribeFn) unsubscribeFn();
-        };
+        // Cleanup listener on unmount
+        return () => unsubscribe();
     }, [chatId]);
 
-    const onSend = useCallback(async (newMsgs = []) => {
-        if (!chatId || !user) return;
-        const msg = newMsgs[0];
-        await addDoc(collection(db, 'chats', chatId, 'messages'), {
-            text: msg.text,
-            user: {
-                _id: user.uid,
-                name: user.displayName || 'User',
-            },
-            createdAt: serverTimestamp(),
-        });
-    }, [chatId, user]);
+    const onSend = useCallback(
+        async (newMsgs = []) => {
+            if (!chatId || !user) return;
+            const msg = newMsgs[0];
+
+            await addDoc(collection(db, 'chats', chatId, 'messages'), {
+                text: msg.text,
+                user: {
+                    _id: user.uid,
+                    // If using displayName from Firestore, you could fetch or store it in AuthContext
+                    name: user.displayName || 'User',
+                },
+                createdAt: serverTimestamp(),
+            });
+        },
+        [chatId, user]
+    );
 
     if (!chatId) {
+        // If there's no chatId yet, show a loading indicator or create a new chat
         return (
             <View style={styles.center}>
                 <ActivityIndicator size="large" />
@@ -69,9 +80,6 @@ export default function ChatScreen({ route }) {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
-
-
-
             <GiftedChat
                 messages={messages}
                 onSend={(msgs) => onSend(msgs)}

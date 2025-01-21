@@ -1,15 +1,15 @@
-// CreateDateScreen.js (Men side)
 import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
-import { AppContext } from '../../context/AppContext';
+import { AuthContext } from '../../contexts/AuthContext';
+import { DatesContext } from '../../contexts/DatesContext';
 
 export default function CreateDateScreen({ navigation }) {
-    const { user } = useContext(AppContext);
+    const { user } = useContext(AuthContext);
+    const { createDate } = useContext(DatesContext);
+
     const [title, setTitle] = useState('');
     const [location, setLocation] = useState('');
-    const [time, setTime] = useState(''); // or use a date-time picker
+    const [time, setTime] = useState('');
     const [category, setCategory] = useState('');
     const [error, setError] = useState(null);
 
@@ -18,16 +18,17 @@ export default function CreateDateScreen({ navigation }) {
             setError('Please fill all fields.');
             return;
         }
+        if (!user) {
+            setError('You must be logged in to create a date.');
+            return;
+        }
         try {
-            // Create the date doc
-            await addDoc(collection(db, 'dates'), {
-                hostId: user.uid,
+            await createDate({
                 title,
                 location,
-                time, // or convert to timestamp
+                time, // or parse into a Timestamp
                 category,
                 status: 'open',
-                createdAt: Timestamp.now(),
             });
 
             // Reset inputs
@@ -36,7 +37,7 @@ export default function CreateDateScreen({ navigation }) {
             setTime('');
             setCategory('');
 
-            // Navigate back or to some "MenFeed" screen to show new date
+            // Navigate to men feed or show success
             navigation.navigate('MenFeed');
         } catch (err) {
             setError(err.message);

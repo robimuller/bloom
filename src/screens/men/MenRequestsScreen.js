@@ -2,16 +2,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
 import {
-    collection,
-    query,
-    where,
-    onSnapshot,
-    doc,
-    updateDoc,
-    addDoc,
-    serverTimestamp
-} from 'firebase/firestore';
-import {
     SegmentedButtons,
     Card,
     Text as PaperText,
@@ -19,98 +9,62 @@ import {
     useTheme
 } from 'react-native-paper';
 
-import { db } from '../../../config/firebase';
-import { AppContext } from '../../context/AppContext';
+import { AuthContext } from '../../contexts/AuthContext';
+import { RequestsContext } from '../../contexts/RequestsContext';
 
 export default function MenRequestsScreen({ navigation }) {
-    const { user } = useContext(AppContext);
+    const { user } = useContext(AuthContext);
+    const { requests, acceptRequest, rejectRequest } = useContext(RequestsContext);
 
-    // 'pending' or 'accepted'
     const [statusFilter, setStatusFilter] = useState('pending');
-    const [requests, setRequests] = useState([]);
     const theme = useTheme();
 
-    useEffect(() => {
-        if (!user) return;
+    // Filter all requests from context for those matching statusFilter
+    // (Men only see requests where hostId = user.uid, as set up in RequestsContext)
+    const filteredRequests = requests.filter((req) => req.status === statusFilter);
 
-        // Build query for 'pending' or 'accepted'
-        const requestsRef = collection(db, 'requests');
-        const q = query(
-            requestsRef,
-            where('hostId', '==', user.uid),
-            where('status', '==', statusFilter)
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetched = [];
-            snapshot.forEach((docSnap) => {
-                fetched.push({ id: docSnap.id, ...docSnap.data() });
-            });
-            setRequests(fetched);
-        });
-
-        return () => unsubscribe();
-    }, [user, statusFilter]);
-
-    // Accept request => create chat & update doc
+    // Handle "Accept": create a chat, update request -> accepted
     const handleAccept = async (reqItem) => {
-        const { id, dateId, hostId, requesterId } = reqItem;
         try {
-            // Create chat doc
-            const chatRef = await addDoc(collection(db, 'chats'), {
-                hostId,
-                requesterId,
-                dateId,
-                createdAt: serverTimestamp(),
-            });
-
-            // Update request => accepted
-            await updateDoc(doc(db, 'requests', id), {
-                status: 'accepted',
-                chatId: chatRef.id,
-            });
-
-            // Optionally navigate to chat right away
+            const chatId = await acceptRequest(reqItem);
+            // Navigate to Chat screen
             navigation.navigate('Chat', {
-                chatId: chatRef.id,
-                dateId,
-                hostId,
-                requesterId
+                chatId,
+                dateId: reqItem.dateId,
+                hostId: reqItem.hostId,
+                requesterId: reqItem.requesterId,
             });
-        } catch (err) {
-            console.log('Error accepting request:', err);
+        } catch (error) {
+            console.log('Error accepting request:', error);
         }
     };
 
-    // Reject request => status = 'rejected'
+    // Handle "Reject": update request -> rejected
     const handleReject = async (reqItem) => {
         try {
-            await updateDoc(doc(db, 'requests', reqItem.id), {
-                status: 'rejected'
-            });
-        } catch (err) {
-            console.log('Error rejecting request:', err);
+            await rejectRequest(reqItem);
+        } catch (error) {
+            console.log('Error rejecting request:', error);
         }
     };
 
-    // Open existing chat
+    // If the request is already accepted, user can "Open Chat"
     const handleOpenChat = (reqItem) => {
         if (!reqItem.chatId) return;
         navigation.navigate('Chat', {
             chatId: reqItem.chatId,
             dateId: reqItem.dateId,
             hostId: reqItem.hostId,
-            requesterId: reqItem.requesterId
+            requesterId: reqItem.requesterId,
         });
     };
 
-    // Renders each request as a Paper Card
     const renderRequest = ({ item }) => {
         return (
             <Card style={styles.card} mode="outlined">
                 <Card.Title
                     title={`Requester: ${item.requesterId}`}
-                    subtitle={`DateID: ${item.dateId}`}
+                    subtitle={`Date ID: ${item.dateId}`}
                 />
                 <Card.Content>
                     <PaperText variant="bodyMedium" style={{ marginVertical: 4 }}>
@@ -157,31 +111,23 @@ export default function MenRequestsScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            {/* Title */}
             <PaperText variant="headlineMedium" style={styles.header}>
                 Men Requests
             </PaperText>
 
-            {/* Segmented Buttons to toggle pending/accepted */}
+            {/* Toggle between 'pending' and 'accepted' */}
             <SegmentedButtons
                 value={statusFilter}
                 onValueChange={setStatusFilter}
                 buttons={[
-                    {
-                        value: 'pending',
-                        label: 'Pending',
-                    },
-                    {
-                        value: 'accepted',
-                        label: 'Accepted',
-                    },
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'accepted', label: 'Accepted' },
                 ]}
                 style={styles.segments}
             />
 
-            {/* List of requests */}
             <FlatList
-                data={requests}
+                data={filteredRequests}
                 keyExtractor={(item) => item.id}
                 renderItem={renderRequest}
                 contentContainerStyle={{ paddingBottom: 20 }}
@@ -191,17 +137,8 @@ export default function MenRequestsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-    },
-    header: {
-        marginBottom: 16,
-    },
-    segments: {
-        marginBottom: 16,
-    },
-    card: {
-        marginBottom: 12,
-    },
+    container: { flex: 1, padding: 16 },
+    header: { marginBottom: 16 },
+    segments: { marginBottom: 16 },
+    card: { marginBottom: 12 },
 });

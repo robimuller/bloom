@@ -1,14 +1,6 @@
 // WomenRequestsScreen.js
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  updateDoc,
-} from 'firebase/firestore';
 import {
   SegmentedButtons,
   Card,
@@ -18,53 +10,28 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { db } from '../../../config/firebase';
-import { AppContext } from '../../context/AppContext';
+import { AuthContext } from '../../contexts/AuthContext';
+import { RequestsContext } from '../../contexts/RequestsContext';
 
 export default function WomenRequestsScreen({ navigation }) {
-  const { user } = useContext(AppContext);
+  const { user } = useContext(AuthContext);
+  const { requests } = useContext(RequestsContext);
+  const theme = useTheme();
 
   // 'pending' or 'accepted'
   const [statusFilter, setStatusFilter] = useState('pending');
-  const [requests, setRequests] = useState([]);
-  const theme = useTheme();
 
-  useEffect(() => {
-    if (!user) return;
+  // Filter requests by status. Women see requests where requesterId = user.uid.
+  const filteredRequests = requests.filter((r) => r.status === statusFilter);
 
-    // Build a query for woman's requests: 
-    //   1) She is the 'requesterId'
-    //   2) Filter by 'pending' or 'accepted'
-    const requestsRef = collection(db, 'requests');
-    const q = query(
-      requestsRef,
-      where('requesterId', '==', user.uid),
-      where('status', '==', statusFilter)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetched = [];
-      snapshot.forEach((docSnap) => {
-        fetched.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      setRequests(fetched);
-    });
-
-    return () => unsubscribe();
-  }, [user, statusFilter]);
-
-  // Women can't accept/reject; this is controlled by men.
-  // So for 'pending', we just show an info card.
-  // For 'accepted', show "Open Chat."
-
+  // If a request is 'accepted' and has a chatId, we can open Chat.
   const handleOpenChat = (reqItem) => {
     if (!reqItem.chatId) return;
     navigation.navigate('Chat', {
       chatId: reqItem.chatId,
       dateId: reqItem.dateId,
-      hostId: reqItem.hostId
-      // If you want to pass requesterId too, do so:
-      // requesterId: reqItem.requesterId
+      hostId: reqItem.hostId,
+      requesterId: reqItem.requesterId,
     });
   };
 
@@ -83,7 +50,10 @@ export default function WomenRequestsScreen({ navigation }) {
 
         <Card.Actions>
           {statusFilter === 'pending' ? (
-            <PaperText variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+            <PaperText
+              variant="labelLarge"
+              style={{ color: theme.colors.onSurfaceVariant }}
+            >
               Awaiting response...
             </PaperText>
           ) : (
@@ -104,7 +74,6 @@ export default function WomenRequestsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
-
       <View style={styles.container}>
         <PaperText variant="headlineMedium" style={styles.header}>
           Women Requests
@@ -114,20 +83,14 @@ export default function WomenRequestsScreen({ navigation }) {
           value={statusFilter}
           onValueChange={setStatusFilter}
           buttons={[
-            {
-              value: 'pending',
-              label: 'Pending',
-            },
-            {
-              value: 'accepted',
-              label: 'Accepted',
-            },
+            { value: 'pending', label: 'Pending' },
+            { value: 'accepted', label: 'Accepted' },
           ]}
           style={styles.segments}
         />
 
         <FlatList
-          data={requests}
+          data={filteredRequests}
           keyExtractor={(item) => item.id}
           renderItem={renderRequest}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -138,17 +101,8 @@ export default function WomenRequestsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  header: {
-    marginBottom: 16,
-  },
-  segments: {
-    marginBottom: 16,
-  },
-  card: {
-    marginBottom: 12,
-  },
+  container: { flex: 1, padding: 16 },
+  header: { marginBottom: 16 },
+  segments: { marginBottom: 16 },
+  card: { marginBottom: 12 },
 });

@@ -1,30 +1,37 @@
 // App.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { Provider as PaperProvider } from 'react-native-paper';
-
-import AppProvider from './src/context/AppContext';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { UserProfileProvider } from './src/contexts/UserProfileContext';
+import { DatesProvider } from './src/contexts/DatesContext';
+import { RequestsProvider } from './src/contexts/RequestsContext';
+import { ChatProvider } from './src/contexts/ChatContext';
+import { SettingsProvider } from './src/contexts/SettingsContext';
+import { NotificationsProvider } from './src/contexts/NotificationsContext';
+import { SignUpProvider } from './src/contexts/SignUpContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import { DefaultTheme } from 'react-native-paper';
-
-// You can customize the Paper theme
-const theme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: '#6c63ff',  // Bloom’s style?
-    accent: '#FF4081',
-  },
-};
 
 export default function App() {
   return (
-    <PaperProvider theme={theme}>
-      <AppProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
-      </AppProvider>
-    </PaperProvider>
+    <AuthProvider>
+      <SignUpProvider>
+        <SettingsProvider>
+          <UserProfileProvider>
+            <DatesProvider>
+              <RequestsProvider>
+                <ChatProvider>
+                  <NotificationsProvider>
+                    {/* Wrap the top-level navigator in NavigationContainer */}
+                    <NavigationContainer>
+                      <AppNavigator />
+                    </NavigationContainer>
+                  </NotificationsProvider>
+                </ChatProvider>
+              </RequestsProvider>
+            </DatesProvider>
+          </UserProfileProvider>
+        </SettingsProvider>
+      </SignUpProvider>
+    </AuthProvider>
   );
 }
