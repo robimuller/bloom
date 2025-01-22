@@ -11,8 +11,6 @@ import {
     doc,
     setDoc,
     onSnapshot,
-    getDoc, // (not strictly needed if everything is real-time)
-    updateDoc,
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
@@ -157,6 +155,8 @@ export const AuthProvider = ({ children }) => {
                 login,
                 logout,
                 setAuthError,
+                role: userDoc?.role,
+                displayName: userDoc?.displayName,
             }}
         >
             {children}
