@@ -1,12 +1,13 @@
-// ChatScreen.js (shared by men or women)
+// ChatScreen.js
 import React, { useEffect, useState, useCallback, useContext } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { GiftedChat } from 'react-native-gifted-chat';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     collection,
     doc,
     addDoc,
+    setDoc,
     onSnapshot,
     query,
     orderBy,
@@ -14,43 +15,70 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '../../../config/firebase';
-// Import AuthContext instead of AppContext
 import { AuthContext } from '../../contexts/AuthContext';
 
-export default function ChatScreen({ route }) {
-    // Pull the current user from AuthContext
-    const { user } = useContext(AuthContext);
-
-    // Destructure any params passed from navigation
-    const { chatId, dateId, hostId, requesterId } = route.params || {};
-
-    const [messages, setMessages] = useState([]);
+// A small custom component to animate "dot dot dot" using setInterval.
+function TypingDots({ style }) {
+    const [dotCount, setDotCount] = useState(1);
 
     useEffect(() => {
-        if (!chatId) return; // if there's no chatId, either create one or show loader
+        // Cycle dotCount from 1 -> 2 -> 3 -> 1 ...
+        const interval = setInterval(() => {
+            setDotCount((prev) => (prev % 3) + 1);
+        }, 500);
 
-        // Reference to the 'messages' subcollection inside 'chats/{chatId}'
+        return () => clearInterval(interval);
+    }, []);
+
+    return <Text style={style}>{'.'.repeat(dotCount)}</Text>;
+}
+
+export default function ChatScreen({ route }) {
+    const { user, userDoc } = useContext(AuthContext);
+    const { chatId, dateId, hostId, requesterId } = route.params || {};
+
+    // Our messages array for GiftedChat
+    const [messages, setMessages] = useState([]);
+    // Track who else is typing
+    const [typingUsers, setTypingUsers] = useState([]);
+
+    // 1) Subscribe to messages
+    useEffect(() => {
+        if (!chatId) return;
+
         const msgsRef = collection(db, 'chats', chatId, 'messages');
         const q = query(msgsRef, orderBy('createdAt', 'desc'));
 
-        // Subscribe to real-time updates
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribeMsgs = onSnapshot(q, (snapshot) => {
             const loaded = snapshot.docs.map((docSnap) => {
                 const data = docSnap.data();
                 return {
                     _id: docSnap.id,
                     text: data.text,
                     createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
-                    user: data.user,
+                    user: data.user, // e.g. { _id: 'abc123', name: 'Alice' }
                 };
             });
             setMessages(loaded);
         });
 
-        // Cleanup listener on unmount
-        return () => unsubscribe();
-    }, [chatId]);
+        // 2) Subscribe to "typing" subcollection to detect if the other user is typing
+        const typingRef = collection(db, 'chats', chatId, 'typing');
+        const unsubscribeTyping = onSnapshot(typingRef, (snapshot) => {
+            const typingData = snapshot.docs
+                .map((docSnap) => docSnap.data())
+                // Filter: only show other users who are currently typing
+                .filter((docData) => docData.isTyping && docData.userId !== user.uid);
+            setTypingUsers(typingData); // array of { userId, displayName, isTyping }
+        });
 
+        return () => {
+            unsubscribeMsgs();
+            unsubscribeTyping();
+        };
+    }, [chatId, user?.uid]);
+
+    // Called when user presses "Send"
     const onSend = useCallback(
         async (newMsgs = []) => {
             if (!chatId || !user) return;
@@ -60,17 +88,61 @@ export default function ChatScreen({ route }) {
                 text: msg.text,
                 user: {
                     _id: user.uid,
-                    // If using displayName from Firestore, you could fetch or store it in AuthContext
-                    name: user.displayName || 'User',
+                    // If you store the name in userDoc:
+                    name: userDoc?.displayName || 'Unknown'
                 },
                 createdAt: serverTimestamp(),
             });
         },
-        [chatId, user]
+        [chatId, user, userDoc]
     );
 
+    // Called whenever the input text changes
+    // => Update my "isTyping" status in Firestore
+    const handleTyping = async (currentText) => {
+        if (!chatId || !user) return;
+        const isTyping = currentText?.length > 0;
+
+        await setDoc(doc(db, 'chats', chatId, 'typing', user.uid), {
+            userId: user.uid,
+            displayName: userDoc?.displayName || 'Someone',
+            isTyping: isTyping,
+            updatedAt: serverTimestamp(),
+        });
+    };
+
+    // Show the other user's typing status in the GiftedChat footer
+    const renderFooter = () => {
+        // If no one else is typing, return null
+        if (!typingUsers.length) return null;
+
+        // For one-on-one chat, typically there's only one other user.
+        // We'll display the first person's name, plus the dot animation.
+        const { displayName } = typingUsers[0];
+
+        return (
+            <View style={styles.footerContainer}>
+                <Text style={styles.footerText}>{displayName} is typing</Text>
+                <TypingDots style={styles.dots} />
+            </View>
+        );
+    };
+
+    // Custom avatar: show initial
+    const renderAvatar = (props) => {
+        // GiftedChat passes props.currentMessage.user
+        const name = props.currentMessage.user.name || 'U';
+        const initial = name.charAt(0).toUpperCase();
+
+        return (
+            <View style={styles.avatarContainer}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
+            </View>
+        );
+    };
+
     if (!chatId) {
-        // If there's no chatId yet, show a loading indicator or create a new chat
+        // If there's no chatId, either create a new one or show a loading spinner
         return (
             <View style={styles.center}>
                 <ActivityIndicator size="large" />
@@ -84,11 +156,44 @@ export default function ChatScreen({ route }) {
                 messages={messages}
                 onSend={(msgs) => onSend(msgs)}
                 user={{ _id: user.uid }}
+                onInputTextChanged={handleTyping}
+                renderFooter={renderFooter}
+                renderAvatar={renderAvatar}
             />
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    center: {
+        flex: 1, justifyContent: 'center', alignItems: 'center'
+    },
+    footerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 10,
+    },
+    footerText: {
+        marginRight: 8,
+        fontStyle: 'italic',
+        color: '#666',
+    },
+    dots: {
+        fontSize: 18,
+        color: '#666',
+    },
+    avatarContainer: {
+        backgroundColor: '#999',
+        borderRadius: 20,
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarInitial: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
 });
