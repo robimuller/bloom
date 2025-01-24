@@ -38,13 +38,13 @@ export default function AppNavigator() {
         }
     }
 
-    // Otherwise, user has finished onboarding, so route by role
-    if (userDoc?.role === 'male') {
+    // Otherwise, user has finished onboarding, so route by gender
+    if (userDoc?.gender === 'male') {
         return <MenTabNavigator />;
-    } else if (userDoc?.role === 'female') {
+    } else if (userDoc?.gender === 'female') {
         return <WomenTabNavigator />;
     } else {
-        // fallback if we don't know their role
+        // fallback if we don't know their gender
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                 <ActivityIndicator size="large" />

@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
             await setDoc(doc(db, 'users', uid), {
                 displayName,
                 email,
-                role: null,            // We'll fill this in later steps
+                gender: null,            // We'll fill this in later steps
                 signUpMethod: 'email',
                 onboardingComplete: false,
                 createdAt: new Date().toISOString(),
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     // -- Phone-based sign up
-    const phoneSignup = async (phoneNumber, appVerifier, role, code) => {
+    const phoneSignup = async (phoneNumber, appVerifier, gender, code) => {
         try {
             setAuthError(null);
 
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }) => {
             // 3) Initialize the Firestore doc
             await setDoc(doc(db, 'users', uid), {
                 phone: phoneNumber,
-                role,
+                gender,
                 signUpMethod: 'phone',
                 onboardingComplete: false,
                 createdAt: new Date().toISOString(),
@@ -155,7 +155,7 @@ export const AuthProvider = ({ children }) => {
                 login,
                 logout,
                 setAuthError,
-                role: userDoc?.role,
+                gender: userDoc?.gender,
                 displayName: userDoc?.displayName,
             }}
         >
