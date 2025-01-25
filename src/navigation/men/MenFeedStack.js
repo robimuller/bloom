@@ -9,8 +9,8 @@ const Stack = createNativeStackNavigator();
 export default function MenFeedStack() {
     return (
         <Stack.Navigator>
-            <Stack.Screen name="MenFeed" component={MenFeedScreen} />
-            <Stack.Screen name="CreateDate" component={CreateDateScreen} />
+            <Stack.Screen name="MenFeed" component={MenFeedScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CreateDate" component={CreateDateScreen} options={{ headerShown: false }} />
             {/* Add more screens if needed */}
         </Stack.Navigator>
     );

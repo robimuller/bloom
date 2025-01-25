@@ -16,6 +16,7 @@ import {
 
 import { db } from '../../../config/firebase';
 import { AuthContext } from '../../contexts/AuthContext';
+import { useTheme } from 'react-native-paper';
 
 // A small custom component to animate "dot dot dot" using setInterval.
 function TypingDots({ style }) {
@@ -36,6 +37,7 @@ function TypingDots({ style }) {
 export default function ChatScreen({ route }) {
     const { user, userDoc } = useContext(AuthContext);
     const { chatId, dateId, hostId, requesterId } = route.params || {};
+    const paperTheme = useTheme();
 
     // Our messages array for GiftedChat
     const [messages, setMessages] = useState([]);
@@ -121,9 +123,11 @@ export default function ChatScreen({ route }) {
         const { displayName } = typingUsers[0];
 
         return (
-            <View style={styles.footerContainer}>
-                <Text style={styles.footerText}>{displayName} is typing</Text>
-                <TypingDots style={styles.dots} />
+            <View style={[styles.footerContainer, { backgroundColor: paperTheme.colors.background }]}>
+                <Text style={[styles.footerText, { color: paperTheme.colors.text }]}>
+                    {displayName} is typing
+                </Text>
+                <TypingDots style={[styles.dots, { color: paperTheme.colors.placeholder }]} />
             </View>
         );
     };
@@ -135,8 +139,10 @@ export default function ChatScreen({ route }) {
         const initial = name.charAt(0).toUpperCase();
 
         return (
-            <View style={styles.avatarContainer}>
-                <Text style={styles.avatarInitial}>{initial}</Text>
+            <View style={[styles.avatarContainer, { backgroundColor: paperTheme.colors.primary }]}>
+                <Text style={[styles.avatarInitial, { color: paperTheme.colors.background }]}>
+                    {initial}
+                </Text>
             </View>
         );
     };
@@ -144,14 +150,14 @@ export default function ChatScreen({ route }) {
     if (!chatId) {
         // If there's no chatId, either create a new one or show a loading spinner
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" />
+            <View style={[styles.center, { backgroundColor: paperTheme.colors.background }]}>
+                <ActivityIndicator size="large" color={paperTheme.colors.primary} />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]} edges={['top']}>
             <GiftedChat
                 messages={messages}
                 onSend={(msgs) => onSend(msgs)}
@@ -159,6 +165,9 @@ export default function ChatScreen({ route }) {
                 onInputTextChanged={handleTyping}
                 renderFooter={renderFooter}
                 renderAvatar={renderAvatar}
+                placeholder="Type a message..."
+                textInputStyle={{ color: paperTheme.colors.text }}
+            // Optionally, you can customize other GiftedChat props to align with the theme
             />
         </SafeAreaView>
     );
@@ -166,7 +175,9 @@ export default function ChatScreen({ route }) {
 
 const styles = StyleSheet.create({
     center: {
-        flex: 1, justifyContent: 'center', alignItems: 'center'
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     footerContainer: {
         flexDirection: 'row',
@@ -177,14 +188,11 @@ const styles = StyleSheet.create({
     footerText: {
         marginRight: 8,
         fontStyle: 'italic',
-        color: '#666',
     },
     dots: {
         fontSize: 18,
-        color: '#666',
     },
     avatarContainer: {
-        backgroundColor: '#999',
         borderRadius: 20,
         width: 36,
         height: 36,
@@ -192,8 +200,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     avatarInitial: {
-        color: '#fff',
         fontWeight: 'bold',
         fontSize: 14,
+    },
+    safeArea: {
+        flex: 1,
     },
 });
