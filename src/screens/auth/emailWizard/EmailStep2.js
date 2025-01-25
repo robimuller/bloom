@@ -1,5 +1,3 @@
-// src/screens/auth/emailWizard/EmailStep2.js
-
 import React, { useState, useContext, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import {
@@ -11,15 +9,15 @@ import {
     Switch,
     useTheme,
 } from 'react-native-paper';
-import { doc, updateDoc } from 'firebase/firestore';
 import { DatePickerModal } from 'react-native-paper-dates';
 import Slider from '@react-native-community/slider';
 import { debounce } from 'lodash';
 
-import { db } from '../../../../config/firebase';
-import { AuthContext } from '../../../contexts/AuthContext';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 import { SignUpContext } from '../../../contexts/SignUpContext';
+// Import WizardContext
+import { WizardContext } from '../../../contexts/WizardContext';
+
 import SignUpLayout from '../../../components/SignUpLayout';
 
 // Helper to calculate age
@@ -36,14 +34,12 @@ function getAge(birthdate) {
 export default function EmailStep2({ navigation }) {
     const paperTheme = useTheme();
     const { theme } = useContext(ThemeContext);
-    const { user } = useContext(AuthContext);
     const { updateProfileInfo } = useContext(SignUpContext);
 
-    const [localError, setLocalError] = useState(null);
+    // Pull in wizard state & actions
+    const { subStep, progress, goNextSubStep, goPrevSubStep } = useContext(WizardContext);
 
-    // subStep indicates which piece of this step is currently active
-    // 1 = Birthday, 2 = Gender, 3 = Orientation, 4 = Height
-    const [subStep, setSubStep] = useState(1);
+    const [localError, setLocalError] = useState(null);
 
     // Birthday
     const [birthday, setBirthday] = useState(null);
@@ -89,89 +85,84 @@ export default function EmailStep2({ navigation }) {
         }
     };
 
-    // Validation & Next logic for each subStep
-    const handleSubStepNext = async () => {
-        setLocalError(null);
-
+    // Validate each sub-step
+    const validateCurrentSubStep = () => {
         switch (subStep) {
-            case 1:
-                if (!birthday) {
-                    setLocalError('Please select your birthdate.');
-                    return;
-                }
+            case 1: {
+                if (!birthday) return 'Please select your birthdate.';
                 const age = getAge(birthday);
-                if (age < 18) {
-                    setLocalError('You must be at least 18 years old to join.');
-                    return;
-                }
-                setSubStep(subStep + 1);
+                if (age < 18) return 'You must be at least 18 years old to join.';
                 break;
-
-            case 2:
-                if (!gender) {
-                    setLocalError('Please choose the option that best describes you.');
-                    return;
-                }
-                setSubStep(subStep + 1);
+            }
+            case 2: {
+                if (!gender) return 'Please choose the option that best describes you.';
                 break;
-
-            case 3:
-                // Orientation is optional
-                setSubStep(subStep + 1);
-                break;
-
+            }
+            // step 3 => orientation is optional; no validation needed
             case 4:
-                // Final sub-step: update Firestore and proceed
-                const birthdayString = birthday.toISOString().split('T')[0];
-
-                updateProfileInfo({
-                    birthday: birthdayString,
-                    gender,
-                    orientation,
-                    orientationPublic,
-                    height: `${height}${heightUnit}`,
-                });
-
-                try {
-                    if (user) {
-                        await updateDoc(doc(db, 'users', user.uid), {
-                            birthday: birthdayString,
-                            gender,
-                            orientation,
-                            orientationPublic,
-                            height: `${height}${heightUnit}`,
-                            updatedAt: new Date().toISOString(),
-                        });
-                    }
-                } catch (err) {
-                    console.error('Error updating doc:', err);
-                }
-
-                navigation.navigate('EmailStep3');
-                break;
-
             default:
                 break;
         }
+        return null;
     };
 
-    // Handle the "Back" button
-    const handleSubStepBack = () => {
+    // "Next" logic
+    const handleNext = () => {
         setLocalError(null);
-        if (subStep > 1) {
-            setSubStep(subStep - 1);
+
+        // Validate the current sub-step
+        const error = validateCurrentSubStep();
+        if (error) {
+            setLocalError(error);
+            return;
+        }
+
+        if (subStep < 4) {
+            // We're in sub-steps 1..3 => just increment the wizard subStep
+            goNextSubStep();
         } else {
-            navigation.goBack();
+            // subStep=4 => this is the LAST sub-step of Step 2
+            // 1) Save final data to context
+            const birthdayString = birthday.toISOString().split('T')[0];
+            updateProfileInfo({
+                birthday: birthdayString,
+                gender,
+                orientation,
+                orientationPublic,
+                height: `${height}${heightUnit}`,
+            });
+
+            // 2) Increment the wizard (step 2 -> step 3, subStep=1)
+            goNextSubStep();
+
+            // 3) Actually navigate to the next screen (EmailStep3)
+            navigation.navigate('EmailStep3');
         }
     };
 
-    // Build an error component for SignUpLayout
+    // "Back" logic
+    const handleBack = () => {
+        setLocalError(null);
+        // If subStep=1, wizard context will do step 2->1 but you must also do 
+        // navigation.navigate('EmailStep1'), etc. 
+        // For now, let's just let wizard handle the sub-step and see if it calls step=1:
+        goPrevSubStep();
+
+        // If you want to handle the actual navigation back to Step 1 screen 
+        // when subStep was 1, you'd do something like this:
+        // if (subStep === 1) {
+        //   navigation.navigate('EmailStep1');
+        // } 
+    };
+
+    // Error component
     const errorMessages = localError && (
         <Text style={[styles.errorText, { color: theme.primary }]}>{localError}</Text>
     );
 
+    // Sub-step panels
     const renderStep1 = () => (
-        <View style={styles.stepPanel}>
+        <View style={[styles.stepPanel, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.panelHeader}>
                 <IconButton icon="calendar" iconColor={theme.primary} />
                 <Text style={[styles.panelTitle, { color: theme.text }]}>
@@ -210,7 +201,7 @@ export default function EmailStep2({ navigation }) {
     );
 
     const renderStep2 = () => (
-        <View style={styles.stepPanel}>
+        <View style={[styles.stepPanel, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.panelHeader}>
                 <IconButton icon="account" iconColor={theme.primary} />
                 <Text style={[styles.panelTitle, { color: theme.text }]}>
@@ -218,7 +209,7 @@ export default function EmailStep2({ navigation }) {
                 </Text>
             </View>
             <Text style={[styles.panelSubtitle, { color: theme.text }]}>
-                We tailor your experience to whether you're hosting or exploring.
+                We tailor your experience based on your selection.
             </Text>
 
             <SegmentedButtons
@@ -228,8 +219,8 @@ export default function EmailStep2({ navigation }) {
                 density="medium"
                 showSelectedCheck={false}
                 buttons={[
-                    { value: 'male', label: "I'm a Man (Host)" },
-                    { value: 'female', label: "I'm a Woman (Explorer)" },
+                    { value: 'male', label: "I'm a Man" },
+                    { value: 'female', label: "I'm a Woman" },
                     { value: 'other', label: "Other / Prefer Not to Say" },
                 ]}
                 theme={{
@@ -246,7 +237,7 @@ export default function EmailStep2({ navigation }) {
     );
 
     const renderStep3 = () => (
-        <View style={styles.stepPanel}>
+        <View style={[styles.stepPanel, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.panelHeader}>
                 <IconButton icon="heart-outline" iconColor={theme.primary} />
                 <Text style={[styles.panelTitle, { color: theme.text }]}>
@@ -254,7 +245,7 @@ export default function EmailStep2({ navigation }) {
                 </Text>
             </View>
             <Text style={[styles.panelSubtitle, { color: theme.text }]}>
-                (Optional) This helps us suggest matches, but you can keep it hidden.
+                (Optional) This helps with suggestions, but you can hide it.
             </Text>
 
             <Menu
@@ -299,13 +290,13 @@ export default function EmailStep2({ navigation }) {
     );
 
     const renderStep4 = () => (
-        <View style={styles.stepPanel}>
+        <View style={[styles.stepPanel, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.panelHeader}>
                 <IconButton icon="human-male-height" iconColor={theme.primary} />
                 <Text style={[styles.panelTitle, { color: theme.text }]}>How Tall Are You?</Text>
             </View>
             <Text style={[styles.panelSubtitle, { color: theme.text }]}>
-                Some people are curious about height—but it's up to you if you want to share it.
+                It's up to you if you want to share height.
             </Text>
 
             <View style={styles.sliderRow}>
@@ -351,19 +342,14 @@ export default function EmailStep2({ navigation }) {
         </View>
     );
 
-    // Render the appropriate sub-step panel
+    // Render the sub-step panel
     const renderSubStep = () => {
         switch (subStep) {
-            case 1:
-                return renderStep1();
-            case 2:
-                return renderStep2();
-            case 3:
-                return renderStep3();
-            case 4:
-                return renderStep4();
-            default:
-                return null;
+            case 1: return renderStep1();
+            case 2: return renderStep2();
+            case 3: return renderStep3();
+            case 4: return renderStep4();
+            default: return null;
         }
     };
 
@@ -371,12 +357,12 @@ export default function EmailStep2({ navigation }) {
         <SignUpLayout
             title="Personal Details"
             subtitle="We just need a few more details to set you up."
-            currentStep={2}
+            progress={progress}  // the global 0..1 progress from WizardContext
             errorComponent={errorMessages}
             canGoBack
-            onBack={handleSubStepBack}
-            onNext={handleSubStepNext}
-            nextLabel={subStep < 4 ? 'Next' : 'Finish'}
+            onBack={handleBack}
+            onNext={handleNext}
+            nextLabel={subStep < 4 ? 'Next' : 'Next'}
             theme={theme}
         >
             <View style={styles.formContainer}>{renderSubStep()}</View>
@@ -384,7 +370,6 @@ export default function EmailStep2({ navigation }) {
     );
 }
 
-// Styles
 const styles = StyleSheet.create({
     formContainer: {
         flex: 1,
@@ -396,18 +381,20 @@ const styles = StyleSheet.create({
         marginTop: 8,
         marginBottom: 10,
     },
-
-    // A single "panel" for each sub-step (instead of a Card in a Card)
     stepPanel: {
         flex: 1,
         padding: 16,
         marginHorizontal: 8,
         borderRadius: 12,
-        backgroundColor: '#fff', // or theme.colors.elevation.level2, etc.
         elevation: 3,
-        // Remove margin-bottom if you want it flush above navigation
         marginBottom: 10,
         justifyContent: 'flex-start',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.08)',
     },
     panelHeader: {
         flexDirection: 'row',
@@ -421,7 +408,6 @@ const styles = StyleSheet.create({
     panelSubtitle: {
         fontSize: 14,
         marginTop: 4,
-        // Ensure it doesn't truncate
         flexWrap: 'wrap',
     },
     outlinedButton: (color) => ({

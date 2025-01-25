@@ -1,42 +1,19 @@
-// src/components/SignUpLayout.js
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Button } from 'react-native-paper';
+import { Text, Button, ProgressBar } from 'react-native-paper';
 
-// A small helper to show the 5-step progress horizontally
-function MultiStepBar({ currentStep, theme }) {
-    // We’ll define 5 total steps. For clarity, an array of step labels is optional:
-    const stepLabels = ['Basic', 'Details', 'Preferences', 'Permissions', 'Finish'];
-    // currentStep is 1..5
-
+/**
+ * A simplified progress bar that goes from 0..1. 
+ * `progress` is a number between 0.0 and 1.0
+ */
+function SingleProgressBar({ progress, theme }) {
     return (
-        <View style={stylesMSB.container}>
-            {stepLabels.map((label, idx) => {
-                const stepIndex = idx + 1; // 1..5
-                const isActive = stepIndex <= currentStep;
-
-                return (
-                    <View key={label} style={stylesMSB.stepItem}>
-                        <View
-                            style={[
-                                stylesMSB.stepBar,
-                                {
-                                    backgroundColor: isActive ? theme.primary : '#ccc',
-                                },
-                            ]}
-                        />
-                        <Text
-                            style={[
-                                stylesMSB.stepLabel,
-                                { color: isActive ? theme.primary : theme.text },
-                            ]}
-                            numberOfLines={1}
-                        >
-                            {label}
-                        </Text>
-                    </View>
-                );
-            })}
+        <View style={{ marginTop: 8 }}>
+            <ProgressBar
+                progress={progress}
+                color={theme.primary}
+                style={{ height: 8, borderRadius: 4 }}
+            />
         </View>
     );
 }
@@ -44,8 +21,8 @@ function MultiStepBar({ currentStep, theme }) {
 export default function SignUpLayout({
     title,
     subtitle,
-    currentStep,     // 1..5
-    totalSteps = 5,
+    // We'll receive a "progress" prop or compute it
+    progress = 0,
     errorComponent,
     canGoBack = false,
     onBack,
@@ -73,13 +50,8 @@ export default function SignUpLayout({
                     </Text>
                 ) : null}
 
-                {/* Multi-Step Horizontal Bar */}
-                <MultiStepBar currentStep={currentStep} theme={theme} />
-
-                {/* Optionally show "Step X of Y" below the bar */}
-                {/* <Text style={[styles.stepText, { color: theme.text }]}>
-          Step {currentStep} of {totalSteps}
-        </Text> */}
+                {/* Single linear progress bar */}
+                <SingleProgressBar progress={progress} theme={theme} />
 
                 {/* Error Messages */}
                 {errorComponent}
@@ -133,9 +105,6 @@ const styles = StyleSheet.create({
     subtitle: {
         marginBottom: 16,
     },
-    stepText: {
-        marginTop: 8,
-    },
     contentArea: {
         flex: 1,
         paddingHorizontal: 24,
@@ -149,28 +118,5 @@ const styles = StyleSheet.create({
     },
     navButton: {
         minWidth: 120,
-    },
-});
-
-/** Additional styles for the multi-step bar */
-const stylesMSB = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    stepItem: {
-        alignItems: 'center',
-        flex: 1,
-        marginHorizontal: 2,
-    },
-    stepBar: {
-        height: 6,
-        borderRadius: 3,
-        width: '100%',
-        marginBottom: 4,
-    },
-    stepLabel: {
-        fontSize: 10,
-        textAlign: 'center',
     },
 });

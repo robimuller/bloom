@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
     const emailSignup = async (email, password, displayName) => {
         try {
             setAuthError(null);
-            // 1) Create the user in Firebase Auth
+            // 1) Create user in Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const { uid } = userCredential.user;
 
@@ -86,14 +86,18 @@ export const AuthProvider = ({ children }) => {
             await setDoc(doc(db, 'users', uid), {
                 displayName,
                 email,
-                gender: null,            // We'll fill this in later steps
+                gender: null,
                 signUpMethod: 'email',
                 onboardingComplete: false,
                 createdAt: new Date().toISOString(),
             });
 
+            // Return the user object directly
+            return userCredential.user;
         } catch (error) {
             setAuthError(error.message);
+            throw error;
+            // Rethrow so the caller knows it failed
         }
     };
 
