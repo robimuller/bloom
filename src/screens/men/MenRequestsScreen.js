@@ -1,12 +1,12 @@
-// MenRequestsScreen.js
+// src/screens/MenRequestsScreen.js
 import React, { useEffect, useState, useContext } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import { StyleSheet, FlatList, View } from 'react-native';
 import {
     SegmentedButtons,
     Card,
     Text as PaperText,
     Button as PaperButton,
-    useTheme
+    useTheme,
 } from 'react-native-paper';
 
 import { AuthContext } from '../../contexts/AuthContext';
@@ -17,7 +17,7 @@ export default function MenRequestsScreen({ navigation }) {
     const { requests, acceptRequest, rejectRequest } = useContext(RequestsContext);
 
     const [statusFilter, setStatusFilter] = useState('pending');
-    const theme = useTheme();
+    const paperTheme = useTheme();
 
     // Filter all requests from context for those matching statusFilter
     // (Men only see requests where hostId = user.uid, as set up in RequestsContext)
@@ -61,13 +61,15 @@ export default function MenRequestsScreen({ navigation }) {
 
     const renderRequest = ({ item }) => {
         return (
-            <Card style={styles.card} mode="outlined">
+            <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]} mode="outlined">
                 <Card.Title
                     title={`Requester: ${item.requesterId}`}
                     subtitle={`Date ID: ${item.dateId}`}
+                    titleStyle={{ color: paperTheme.colors.text }}
+                    subtitleStyle={{ color: paperTheme.colors.placeholder }}
                 />
                 <Card.Content>
-                    <PaperText variant="bodyMedium" style={{ marginVertical: 4 }}>
+                    <PaperText variant="bodyMedium" style={{ marginVertical: 4, color: paperTheme.colors.text }}>
                         Status: {item.status}
                     </PaperText>
                 </Card.Content>
@@ -78,8 +80,8 @@ export default function MenRequestsScreen({ navigation }) {
                             <PaperButton
                                 mode="contained"
                                 onPress={() => handleAccept(item)}
-                                style={{ marginRight: 8 }}
-                                buttonColor="#4caf50" // green
+                                style={[styles.button, { marginRight: 8 }]}
+                                buttonColor="#4caf50" // Consider replacing with theme color
                                 textColor="#fff"
                             >
                                 Accept
@@ -87,7 +89,8 @@ export default function MenRequestsScreen({ navigation }) {
                             <PaperButton
                                 mode="contained"
                                 onPress={() => handleReject(item)}
-                                buttonColor="#f44336" // red
+                                style={styles.button}
+                                buttonColor="#f44336" // Consider replacing with theme color
                                 textColor="#fff"
                             >
                                 Reject
@@ -98,7 +101,8 @@ export default function MenRequestsScreen({ navigation }) {
                         <PaperButton
                             mode="contained"
                             onPress={() => handleOpenChat(item)}
-                            buttonColor={theme.colors.primary}
+                            style={styles.button}
+                            buttonColor={paperTheme.colors.primary}
                             textColor="#fff"
                         >
                             Open Chat
@@ -110,8 +114,11 @@ export default function MenRequestsScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <PaperText variant="headlineMedium" style={styles.header}>
+        <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
+            <PaperText
+                variant="headlineMedium"
+                style={[styles.header, { color: paperTheme.colors.text }]}
+            >
                 Men Requests
             </PaperText>
 
@@ -124,6 +131,15 @@ export default function MenRequestsScreen({ navigation }) {
                     { value: 'accepted', label: 'Accepted' },
                 ]}
                 style={styles.segments}
+                theme={{
+                    colors: {
+                        primary: paperTheme.colors.primary,
+                        secondary: paperTheme.colors.secondary,
+                        surface: paperTheme.colors.surface,
+                        background: paperTheme.colors.background,
+                        onSurface: paperTheme.colors.onSurface,
+                    },
+                }}
             />
 
             <FlatList
@@ -131,6 +147,11 @@ export default function MenRequestsScreen({ navigation }) {
                 keyExtractor={(item) => item.id}
                 renderItem={renderRequest}
                 contentContainerStyle={{ paddingBottom: 20 }}
+                ListEmptyComponent={
+                    <PaperText style={{ color: paperTheme.colors.placeholder, alignSelf: 'center' }}>
+                        No {statusFilter} requests available.
+                    </PaperText>
+                }
             />
         </View>
     );
@@ -140,5 +161,8 @@ const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
     header: { marginBottom: 16 },
     segments: { marginBottom: 16 },
-    card: { marginBottom: 12 },
+    card: { marginBottom: 12, width: '100%' },
+    button: {
+        // Optional: Define button styles if needed
+    },
 });

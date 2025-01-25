@@ -11,7 +11,7 @@ export default function MenRequestsStack() {
             <Stack.Screen
                 name="MenRequests"
                 component={MenRequestsScreen}
-                options={{ title: 'Requests' }}
+                options={{ title: 'Requests', headerShown: false }}
             />
             <Stack.Screen name="Chat" component={ChatScreen} />
         </Stack.Navigator>

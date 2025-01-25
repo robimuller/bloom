@@ -16,25 +16,25 @@ import { AuthContext } from './AuthContext';
 export const RequestsContext = createContext();
 
 export const RequestsProvider = ({ children }) => {
-    const { user, role } = useContext(AuthContext);
+    const { user, gender } = useContext(AuthContext);
     const [requests, setRequests] = useState([]);
     const [loadingRequests, setLoadingRequests] = useState(false);
 
     useEffect(() => {
-        if (!user || !role) {
+        if (!user || !gender) {
             setRequests([]);
             return;
         }
-        // Subscribe to "requests" that matter to this user, depending on role
+        // Subscribe to "requests" that matter to this user, depending on gender
         // If user is male => fetch requests where hostId = user.uid
         // If user is female => fetch requests where requesterId = user.uid
         setLoadingRequests(true);
 
         const requestsRef = collection(db, 'requests');
         let q;
-        if (role === 'male') {
+        if (gender === 'male') {
             q = query(requestsRef, where('hostId', '==', user.uid));
-        } else if (role === 'female') {
+        } else if (gender === 'female') {
             q = query(requestsRef, where('requesterId', '==', user.uid));
         }
 
@@ -48,7 +48,7 @@ export const RequestsProvider = ({ children }) => {
         });
 
         return () => unsubscribe();
-    }, [user, role]);
+    }, [user, gender]);
 
     // Create a new request (used by women who see open dates or men who want to invite women, in the future)
     const sendRequest = async ({ dateId, hostId }) => {

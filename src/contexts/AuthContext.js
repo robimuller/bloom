@@ -11,8 +11,6 @@ import {
     doc,
     setDoc,
     onSnapshot,
-    getDoc, // (not strictly needed if everything is real-time)
-    updateDoc,
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
@@ -80,7 +78,7 @@ export const AuthProvider = ({ children }) => {
     const emailSignup = async (email, password, displayName) => {
         try {
             setAuthError(null);
-            // 1) Create the user in Firebase Auth
+            // 1) Create user in Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const { uid } = userCredential.user;
 
@@ -88,19 +86,23 @@ export const AuthProvider = ({ children }) => {
             await setDoc(doc(db, 'users', uid), {
                 displayName,
                 email,
-                role: null,            // We'll fill this in later steps
+                gender: null,
                 signUpMethod: 'email',
                 onboardingComplete: false,
                 createdAt: new Date().toISOString(),
             });
 
+            // Return the user object directly
+            return userCredential.user;
         } catch (error) {
             setAuthError(error.message);
+            throw error;
+            // Rethrow so the caller knows it failed
         }
     };
 
     // -- Phone-based sign up
-    const phoneSignup = async (phoneNumber, appVerifier, role, code) => {
+    const phoneSignup = async (phoneNumber, appVerifier, gender, code) => {
         try {
             setAuthError(null);
 
@@ -114,7 +116,7 @@ export const AuthProvider = ({ children }) => {
             // 3) Initialize the Firestore doc
             await setDoc(doc(db, 'users', uid), {
                 phone: phoneNumber,
-                role,
+                gender,
                 signUpMethod: 'phone',
                 onboardingComplete: false,
                 createdAt: new Date().toISOString(),
@@ -157,6 +159,8 @@ export const AuthProvider = ({ children }) => {
                 login,
                 logout,
                 setAuthError,
+                gender: userDoc?.gender,
+                displayName: userDoc?.displayName,
             }}
         >
             {children}

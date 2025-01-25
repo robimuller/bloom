@@ -8,7 +8,7 @@ const Stack = createNativeStackNavigator();
 export default function MenSettingsStack() {
     return (
         <Stack.Navigator>
-            <Stack.Screen name="MenSettings" component={SettingsScreen} />
+            <Stack.Screen name="MenSettings" component={SettingsScreen} options={{ headerShown: false }} />
             {/* Add more men-specific settings screens if needed */}
         </Stack.Navigator>
     );

@@ -1,11 +1,15 @@
+// src/screens/CreateDateScreen.js
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, Button, HelperText } from 'react-native-paper';
 import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
+import { useTheme } from 'react-native-paper';
 
 export default function CreateDateScreen({ navigation }) {
     const { user } = useContext(AuthContext);
     const { createDate } = useContext(DatesContext);
+    const paperTheme = useTheme();
 
     const [title, setTitle] = useState('');
     const [location, setLocation] = useState('');
@@ -45,48 +49,116 @@ export default function CreateDateScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Create a Date</Text>
+        <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
+            <Text style={[styles.title, { color: paperTheme.colors.text }]}>Create a Date</Text>
+
             <TextInput
-                placeholder="Title"
-                style={styles.input}
+                label="Title"
+                mode="outlined"
                 value={title}
                 onChangeText={setTitle}
+                style={styles.input}
+                theme={{
+                    colors: {
+                        primary: paperTheme.colors.primary,
+                        background: paperTheme.colors.surface,
+                        text: paperTheme.colors.text,
+                        placeholder: paperTheme.colors.placeholder,
+                        error: paperTheme.colors.error,
+                    },
+                }}
             />
             <TextInput
-                placeholder="Location"
-                style={styles.input}
+                label="Location"
+                mode="outlined"
                 value={location}
                 onChangeText={setLocation}
+                style={styles.input}
+                theme={{
+                    colors: {
+                        primary: paperTheme.colors.primary,
+                        background: paperTheme.colors.surface,
+                        text: paperTheme.colors.text,
+                        placeholder: paperTheme.colors.placeholder,
+                        error: paperTheme.colors.error,
+                    },
+                }}
             />
             <TextInput
-                placeholder="Time (e.g. 2025-02-01 6:00 PM)"
-                style={styles.input}
+                label="Time (e.g., 2025-02-01 6:00 PM)"
+                mode="outlined"
                 value={time}
                 onChangeText={setTime}
+                style={styles.input}
+                theme={{
+                    colors: {
+                        primary: paperTheme.colors.primary,
+                        background: paperTheme.colors.surface,
+                        text: paperTheme.colors.text,
+                        placeholder: paperTheme.colors.placeholder,
+                        error: paperTheme.colors.error,
+                    },
+                }}
             />
             <TextInput
-                placeholder="Category (e.g. Food & Drinks)"
-                style={styles.input}
+                label="Category (e.g., Food & Drinks)"
+                mode="outlined"
                 value={category}
                 onChangeText={setCategory}
+                style={styles.input}
+                theme={{
+                    colors: {
+                        primary: paperTheme.colors.primary,
+                        background: paperTheme.colors.surface,
+                        text: paperTheme.colors.text,
+                        placeholder: paperTheme.colors.placeholder,
+                        error: paperTheme.colors.error,
+                    },
+                }}
             />
 
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && (
+                <HelperText type="error" visible={!!error} style={styles.error}>
+                    {error}
+                </HelperText>
+            )}
 
-            <Button title="Create" onPress={handleCreateDate} />
+            <Button
+                mode="contained"
+                onPress={handleCreateDate}
+                style={styles.button}
+                contentStyle={styles.buttonContent}
+                labelStyle={{ color: paperTheme.colors.background }}
+                buttonColor={paperTheme.colors.primary}
+            >
+                Create
+            </Button>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-    input: {
-        borderWidth: 1,
-        marginBottom: 10,
-        padding: 10,
-        borderRadius: 5,
+    container: {
+        flex: 1,
+        padding: 20,
     },
-    error: { color: 'red', marginBottom: 10 },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        alignSelf: 'center',
+    },
+    input: {
+        marginBottom: 10,
+    },
+    error: {
+        marginBottom: 10,
+        alignSelf: 'center',
+    },
+    button: {
+        marginTop: 10,
+    },
+    buttonContent: {
+        paddingVertical: 8,
+    },
 });

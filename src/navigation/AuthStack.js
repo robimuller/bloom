@@ -15,7 +15,7 @@ export default function AuthStack() {
             <Stack.Screen
                 name="SignUpChoice"
                 component={SignUpChoiceScreen}
-                options={{ title: 'Sign Up' }}
+                options={{ title: 'Sign Up', headerShown: false }}
             />
 
             {/* Wizard flows */}
