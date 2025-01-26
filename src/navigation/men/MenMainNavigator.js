@@ -18,7 +18,7 @@ export default function MenMainNavigator() {
             <Stack.Screen name="MenHome" component={MenHomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MenRequests" component={MenRequestsScreen} />
             <Stack.Screen name="MenSettings" component={MenSettingsScreen} />
-            <Stack.Screen name="CreateDate" component={CreateDateScreen} />
+            <Stack.Screen name="CreateDate" component={CreateDateScreen} options={{ headerShown: true }} />
             <Stack.Screen name="Chat" component={ChatScreen} />
         </Stack.Navigator>
     );

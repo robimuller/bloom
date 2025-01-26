@@ -15,7 +15,6 @@ import {
     Platform,
     Modal,
     Pressable,
-    Image,
 } from 'react-native';
 import { GiftedChat, Bubble } from 'react-native-gifted-chat';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,6 +33,8 @@ import { db } from '../../../config/firebase';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useTheme, IconButton } from 'react-native-paper';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { Image } from 'expo-image';
+
 
 import TypingDots from './TypingDots'; // new bouncy animation
 
@@ -109,6 +110,8 @@ export default function ChatScreen({ route, navigation }) {
                     <Image
                         source={{ uri: userPhoto }}
                         style={styles.headerAvatarImage}
+                        contentFit="cover"
+                        transition={500}     // optional fade     // optional placeholder
                     />
                 ) : (
                     <View

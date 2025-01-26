@@ -7,71 +7,53 @@ import {
     createUserWithEmailAndPassword,
     signInWithPhoneNumber,
 } from 'firebase/auth';
-import {
-    doc,
-    setDoc,
-    onSnapshot,
-} from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore'; // <-- getDoc instead of onSnapshot
 import { auth, db } from '../../config/firebase';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);       // The raw Firebase User object
+    const [user, setUser] = useState(null);       // The raw Firebase Auth user
     const [userDoc, setUserDoc] = useState(null); // The Firestore doc data for that user
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [authError, setAuthError] = useState(null);
 
     useEffect(() => {
-        // We'll keep two unsubscribers:
-        // 1) For Firebase Auth
-        // 2) For the Firestore doc snapshot (which we attach once we have a user)
-        let unsubscribeDoc = null;
-
+        // Watch for Auth state changes
         const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
             setLoadingAuth(true);
             setAuthError(null);
 
             if (firebaseUser) {
-                // Set the current user in state
+                // We have a logged-in user
                 setUser(firebaseUser);
 
-                // Subscribe to changes in this user's Firestore doc in real time:
-                const userRef = doc(db, 'users', firebaseUser.uid);
-                unsubscribeDoc = onSnapshot(
-                    userRef,
-                    (snapshot) => {
-                        if (snapshot.exists()) {
-                            setUserDoc(snapshot.data());
-                        } else {
-                            setUserDoc(null);
-                        }
-                        setLoadingAuth(false);
-                    },
-                    (error) => {
-                        console.error('Error in onSnapshot:', error);
-                        setAuthError(error.message);
-                        setLoadingAuth(false);
+                try {
+                    // One-time fetch of user doc, no real-time listening
+                    const userRef = doc(db, 'users', firebaseUser.uid);
+                    const snap = await getDoc(userRef);
+
+                    if (snap.exists()) {
+                        setUserDoc(snap.data());
+                    } else {
+                        setUserDoc(null);
                     }
-                );
+                } catch (error) {
+                    console.error('Error fetching user doc:', error);
+                    setAuthError(error.message);
+                }
+
+                setLoadingAuth(false);
             } else {
-                // No user -> reset state
+                // No user
                 setUser(null);
                 setUserDoc(null);
                 setLoadingAuth(false);
             }
         });
 
-        // Clean up both listeners on unmount or if user changes
-        return () => {
-            // Unsubscribe from Auth
-            unsubscribeAuth();
-
-            // Unsubscribe from the doc snapshot if it's active
-            if (unsubscribeDoc) {
-                unsubscribeDoc();
-            }
-        };
+        // Cleanup
+        return () => unsubscribeAuth();
     }, []);
 
     // -- Email-based sign up
@@ -97,7 +79,6 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             setAuthError(error.message);
             throw error;
-            // Rethrow so the caller knows it failed
         }
     };
 
@@ -127,7 +108,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // -- Login (existing user)
+    // -- Login
     const login = async (email, password) => {
         try {
             setAuthError(null);
