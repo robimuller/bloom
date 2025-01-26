@@ -59,7 +59,7 @@ function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
             Animated.sequence([
                 Animated.timing(lightAnim, {
                     toValue: 1,
-                    duration: 500,
+                    duration: 300,
                     easing: Easing.linear,
                     useNativeDriver: false,
                 }),
@@ -86,7 +86,7 @@ function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
     // to create that "light beam" effect
     const highlightColors = [
         'rgba(255,255,255,0)', // transparent
-        'rgba(255,255,255,0.6)', // bright center
+        'rgba(255, 255, 255, 0.4)', // bright center
         'rgba(255,255,255,0)', // transparent
     ];
 
@@ -113,7 +113,7 @@ function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
             {/* ======= ANIMATED HIGHLIGHT LAYER ======= */}
             <AnimatedLinearGradient
                 colors={highlightColors}
-                start={{ x: startX, y: 0 }}
+                start={{ x: startX, y: -0.1 }}
                 end={{ x: endX, y: 0 }}
                 style={[StyleSheet.absoluteFill, { borderRadius: 25 }]}
             />
