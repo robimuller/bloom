@@ -14,8 +14,8 @@ const Stack = createNativeStackNavigator();
 
 export default function MenMainNavigator() {
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="MenHome" component={MenHomeScreen} />
+        <Stack.Navigator>
+            <Stack.Screen name="MenHome" component={MenHomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MenRequests" component={MenRequestsScreen} />
             <Stack.Screen name="MenSettings" component={MenSettingsScreen} />
             <Stack.Screen name="CreateDate" component={CreateDateScreen} />

@@ -44,7 +44,7 @@ export default function CreateDateScreen({ navigation }) {
             setCategory('');
 
             // Navigate to men feed or show success
-            navigation.navigate('MenFeed');
+            navigation.navigate('MenHome');
         } catch (err) {
             setError(err.message);
         }

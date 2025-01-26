@@ -130,8 +130,6 @@ export default function EmailSignUpScreen({ navigation }) {
         }
     };
 
-    console.log('Finished updating doc. Check Firestore manually or logs to confirm.');
-
 
     // Helper: Upload all photos
     const uploadAllPhotos = async (photosArray, uid) => {
