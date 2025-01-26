@@ -25,9 +25,6 @@ const firebaseConfig = {
     measurementId: FIREBASE_MEASUREMENT_ID
 };
 
-console.log(FIREBASE_API_KEY)
-
-
 const app = initializeApp(firebaseConfig);
 
 export const auth = initializeAuth(app, {

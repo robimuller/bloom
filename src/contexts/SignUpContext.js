@@ -1,6 +1,7 @@
 // src/contexts/SignUpContext.js
 import React, { createContext, useState } from 'react';
 
+
 // We'll store partial sign-up data across multiple steps
 export const SignUpContext = createContext();
 
@@ -18,7 +19,7 @@ export const SignUpProvider = ({ children }) => {
         gender: '',
         orientation: '',
         bio: '',
-        // pictures, etc.
+        photos: [], // <-- Add this
     });
 
     const [preferences, setPreferences] = useState({
@@ -35,8 +36,12 @@ export const SignUpProvider = ({ children }) => {
         agreedToTerms: false,
     });
 
+
     // Step 5: If you want, store some "verification" status or code
     const [verificationStatus, setVerificationStatus] = useState(null);
+
+    const [finishing, setFinishing] = useState(false);
+
 
     // Update Basic Info
     const updateBasicInfo = (updates) => {
@@ -75,6 +80,8 @@ export const SignUpProvider = ({ children }) => {
                 preferences,
                 permissions,
                 verificationStatus,
+                finishing,
+                setFinishing,
                 updateBasicInfo,
                 updateProfileInfo,
                 updatePreferences,

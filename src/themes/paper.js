@@ -12,14 +12,19 @@ export function createPaperTheme(baseTheme, mode = 'light') {
         ...paperBase,
         colors: {
             ...paperBase.colors,
-
-            // Overwrite Paper's defaults with your tokens
             primary: baseTheme.primary,
-            onPrimary: '#fff',          // text color on a primary background
+            onPrimary: '#fff',
+            // Keep background from baseTheme
             background: baseTheme.background,
             onBackground: baseTheme.text,
-            surface: baseTheme.background,
+            // Add this line:
+            text: baseTheme.text,
+
+            // Let surface be something else. Often surface is the "card" color in Paper.
             onSurface: baseTheme.text,
+
+            // Keep a separate variable if you still want to call it cardBackground:
+            cardBackground: baseTheme.cardBackground,
 
             // You can include these if you like:
             secondary: baseTheme.secondary,
@@ -29,6 +34,6 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             // tertiary: baseTheme.accent,
             // etc.
         },
-        roundness: 10, // or any shape you prefer
+        roundness: 5, // or any shape you prefer
     };
 }

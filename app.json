@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true, 
-      "bundleIdentifier": "dev.expo.bloomapp"
+      "bundleIdentifier": "dev.expo.bloomapp",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "We need access to your photos to let you upload profile pictures."
+      }
     },
     "android": {
       "adaptiveIcon": {
