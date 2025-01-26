@@ -1,22 +1,29 @@
-// CreateDateLayout.js
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import {
+    View,
+    StyleSheet,
+    TouchableOpacity,
+    Animated,
+    Easing,
+} from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient'; // or 'react-native-linear-gradient'
-import HostHeader from './HostHeader';
+import { LinearGradient } from 'expo-linear-gradient'; // or react-native-linear-gradient
 
 /* 
- * 1) Custom gradient progress bar. 
- *    “progress” is a number 0..1. 
- *    “barHeight” is optional style.
- */
+  ============================
+     1) STATIC GRADIENT BAR
+  ============================
+  A normal progress bar:
+  - Gray background (unfilled).
+  - Filled portion is a left→right gradient (red→gold).
+*/
 function GradientProgressBar({ progress, barHeight = 8 }) {
     return (
         <View
             style={{
                 height: barHeight,
                 borderRadius: barHeight / 2,
-                backgroundColor: '#ccc', // the unfilled portion
+                backgroundColor: '#ccc',
                 overflow: 'hidden',
             }}
         >
@@ -32,38 +39,104 @@ function GradientProgressBar({ progress, barHeight = 8 }) {
     );
 }
 
-/* 
- * 2) Custom gradient button. 
- *    We replicate the arrow-right + label. 
- */
-function GradientButton({ label, icon = 'arrow-right', onPress, style }) {
+/*
+  ============================
+    2) SHOOTING LIGHT BUTTON
+  ============================
+  - Base layer: static gradient (#e60000 → #e6ab00).
+  - Animated highlight layer: 
+    a translucent white band that sweeps from left to right.
+*/
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
+function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
+    // The anim value that goes from -1 → +1
+    // We'll shift the highlight from far left to far right
+    const lightAnim = useRef(new Animated.Value(-1)).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(lightAnim, {
+                    toValue: 1,
+                    duration: 500,
+                    easing: Easing.linear,
+                    useNativeDriver: false,
+                }),
+                // Reset instantly to -1 (so the band snaps back to left)
+                Animated.timing(lightAnim, {
+                    toValue: -1,
+                    duration: 0,
+                    useNativeDriver: false,
+                }),
+                // Optional: add a small delay here if you want a pause
+                Animated.delay(5000),
+            ])
+        );
+        loop.start();
+
+        return () => loop.stop();
+    }, [lightAnim]);
+
+    // We'll use the base gradient as the background
+    // Then layer a narrow highlight on top
+    const baseColors = ['#e60000', '#e6ab00'];
+
+    // The highlight band is basically transparent → white → transparent
+    // to create that "light beam" effect
+    const highlightColors = [
+        'rgba(255,255,255,0)', // transparent
+        'rgba(255,255,255,0.6)', // bright center
+        'rgba(255,255,255,0)', // transparent
+    ];
+
+    // Interpolate the "start" and "end" positions
+    // so the highlight crosses from left (-1) to right (~ +1).
+    const startX = lightAnim;
+    // We'll make the band about 0.3 wide
+    const endX = Animated.add(lightAnim, 0.4);
+
     return (
-        <TouchableOpacity onPress={onPress} style={[styles.gradientButtonContainer, style]}>
-            {/* The gradient background */}
+        <TouchableOpacity
+            onPress={onPress}
+            style={[styles.shootButtonContainer, style]}
+            activeOpacity={0.8}
+        >
+            {/* ======= BASE (STATIC) GRADIENT ======= */}
             <LinearGradient
-                colors={['#e60000', '#e6ab00']}
+                colors={baseColors}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[StyleSheet.absoluteFill, { borderRadius: 25 }]}
             />
-            {/* The button content: icon + text */}
-            <View style={styles.gradientButtonContent}>
-                {/* Icon */}
+
+            {/* ======= ANIMATED HIGHLIGHT LAYER ======= */}
+            <AnimatedLinearGradient
+                colors={highlightColors}
+                start={{ x: startX, y: 0 }}
+                end={{ x: endX, y: 0 }}
+                style={[StyleSheet.absoluteFill, { borderRadius: 25 }]}
+            />
+
+            {/* FOREGROUND CONTENT: icon + label */}
+            <View style={styles.shootButtonContent}>
                 <IconButton
                     icon={icon}
                     size={20}
                     iconColor="#fff"
                     style={{ margin: 0, marginRight: 4 }}
                 />
-                <Text style={styles.gradientButtonText}>{label}</Text>
+                <Text style={styles.shootButtonText}>{label}</Text>
             </View>
         </TouchableOpacity>
     );
 }
 
-/* ============================= */
-/*         MAIN LAYOUT          */
-/* ============================= */
+/*
+  ============================
+       3) MAIN LAYOUT
+  ============================
+*/
 export default function CreateDateLayout({
     step = 1,
     totalSteps = 5,
@@ -85,19 +158,8 @@ export default function CreateDateLayout({
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            {/* ========== TOP SECTION ========== */}
+            {/* TOP SECTION */}
             <View style={styles.topSection}>
-                {/* If you want to show host header here, uncomment:
-        <View style={styles.headerRow}>
-          <HostHeader
-            photo={hostPhoto}
-            name={hostName}
-            age={hostAge}
-            theme={theme}
-          />
-        </View>
-        */}
-
                 {/* Title & Subtitle */}
                 {title ? (
                     <Text
@@ -107,6 +169,7 @@ export default function CreateDateLayout({
                         {title}
                     </Text>
                 ) : null}
+
                 {subtitle ? (
                     <Text
                         variant="bodySmall"
@@ -116,7 +179,7 @@ export default function CreateDateLayout({
                     </Text>
                 ) : null}
 
-                {/* Gradient Progress Bar */}
+                {/* Gradient ProgressBar (static) */}
                 <View style={{ marginTop: 8 }}>
                     <GradientProgressBar progress={progress} />
                 </View>
@@ -125,21 +188,20 @@ export default function CreateDateLayout({
                 {errorComponent}
             </View>
 
-            {/* ========== MIDDLE SECTION (OUR "CARD") ========== */}
+            {/* MIDDLE CARD SECTION */}
             <View style={styles.cardSection}>
                 <View style={[styles.card, { backgroundColor: theme.colors.cardBackground }]}>
                     <View style={styles.cardContent}>{children}</View>
                 </View>
             </View>
 
-            {/* ========== BOTTOM NAVIGATION ========== */}
+            {/* BOTTOM NAVIGATION */}
             <View style={styles.bottomNav}>
                 {canGoBack ? (
                     <TouchableOpacity
                         onPress={onBack}
                         style={[styles.outlinedBtn, { borderColor: theme.colors.primary }]}
                     >
-                        {/* Left arrow icon + text */}
                         <IconButton
                             icon="arrow-left"
                             size={20}
@@ -154,31 +216,26 @@ export default function CreateDateLayout({
                     <View style={styles.buttonPlaceholder} />
                 )}
 
-                {/* Next button (gradient) */}
-                <GradientButton label={nextLabel} icon="arrow-right" onPress={onNext} />
+                {/* Shooting Light Button */}
+                <ShootingLightButton label={nextLabel} icon="arrow-right" onPress={onNext} />
             </View>
         </View>
     );
 }
 
-/* ============================= */
-/*           STYLES             */
-/* ============================= */
+/* =============================
+       STYLES
+============================= */
 const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    // ======= TOP SECTION =======
+
+    // ====== TOP SECTION ======
     topSection: {
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 12,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
     },
     mainTitle: {
         marginBottom: 4,
@@ -188,7 +245,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
 
-    // ======= MIDDLE “CARD” SECTION =======
+    // ====== CARD SECTION ======
     cardSection: {
         flex: 1,
         marginHorizontal: 16,
@@ -208,7 +265,7 @@ const styles = StyleSheet.create({
         padding: 16,
     },
 
-    // ======= BOTTOM NAV SECTION =======
+    // ====== BOTTOM NAV ======
     bottomNav: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -221,7 +278,7 @@ const styles = StyleSheet.create({
         height: 48,
     },
 
-    // Outline "Back" button
+    // Outlined “Back” button
     outlinedBtn: {
         minWidth: 120,
         height: 48,
@@ -236,20 +293,20 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 
-    // ======= GRADIENT BUTTON =======
-    gradientButtonContainer: {
+    // ====== SHOOTING LIGHT NEXT BUTTON ======
+    shootButtonContainer: {
         minWidth: 120,
         height: 48,
         borderRadius: 25,
         overflow: 'hidden',
     },
-    gradientButtonContent: {
+    shootButtonContent: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    gradientButtonText: {
+    shootButtonText: {
         fontSize: 16,
         color: '#fff',
         fontWeight: '500',
