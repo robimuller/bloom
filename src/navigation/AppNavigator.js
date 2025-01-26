@@ -5,8 +5,10 @@ import { useTheme } from 'react-native-paper';
 
 // Stacks
 import AuthStack from './AuthStack';
-import MenTabNavigator from './men/MenTabNavigator';
-import WomenTabNavigator from './women/WomenTabNavigator';
+// import MenTabNavigator from './men/MenTabNavigator'; // remove or comment out
+// import WomenTabNavigator from './women/WomenTabNavigator'; // remove or comment out
+import MenMainNavigator from './men/MenMainNavigator';
+import WomenMainNavigator from './women/WomenMainNavigator';
 
 // Wizard Stacks
 import EmailSignUpStack from './EmailSignUpStack';
@@ -26,7 +28,7 @@ export default function AppNavigator() {
         );
     }
 
-    // If not logged in at all:
+    // If not logged in:
     if (!user) {
         return <AuthStack />;
     }
@@ -42,11 +44,10 @@ export default function AppNavigator() {
 
     // Otherwise, user has finished onboarding, so route by gender
     if (userDoc?.gender === 'male') {
-        return <MenTabNavigator />;
+        return <MenMainNavigator />;
     } else if (userDoc?.gender === 'female') {
-        return <WomenTabNavigator />;
+        return <WomenMainNavigator />;
     } else {
-        // Fallback if gender is unknown
         return (
             <View style={[styles.center, { backgroundColor: paperTheme.colors.background }]}>
                 <ActivityIndicator size="large" color={paperTheme.colors.primary} />

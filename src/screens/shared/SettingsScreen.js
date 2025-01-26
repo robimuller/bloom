@@ -25,6 +25,7 @@ export default function SettingsScreen() {
                 <>
                     <Text style={[styles.text, { color: paperTheme.colors.text }]}>Logged in as:</Text>
                     <Text style={[styles.userId, { color: paperTheme.colors.text }]}>{user.uid}</Text>
+                    <Text style={[styles.userId, { color: paperTheme.colors.text }]}>{user.displayName}</Text>
                 </>
             ) : (
                 <Text style={[styles.text, { color: paperTheme.colors.text }]}>No user is currently logged in.</Text>

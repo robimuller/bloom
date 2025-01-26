@@ -1,7 +1,7 @@
 // src/contexts/WizardContext.js
 import React, { createContext, useState, useMemo } from 'react';
 
-const stepsConfig = [3, 4, 3, 1, 1];
+const stepsConfig = [3, 4, 4, 1, 1];
 const totalSubSteps = stepsConfig.reduce((acc, val) => acc + val, 0);
 
 export const WizardContext = createContext(null);

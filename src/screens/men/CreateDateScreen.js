@@ -5,6 +5,8 @@ import { Text, TextInput, Button, HelperText } from 'react-native-paper';
 import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
 import { useTheme } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 export default function CreateDateScreen({ navigation }) {
     const { user } = useContext(AuthContext);
@@ -49,7 +51,7 @@ export default function CreateDateScreen({ navigation }) {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]} edges={['top']}>
             <Text style={[styles.title, { color: paperTheme.colors.text }]}>Create a Date</Text>
 
             <TextInput
@@ -133,14 +135,14 @@ export default function CreateDateScreen({ navigation }) {
             >
                 Create
             </Button>
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
         flex: 1,
-        padding: 20,
+        paddingHorizontal: 16
     },
     title: {
         fontSize: 24,

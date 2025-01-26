@@ -5,7 +5,7 @@ export const lightTheme = {
     background: '#ffffff',
     cardBackground: '#f8f8ff',
     primary: '#ff1a1a',
-    secondary: '#efc86c',
+    secondary: '#6C6F7F',
     accent: '#20FC8F',
 };
 
@@ -14,6 +14,6 @@ export const darkTheme = {
     background: '#0f0202',
     cardBackground: '#17131D',
     primary: '#e60000',
-    secondary: '#936b10',
+    secondary: '#6C6F7F',
     accent: '#20FC8F',
 };
