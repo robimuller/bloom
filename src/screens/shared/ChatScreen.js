@@ -1,3 +1,4 @@
+// ChatScreen.js
 import React, {
     useEffect,
     useState,
@@ -32,14 +33,15 @@ import {
 import { db } from '../../../config/firebase';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useTheme, IconButton } from 'react-native-paper';
+import { useHeaderHeight } from '@react-navigation/elements';
 
-import TypingDots from './TypingDots'; // If you place TypingDots in a separate file
-// or keep the inline version from your snippet
+import TypingDots from './TypingDots'; // new bouncy animation
 
 export default function ChatScreen({ route, navigation }) {
     const { user, userDoc } = useContext(AuthContext);
     const { chatId, dateId, hostId, requesterId } = route.params || {};
     const paperTheme = useTheme();
+    const headerHeight = useHeaderHeight(); // Precisely measure the header
 
     // Local state
     const [messages, setMessages] = useState([]);
@@ -51,7 +53,7 @@ export default function ChatScreen({ route, navigation }) {
     // Determine who the "other" person is
     const otherUserId = user?.uid === hostId ? requesterId : hostId;
 
-    // 1) Fetch other user info to display in header
+    // Fetch other user info to display in header
     useEffect(() => {
         if (!otherUserId) return;
         const fetchOtherUser = async () => {
@@ -67,7 +69,7 @@ export default function ChatScreen({ route, navigation }) {
         fetchOtherUser();
     }, [otherUserId]);
 
-    // 2) Fetch date details for modal/hamburger menu
+    // Fetch date details for modal/hamburger menu
     useEffect(() => {
         if (!dateId) return;
         const fetchDateDetails = async () => {
@@ -83,7 +85,7 @@ export default function ChatScreen({ route, navigation }) {
         fetchDateDetails();
     }, [dateId]);
 
-    // 3) Customize the header once we have `otherUserDoc`
+    // Customize the header once we have `otherUserDoc`
     useLayoutEffect(() => {
         // Define a “Back” icon:
         const backButton = () => (
@@ -95,7 +97,7 @@ export default function ChatScreen({ route, navigation }) {
         );
 
         // Photo or initial:
-        const userPhoto = otherUserDoc?.photos?.[0]; // e.g. store array of photo URLs
+        const userPhoto = otherUserDoc?.photos?.[0];
         const userInitial = otherUserDoc?.firstName
             ? otherUserDoc.firstName.charAt(0).toUpperCase()
             : 'U';
@@ -126,7 +128,7 @@ export default function ChatScreen({ route, navigation }) {
         // The person’s first name next to photo
         const displayName = otherUserDoc?.firstName || 'Unknown';
 
-        // A hamburger icon on the right => toggles the modal to show date details
+        // A hamburger icon => toggles the modal
         const hamburgerButton = () => (
             <IconButton
                 icon="dots-vertical"
@@ -136,9 +138,8 @@ export default function ChatScreen({ route, navigation }) {
         );
 
         navigation.setOptions({
-            // Show back icon
+            headerShown: true, // Ensure it shows
             headerLeft: backButton,
-            // Title area => photo + name
             headerTitle: () => (
                 <View style={styles.headerTitleContainer}>
                     <PhotoOrInitial />
@@ -147,15 +148,13 @@ export default function ChatScreen({ route, navigation }) {
                     </Text>
                 </View>
             ),
-            // Right side icon
             headerRight: hamburgerButton,
         });
     }, [navigation, otherUserDoc, paperTheme.colors.text]);
 
-    // 4) Subscribe to messages
+    // Subscribe to messages
     useEffect(() => {
         if (!chatId) return;
-
         const msgsRef = collection(db, 'chats', chatId, 'messages');
         const q = query(msgsRef, orderBy('createdAt', 'desc'));
 
@@ -168,22 +167,21 @@ export default function ChatScreen({ route, navigation }) {
                     createdAt: data.createdAt
                         ? data.createdAt.toDate()
                         : new Date(),
-                    user: data.user, // e.g. { _id: 'abc123', name: 'Alice' }
+                    user: data.user,
                 };
             });
             setMessages(loaded);
         });
 
-        // 5) Subscribe to "typing" subcollection
+        // Subscribe to "typing"
         const typingRef = collection(db, 'chats', chatId, 'typing');
         const unsubscribeTyping = onSnapshot(typingRef, (snapshot) => {
             const typingData = snapshot.docs
                 .map((docSnap) => docSnap.data())
-                // Only show other users who are currently typing
                 .filter(
                     (docData) => docData.isTyping && docData.userId !== user.uid
                 );
-            setTypingUsers(typingData); // array of { userId, displayName, isTyping }
+            setTypingUsers(typingData);
         });
 
         return () => {
@@ -192,7 +190,7 @@ export default function ChatScreen({ route, navigation }) {
         };
     }, [chatId, user?.uid]);
 
-    // Called when user presses "Send"
+    // Handle sending a message
     const onSend = useCallback(
         async (newMsgs = []) => {
             if (!chatId || !user) return;
@@ -210,7 +208,7 @@ export default function ChatScreen({ route, navigation }) {
         [chatId, user, userDoc]
     );
 
-    // Called whenever the input text changes => update "isTyping"
+    // Handle typing
     const handleTyping = async (currentText) => {
         if (!chatId || !user) return;
         const isTyping = currentText?.length > 0;
@@ -218,7 +216,7 @@ export default function ChatScreen({ route, navigation }) {
         await setDoc(doc(db, 'chats', chatId, 'typing', user.uid), {
             userId: user.uid,
             displayName: userDoc?.displayName || 'Someone',
-            isTyping: isTyping,
+            isTyping,
             updatedAt: serverTimestamp(),
         });
     };
@@ -228,31 +226,17 @@ export default function ChatScreen({ route, navigation }) {
         if (!typingUsers.length) return null;
         const { displayName } = typingUsers[0];
         return (
-            <View
-                style={[
-                    styles.footerContainer,
-                    { backgroundColor: paperTheme.colors.background },
-                ]}
-            >
-                <Text
-                    style={[
-                        styles.footerText,
-                        { color: paperTheme.colors.text },
-                    ]}
-                >
+            <View style={styles.footerContainer}>
+                <Text style={styles.footerText}>
                     {displayName} is typing
                 </Text>
-                <TypingDots
-                    style={[styles.dots, { color: paperTheme.colors.placeholder }]}
-                />
+                <TypingDots dotColor="gray" style={{ marginLeft: 4 }} />
             </View>
         );
     };
 
-    // Optionally, customize the chat bubble to match your theme
+    // Customize bubbles
     const renderBubble = (props) => {
-        const isCurrentUser = props.currentMessage.user._id === user.uid;
-
         return (
             <Bubble
                 {...props}
@@ -261,8 +245,7 @@ export default function ChatScreen({ route, navigation }) {
                         backgroundColor: paperTheme.colors.primary,
                     },
                     left: {
-                        backgroundColor:
-                            paperTheme.dark ? '#444' : '#e6e6e6',
+                        backgroundColor: paperTheme.dark ? '#444' : '#e6e6e6',
                     },
                 }}
                 textStyle={{
@@ -277,7 +260,6 @@ export default function ChatScreen({ route, navigation }) {
     const renderAvatar = (props) => {
         const name = props.currentMessage.user.name || 'U';
         const initial = name.charAt(0).toUpperCase();
-
         return (
             <View
                 style={[
@@ -297,29 +279,21 @@ export default function ChatScreen({ route, navigation }) {
         );
     };
 
-    // If we don't have a chatId, show a loading spinner
+    // If there's no chatId yet, show loading
     if (!chatId) {
         return (
-            <View
-                style={[
-                    styles.center,
-                    { backgroundColor: paperTheme.colors.background },
-                ]}
-            >
-                <ActivityIndicator
-                    size="large"
-                    color={paperTheme.colors.primary}
-                />
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color={paperTheme.colors.primary} />
             </View>
         );
     }
 
     return (
         <>
-            {/*  Date Details Modal  */}
+            {/* Date Details Modal */}
             <Modal
                 visible={modalVisible}
-                transparent={true}
+                transparent
                 animationType="slide"
                 onRequestClose={() => setModalVisible(false)}
             >
@@ -340,31 +314,15 @@ export default function ChatScreen({ route, navigation }) {
                         </Text>
                         {dateDetails ? (
                             <>
-                                <Text
-                                    style={[
-                                        styles.modalText,
-                                        { color: paperTheme.colors.text },
-                                    ]}
-                                >
+                                <Text style={[styles.modalText, { color: paperTheme.colors.text }]}>
                                     Title: {dateDetails.title}
                                 </Text>
-                                <Text
-                                    style={[
-                                        styles.modalText,
-                                        { color: paperTheme.colors.text },
-                                    ]}
-                                >
+                                <Text style={[styles.modalText, { color: paperTheme.colors.text }]}>
                                     Location: {dateDetails.location}
                                 </Text>
-                                <Text
-                                    style={[
-                                        styles.modalText,
-                                        { color: paperTheme.colors.text },
-                                    ]}
-                                >
+                                <Text style={[styles.modalText, { color: paperTheme.colors.text }]}>
                                     Time: {dateDetails.time}
                                 </Text>
-                                {/* Add more fields as needed */}
                             </>
                         ) : (
                             <Text style={{ color: paperTheme.colors.placeholder }}>
@@ -385,32 +343,26 @@ export default function ChatScreen({ route, navigation }) {
                 </View>
             </Modal>
 
-            {/* Chat UI with Keyboard Avoiding */}
+            {/* Chat UI */}
             <SafeAreaView
                 style={[
                     styles.safeArea,
                     { backgroundColor: paperTheme.colors.background },
                 ]}
-                edges={['bottom', 'left', 'right']} // top handled by nav header
+                edges={['bottom', 'left', 'right']}
             >
-                <KeyboardAvoidingView
-                    style={styles.flex}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    keyboardVerticalOffset={90} // Adjust if your header is taller
-                >
-                    <GiftedChat
-                        messages={messages}
-                        onSend={(msgs) => onSend(msgs)}
-                        user={{ _id: user.uid }}
-                        onInputTextChanged={handleTyping}
-                        renderFooter={renderFooter}
-                        renderBubble={renderBubble}
-                        renderAvatar={renderAvatar}
-                        placeholder="Type a message..."
-                        textInputStyle={{ color: paperTheme.colors.text }}
-                        alwaysShowSend
-                    />
-                </KeyboardAvoidingView>
+                <GiftedChat
+                    messages={messages}
+                    onSend={(msgs) => onSend(msgs)}
+                    user={{ _id: user.uid }}
+                    onInputTextChanged={handleTyping}
+                    renderFooter={renderFooter}
+                    renderBubble={renderBubble}
+                    renderAvatar={renderAvatar}
+                    placeholder="Type a message..."
+                    textInputStyle={{ color: paperTheme.colors.text }}
+                    alwaysShowSend
+                />
             </SafeAreaView>
         </>
     );
@@ -429,15 +381,12 @@ const styles = StyleSheet.create({
     footerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingBottom: 10,
+        marginLeft: 10,
+        marginBottom: 6,
     },
     footerText: {
-        marginRight: 8,
+        marginRight: 4,
         fontStyle: 'italic',
-    },
-    dots: {
-        fontSize: 18,
     },
     avatarContainer: {
         borderRadius: 20,
@@ -451,7 +400,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
 
-    // Header styling
+    // Header
     headerTitleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
