@@ -7,21 +7,38 @@ import React, {
     memo,
     useRef,
 } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import {
+    View,
+    StyleSheet,
+    Image,
+    ScrollView,
+    Dimensions,
+    Pressable,
+} from 'react-native';
 import {
     Text,
     TextInput,
     Button,
     HelperText,
     useTheme,
+    ActivityIndicator,
 } from 'react-native-paper';
 import { Calendar } from 'react-native-calendars';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import * as ImagePicker from 'expo-image-picker';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { db } from '../../../config/firebase';
 
 import CreateDateLayout from '../../components/CreateDateLayout';
 import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// We'll need these to measure screen for the carousel
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 /* ============================= */
 /*  STEP COMPONENTS (MEMOIZED)  */
@@ -41,7 +58,6 @@ const StepOne = memo(function StepOne({ title, setTitle, details, setDetails }) 
                 outlineColor="#252525"
                 theme={{ roundness: 25 }}
             />
-
             <Text style={styles.stepTitle}>Tell us more?</Text>
             <TextInput
                 label="Details"
@@ -53,7 +69,6 @@ const StepOne = memo(function StepOne({ title, setTitle, details, setDetails }) 
                 outlineColor="#252525"
                 theme={{ roundness: 25 }}
             />
-
             <Text style={styles.inspirationText}>
                 Need some inspiration? Try some of our date ideas and save the headache
                 of being creative.{' '}
@@ -82,7 +97,6 @@ const StepTwo = memo(function StepTwo({ location, setLocation }) {
     return (
         <View style={{ flex: 1, zIndex: 10 }}>
             <Text style={styles.stepTitle}>Where would you like to go?</Text>
-
             <GooglePlacesAutocomplete
                 ref={autocompleteRef}
                 placeholder="Search location"
@@ -143,15 +157,9 @@ const StepTwo = memo(function StepTwo({ location, setLocation }) {
     );
 });
 
-// STEP 3 (Date & Time, with calendar below the row)
-const StepThree = memo(function StepThree({
-    date,
-    setDate,
-    time,
-    setTime,
-}) {
+// STEP 3
+const StepThree = memo(function StepThree({ date, setDate, time, setTime }) {
     const theme = useTheme();
-
     const [isCalendarOpen, setCalendarOpen] = useState(false);
     const [isTimePickerOpen, setTimePickerOpen] = useState(false);
 
@@ -164,7 +172,7 @@ const StepThree = memo(function StepThree({
     const getMonthName = (monthStr) => {
         const months = [
             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
         ];
         const idx = parseInt(monthStr, 10) - 1;
         return months[idx] || '';
@@ -174,18 +182,16 @@ const StepThree = memo(function StepThree({
         let hours = dateObj.getHours();
         let minutes = dateObj.getMinutes();
         const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12 || 12; // convert 0 → 12
+        hours = hours % 12 || 12;
         minutes = minutes < 10 ? `0${minutes}` : minutes;
         return `${hours}:${minutes} ${ampm}`;
     };
 
-    // Handle a day press from <Calendar>
     const handleDayPress = (day) => {
         setDate(day.dateString);
         setCalendarOpen(false);
     };
 
-    // Handle time confirm from <DateTimePickerModal>
     const handleTimeConfirm = (selectedDate) => {
         setTime(formatTime(selectedDate));
         setTimePickerOpen(false);
@@ -194,10 +200,7 @@ const StepThree = memo(function StepThree({
     return (
         <View>
             <Text style={styles.stepTitle}>Date &amp; Time</Text>
-
-            {/* ROW 1: Two columns for date/time buttons */}
             <View style={styles.dateTimeRow}>
-                {/* Left: Date Button */}
                 <Button
                     mode="outlined"
                     onPress={() => setCalendarOpen(!isCalendarOpen)}
@@ -206,8 +209,6 @@ const StepThree = memo(function StepThree({
                 >
                     {date ? formatDate(date) : 'Select Date'}
                 </Button>
-
-                {/* Right: Time Button */}
                 <Button
                     mode="outlined"
                     onPress={() => setTimePickerOpen(true)}
@@ -217,16 +218,11 @@ const StepThree = memo(function StepThree({
                     {time || 'Select Time'}
                 </Button>
             </View>
-
-            {/* ROW 2: Expand the calendar if date is pressed */}
             {isCalendarOpen && (
                 <View style={styles.calendarRow}>
                     <Calendar
                         markedDates={{
-                            [date]: {
-                                selected: true,
-                                selectedColor: theme.colors.primary,
-                            },
+                            [date]: { selected: true, selectedColor: theme.colors.primary },
                         }}
                         onDayPress={handleDayPress}
                         theme={{
@@ -240,8 +236,6 @@ const StepThree = memo(function StepThree({
                     />
                 </View>
             )}
-
-            {/* Time picker modal */}
             <DateTimePickerModal
                 isVisible={isTimePickerOpen}
                 mode="time"
@@ -253,32 +247,52 @@ const StepThree = memo(function StepThree({
 });
 
 // STEP 4
-const StepFour = memo(function StepFour({ photos }) {
+const StepFour = memo(function StepFour({ photos, setPhotos }) {
+    const handlePickPhoto = async () => {
+        const pickerResult = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsMultipleSelection: false,
+        });
+        if (!pickerResult.canceled && pickerResult.assets?.[0]) {
+            if (photos.length >= 6) {
+                alert('You can only add up to 6 photos.');
+                return;
+            }
+            const newPhotoUri = pickerResult.assets[0].uri;
+            setPhotos((prev) => [...prev, newPhotoUri]);
+        }
+    };
+
+    const handleRemovePhoto = (index) => {
+        const newPhotos = [...photos];
+        newPhotos.splice(index, 1);
+        setPhotos(newPhotos);
+    };
+
     return (
         <View>
             <Text style={styles.stepTitle}>Upload / Edit Photos</Text>
-            {photos?.length > 0 ? (
+            {photos.length > 0 ? (
                 <View style={styles.photoContainer}>
-                    {photos.map((photoUri, index) => (
-                        <Image
-                            key={index}
-                            source={{ uri: photoUri }}
-                            style={styles.photo}
-                            resizeMode="cover"
-                        />
+                    {photos.map((uri, i) => (
+                        <Pressable
+                            key={i}
+                            onLongPress={() => handleRemovePhoto(i)}
+                            style={{ marginRight: 8, marginBottom: 8 }}
+                        >
+                            <Image source={{ uri }} style={styles.photo} resizeMode="cover" />
+                        </Pressable>
                     ))}
                 </View>
             ) : (
-                <Text style={{ marginBottom: 8 }}>No photos yet.</Text>
+                <Text>No photos yet.</Text>
             )}
-            <Button
-                mode="outlined"
-                onPress={() => {
-                    // pickPhoto() logic
-                }}
-            >
+            <Button mode="outlined" onPress={handlePickPhoto}>
                 Add Photo
             </Button>
+            <Text style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                Long-press a photo to remove it. (Max 6)
+            </Text>
         </View>
     );
 });
@@ -292,31 +306,67 @@ const StepFive = memo(function StepFive({
     time,
     photos,
 }) {
+    // We'll show a hero carousel on top (50% of screen), details below it.
+    const IMAGE_HEIGHT = Math.round(SCREEN_HEIGHT * 0.3);
+
     return (
-        <View>
-            <Text style={styles.stepTitle}>Preview &amp; Publish</Text>
-            <View style={styles.previewBox}>
-                <Text>Title: {title}</Text>
-                <Text>Details: {details}</Text>
-                <Text>Location: {location}</Text>
-                <Text>Date: {date}</Text>
-                <Text>Time: {time}</Text>
+        <ScrollView style={{ flex: 1, borderRadius: 15 }}>
+            {/* === TOP CAROUSEL (50% screen) === */}
+            <View style={[styles.carouselContainer, { height: IMAGE_HEIGHT }]}>
+                <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    style={{ flex: 1, borderRadius: 15 }}
+                >
+                    {photos.length > 0 ? (
+                        photos.map((uri, index) => (
+                            <Image
+                                key={index}
+                                source={{ uri }}
+                                style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT, resizeMode: 'cover' }}
+                            />
+                        ))
+                    ) : (
+                        <Image
+                            // fallback image if no photos
+                            source={require('../../../assets/placeholder.png')}
+                            style={{ width: SCREEN_WIDTH, height: IMAGE_HEIGHT, resizeMode: 'cover' }}
+                        />
+                    )}
+                </ScrollView>
             </View>
-            <Text style={{ marginBottom: 8 }}>Photos:</Text>
-            <View style={styles.photoContainer}>
-                {photos.map((photoUri, index) => (
-                    <Image
-                        key={index}
-                        source={{ uri: photoUri }}
-                        style={styles.photo}
-                        resizeMode="cover"
-                    />
-                ))}
+
+            {/* === BOTTOM CONTENT === */}
+            <View style={[styles.bottomContent]}>
+                {/* You can style a "card" effect or just plain background */}
+                <View style={styles.bottomCard}>
+                    <Text style={styles.bigTitle}>{title}</Text>
+                    <View style={styles.infoContainer}>
+
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Location</Text>
+                            <Text style={styles.infoValue}>{location || 'N/A'}</Text>
+                        </View>
+
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Date</Text>
+                            <Text style={styles.infoValue}>{date || 'N/A'}</Text>
+                        </View>
+
+                        {/* <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Time:</Text>
+                            <Text style={styles.infoValue}>{time || 'N/A'}</Text>
+                        </View> */}
+                    </View>
+                    <Text style={styles.sectionHeading}>About this date</Text>
+                    <Text style={styles.detailsText}>
+                        {details || 'No description provided.'}
+                    </Text>
+
+                </View>
             </View>
-            <Text style={{ marginBottom: 8 }}>
-                If everything looks good, tap "Next" to publish.
-            </Text>
-        </View>
+        </ScrollView>
     );
 });
 
@@ -327,8 +377,9 @@ export default function CreateDateScreen({ navigation }) {
     const paperTheme = useTheme();
     const { user, userDoc } = useContext(AuthContext);
     const { createDate } = useContext(DatesContext);
+    const theme = useTheme();
 
-    // Which step we’re on
+
     const [currentStep, setCurrentStep] = useState(1);
 
     // Form fields
@@ -339,8 +390,9 @@ export default function CreateDateScreen({ navigation }) {
     const [time, setTime] = useState('');
     const [photos, setPhotos] = useState([]);
     const [error, setError] = useState(null);
+    const [isPublishing, setIsPublishing] = useState(false);
 
-    // Grab user info (photo, name, age) for the layout
+    // On mount, optionally load userDoc photos as defaults
     useEffect(() => {
         if (userDoc?.photos) {
             setPhotos(userDoc.photos);
@@ -352,7 +404,6 @@ export default function CreateDateScreen({ navigation }) {
     const hostAge = userDoc?.age || '';
 
     const handleNext = useCallback(() => {
-        // Validate fields for the current step
         if (currentStep === 1 && !title) {
             setError('Please enter a title.');
             return;
@@ -387,27 +438,61 @@ export default function CreateDateScreen({ navigation }) {
         }
     }, [currentStep]);
 
-    const handleCreateDate = async () => {
-        if (!title || !location || !date || !time) {
-            setError('Please fill out all required fields before publishing.');
-            return;
+    // Upload photos to Storage
+    const uploadAllPhotos = async (docId) => {
+        const storage = getStorage();
+        const photoURLs = [];
+        for (let i = 0; i < photos.length; i++) {
+            const uri = photos[i];
+            try {
+                const resp = await fetch(uri);
+                const blob = await resp.blob();
+                const fileRef = ref(storage, `date_photos/${docId}/photo_${i}.jpg`);
+                await uploadBytes(fileRef, blob);
+                const downloadURL = await getDownloadURL(fileRef);
+                photoURLs.push(downloadURL);
+            } catch (err) {
+                console.error('Error uploading photo:', err);
+            }
         }
+        return photoURLs;
+    };
+
+    const handleCreateDate = async () => {
         if (!user) {
             setError('You must be logged in to create a date.');
             return;
         }
+        if (!title || !location || !date || !time) {
+            setError('Please fill out all required fields before publishing.');
+            return;
+        }
+        setIsPublishing(true);
+        setError(null);
 
         try {
-            await createDate({
+            // 1) Create doc in Firestore "dates" to get the docId
+            const docRef = await addDoc(collection(db, 'dates'), {
+                hostId: user.uid,
                 title,
                 details,
                 location,
                 date,
                 time,
-                photos,
                 status: 'open',
+                createdAt: serverTimestamp(),
+                photos: [],
             });
-            // Reset
+
+            // 2) Upload each photo
+            const photoURLs = await uploadAllPhotos(docRef.id);
+
+            // 3) Update the date doc
+            await updateDoc(doc(db, 'dates', docRef.id), {
+                photos: photoURLs,
+            });
+
+            // Reset local state
             setTitle('');
             setDetails('');
             setLocation('');
@@ -417,7 +502,10 @@ export default function CreateDateScreen({ navigation }) {
 
             navigation.navigate('MenHome');
         } catch (err) {
+            console.error('Error creating date:', err);
             setError(err.message);
+        } finally {
+            setIsPublishing(false);
         }
     };
 
@@ -449,7 +537,9 @@ export default function CreateDateScreen({ navigation }) {
                     />
                 );
             case 4:
-                return <StepFour photos={photos} />;
+                return (
+                    <StepFour photos={photos} setPhotos={setPhotos} />
+                );
             case 5:
                 return (
                     <StepFive
@@ -467,7 +557,7 @@ export default function CreateDateScreen({ navigation }) {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={{ flex: 1 }}>
             <CreateDateLayout
                 step={currentStep}
                 totalSteps={5}
@@ -476,7 +566,7 @@ export default function CreateDateScreen({ navigation }) {
                 hostAge={hostAge}
                 title="Create an event"
                 subtitle={`Step ${currentStep} of 5`}
-                canGoBack={currentStep > 1}
+                canGoBack={currentStep > 1 && !isPublishing}
                 onBack={handleBack}
                 onNext={handleNext}
                 nextLabel={currentStep === 5 ? 'Publish' : 'Next'}
@@ -497,16 +587,25 @@ export default function CreateDateScreen({ navigation }) {
                     },
                 }}
             >
-                {renderStepContent()}
+                {isPublishing ? (
+                    <View style={styles.centered}>
+                        <ActivityIndicator size="large" />
+                        <Text style={{ marginTop: 16 }}>Publishing your date...</Text>
+                    </View>
+                ) : (
+                    renderStepContent()
+                )}
             </CreateDateLayout>
-        </View>
+        </SafeAreaView>
     );
 }
 
 /* ============= STYLES ============= */
 const styles = StyleSheet.create({
-    container: {
+    centered: {
         flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     stepTitle: {
         fontSize: 18,
@@ -531,14 +630,12 @@ const styles = StyleSheet.create({
     photoContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: 8,
+        marginTop: 10,
     },
     photo: {
         width: 60,
         height: 60,
         borderRadius: 4,
-        marginRight: 8,
-        marginBottom: 8,
     },
     previewBox: {
         padding: 12,
@@ -547,11 +644,10 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
 
-    /* ============ StepThree Layout ============ */
+    // StepThree
     dateTimeRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        // Each button is half the row
         marginBottom: 8,
     },
     buttonStyle: {
@@ -563,10 +659,58 @@ const styles = StyleSheet.create({
         borderColor: '#252525',
     },
     calendarRow: {
-        // Calendar appears below the row, spanning full width
         marginTop: 8,
     },
     calendar: {
         borderRadius: 8,
+    },
+
+    // Step Five styles
+    carouselContainer: {
+        // Absolutely position the top carousel if you want it behind the layout’s header
+        // For example: position:'absolute', top:0, left:0, right:0
+        // but here we keep it simple: we just fix the height at 50% in that component
+        borderRadius: 15,
+    },
+    bottomContent: {
+        flex: 1,
+        paddingTop: 5
+    },
+    bottomCard: {
+    },
+    bigTitle: {
+        fontSize: 25,
+        fontWeight: '700',
+        marginBottom: 15,
+    },
+    infoContainer: {
+        display: "flex",
+        justifyContent: "space-between",
+        flexDirection: "row"
+    },
+
+    infoRow: {
+        flexDirection: 'column',
+        justifyContent: "center",
+        marginBottom: 5,
+    },
+    infoLabel: {
+        fontWeight: '700',
+        marginRight: 8,
+        textAlign: "center"
+    },
+    infoValue: {
+        fontWeight: '400',
+    },
+    sectionHeading: {
+        marginTop: 12,
+        marginBottom: 4,
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    detailsText: {
+        fontSize: 14,
+        lineHeight: 20,
+        opacity: 0.5,
     },
 });

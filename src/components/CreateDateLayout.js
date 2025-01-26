@@ -1,13 +1,69 @@
 // CreateDateLayout.js
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import {
-    Text,
-    Button,
-    ProgressBar
-} from 'react-native-paper';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, IconButton } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient'; // or 'react-native-linear-gradient'
 import HostHeader from './HostHeader';
 
+/* 
+ * 1) Custom gradient progress bar. 
+ *    “progress” is a number 0..1. 
+ *    “barHeight” is optional style.
+ */
+function GradientProgressBar({ progress, barHeight = 8 }) {
+    return (
+        <View
+            style={{
+                height: barHeight,
+                borderRadius: barHeight / 2,
+                backgroundColor: '#ccc', // the unfilled portion
+                overflow: 'hidden',
+            }}
+        >
+            <View style={{ width: `${progress * 100}%`, height: '100%' }}>
+                <LinearGradient
+                    colors={['#e60000', '#e6ab00']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ width: '100%', height: '100%' }}
+                />
+            </View>
+        </View>
+    );
+}
+
+/* 
+ * 2) Custom gradient button. 
+ *    We replicate the arrow-right + label. 
+ */
+function GradientButton({ label, icon = 'arrow-right', onPress, style }) {
+    return (
+        <TouchableOpacity onPress={onPress} style={[styles.gradientButtonContainer, style]}>
+            {/* The gradient background */}
+            <LinearGradient
+                colors={['#e60000', '#e6ab00']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[StyleSheet.absoluteFill, { borderRadius: 25 }]}
+            />
+            {/* The button content: icon + text */}
+            <View style={styles.gradientButtonContent}>
+                {/* Icon */}
+                <IconButton
+                    icon={icon}
+                    size={20}
+                    iconColor="#fff"
+                    style={{ margin: 0, marginRight: 4 }}
+                />
+                <Text style={styles.gradientButtonText}>{label}</Text>
+            </View>
+        </TouchableOpacity>
+    );
+}
+
+/* ============================= */
+/*         MAIN LAYOUT          */
+/* ============================= */
 export default function CreateDateLayout({
     step = 1,
     totalSteps = 5,
@@ -23,24 +79,24 @@ export default function CreateDateLayout({
     nextLabel = 'Next',
     backLabel = 'Back',
     children,
-    // We'll assume `theme` has the shape { colors: { background, text, primary, cardBackground } }
     theme,
 }) {
     const progress = step / totalSteps;
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-
             {/* ========== TOP SECTION ========== */}
             <View style={styles.topSection}>
-                <View style={styles.headerRow}>
-                    <HostHeader
-                        photo={hostPhoto}
-                        name={hostName}
-                        age={hostAge}
-                        theme={theme}
-                    />
-                </View>
+                {/* If you want to show host header here, uncomment:
+        <View style={styles.headerRow}>
+          <HostHeader
+            photo={hostPhoto}
+            name={hostName}
+            age={hostAge}
+            theme={theme}
+          />
+        </View>
+        */}
 
                 {/* Title & Subtitle */}
                 {title ? (
@@ -51,7 +107,6 @@ export default function CreateDateLayout({
                         {title}
                     </Text>
                 ) : null}
-
                 {subtitle ? (
                     <Text
                         variant="bodySmall"
@@ -61,13 +116,9 @@ export default function CreateDateLayout({
                     </Text>
                 ) : null}
 
-                {/* Progress Bar */}
+                {/* Gradient Progress Bar */}
                 <View style={{ marginTop: 8 }}>
-                    <ProgressBar
-                        progress={progress}
-                        color={theme.colors.primary}
-                        style={{ height: 8, borderRadius: 4, backgroundColor: theme.colors.cardBackground }}
-                    />
+                    <GradientProgressBar progress={progress} />
                 </View>
 
                 {/* Error messages (if any) */}
@@ -76,64 +127,48 @@ export default function CreateDateLayout({
 
             {/* ========== MIDDLE SECTION (OUR "CARD") ========== */}
             <View style={styles.cardSection}>
-                <View
-                    style={[
-                        styles.card,
-                        {
-                            backgroundColor: theme.colors.cardBackground,
-                        },
-                    ]}
-                >
-                    <View style={styles.cardContent}>
-                        {children}
-                    </View>
+                <View style={[styles.card, { backgroundColor: theme.colors.cardBackground }]}>
+                    <View style={styles.cardContent}>{children}</View>
                 </View>
             </View>
 
             {/* ========== BOTTOM NAVIGATION ========== */}
             <View style={styles.bottomNav}>
                 {canGoBack ? (
-                    <Button
-                        mode="outlined"
-                        icon="arrow-left"
+                    <TouchableOpacity
                         onPress={onBack}
-                        style={[styles.navButton, { borderColor: theme.colors.primary }]}
-                        textColor={theme.colors.primary}
-                        labelStyle={{ fontSize: 16 }}
+                        style={[styles.outlinedBtn, { borderColor: theme.colors.primary }]}
                     >
-                        {backLabel}
-                    </Button>
+                        {/* Left arrow icon + text */}
+                        <IconButton
+                            icon="arrow-left"
+                            size={20}
+                            iconColor={theme.colors.primary}
+                            style={{ margin: 0, marginRight: 4 }}
+                        />
+                        <Text style={[styles.outlinedBtnText, { color: theme.colors.primary }]}>
+                            {backLabel}
+                        </Text>
+                    </TouchableOpacity>
                 ) : (
-                    /* 
-                     * This placeholder exactly matches 
-                     * the navButton style: same width & height 
-                     * so the layout doesn't shift.
-                     */
                     <View style={styles.buttonPlaceholder} />
                 )}
 
-                <Button
-                    mode="contained"
-                    icon="arrow-right"
-                    onPress={onNext}
-                    style={styles.navButton}
-                    buttonColor={theme.colors.primary}
-                    labelStyle={{ fontSize: 16, color: '#fff' }}
-                >
-                    {nextLabel}
-                </Button>
+                {/* Next button (gradient) */}
+                <GradientButton label={nextLabel} icon="arrow-right" onPress={onNext} />
             </View>
         </View>
     );
 }
 
+/* ============================= */
+/*           STYLES             */
+/* ============================= */
 const styles = StyleSheet.create({
-    /* Outer container takes the full screen (or parent space) */
     container: {
         flex: 1,
     },
-
-    /* ===== TOP SECTION ===== */
+    // ======= TOP SECTION =======
     topSection: {
         paddingHorizontal: 16,
         paddingTop: 16,
@@ -153,9 +188,8 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
 
-    /* ===== MIDDLE “CARD” SECTION ===== */
+    // ======= MIDDLE “CARD” SECTION =======
     cardSection: {
-        // Fill leftover vertical space between top & bottom
         flex: 1,
         marginHorizontal: 16,
         marginBottom: 16,
@@ -174,7 +208,7 @@ const styles = StyleSheet.create({
         padding: 16,
     },
 
-    /* ===== BOTTOM NAV SECTION ===== */
+    // ======= BOTTOM NAV SECTION =======
     bottomNav: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -182,15 +216,42 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         paddingHorizontal: 16,
     },
-    navButton: {
-        // Must define both width & height 
-        // so we can match it exactly in buttonPlaceholder
-        minWidth: 120,
-        height: 48,
-        justifyContent: 'center',
-    },
     buttonPlaceholder: {
         width: 120,
         height: 48,
+    },
+
+    // Outline "Back" button
+    outlinedBtn: {
+        minWidth: 120,
+        height: 48,
+        borderWidth: 1,
+        borderRadius: 25,
+        paddingHorizontal: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    outlinedBtnText: {
+        fontSize: 16,
+    },
+
+    // ======= GRADIENT BUTTON =======
+    gradientButtonContainer: {
+        minWidth: 120,
+        height: 48,
+        borderRadius: 25,
+        overflow: 'hidden',
+    },
+    gradientButtonContent: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    gradientButtonText: {
+        fontSize: 16,
+        color: '#fff',
+        fontWeight: '500',
     },
 });
