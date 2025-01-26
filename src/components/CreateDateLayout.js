@@ -66,7 +66,7 @@ export default function CreateDateLayout({
                     <ProgressBar
                         progress={progress}
                         color={theme.colors.primary}
-                        style={{ height: 8, borderRadius: 4 }}
+                        style={{ height: 8, borderRadius: 4, backgroundColor: theme.colors.cardBackground }}
                     />
                 </View>
 
