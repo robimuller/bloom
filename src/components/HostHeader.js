@@ -3,6 +3,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { Image } from 'expo-image';
+// udiweuhdiw eudh e
 
 function HostHeader({ photo, name, age, theme = {} }) {
     const firstLetter = (name || 'U')[0].toUpperCase();
