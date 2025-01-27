@@ -26,6 +26,9 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             // Keep a separate variable if you still want to call it cardBackground:
             cardBackground: baseTheme.cardBackground,
 
+            overlay: baseTheme.overlay, // <--- carry over the custom overlay
+
+
             // You can include these if you like:
             secondary: baseTheme.secondary,
             onSecondary: '#fff',
