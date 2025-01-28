@@ -1,4 +1,4 @@
-// WomenRequestsScreen.js
+// src/screens/women/WomenRequestsScreen.js
 import React, { useState, useContext } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
 import {
@@ -21,10 +21,10 @@ export default function WomenRequestsScreen({ navigation }) {
   // 'pending' or 'accepted'
   const [statusFilter, setStatusFilter] = useState('pending');
 
-  // Filter requests by status. Women see requests where requesterId = user.uid.
+  // Show only the user's requests that match the chosen filter
   const filteredRequests = requests.filter((r) => r.status === statusFilter);
 
-  // If a request is 'accepted' and has a chatId, we can open Chat.
+  // If a request is 'accepted' and has a chatId, user can open Chat
   const handleOpenChat = (reqItem) => {
     if (!reqItem.chatId) return;
     navigation.navigate('Chat', {
@@ -37,7 +37,7 @@ export default function WomenRequestsScreen({ navigation }) {
 
   const renderRequest = ({ item }) => {
     return (
-      <Card style={styles.card} mode="outlined">
+      <Card mode="outlined" style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Card.Title
           title={`Date ID: ${item.dateId}`}
           subtitle={`Host: ${item.hostId}`}
@@ -47,7 +47,6 @@ export default function WomenRequestsScreen({ navigation }) {
             Status: {item.status}
           </PaperText>
         </Card.Content>
-
         <Card.Actions>
           {statusFilter === 'pending' ? (
             <PaperText
@@ -73,7 +72,10 @@ export default function WomenRequestsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
+      edges={['top']}
+    >
       <View style={styles.container}>
         <PaperText variant="headlineMedium" style={styles.header}>
           Women Requests
@@ -94,6 +96,13 @@ export default function WomenRequestsScreen({ navigation }) {
           keyExtractor={(item) => item.id}
           renderItem={renderRequest}
           contentContainerStyle={{ paddingBottom: 20 }}
+          ListEmptyComponent={
+            <PaperText
+              style={{ color: theme.colors.onSurfaceVariant, alignSelf: 'center' }}
+            >
+              No {statusFilter} requests available.
+            </PaperText>
+          }
         />
       </View>
     </SafeAreaView>
@@ -101,8 +110,20 @@ export default function WomenRequestsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  header: { marginBottom: 16 },
-  segments: { marginBottom: 16 },
-  card: { marginBottom: 12 },
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  header: {
+    marginBottom: 16,
+  },
+  segments: {
+    marginBottom: 16,
+  },
+  card: {
+    marginBottom: 12,
+  },
 });

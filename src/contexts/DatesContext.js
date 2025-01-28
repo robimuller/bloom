@@ -7,7 +7,7 @@ import {
     where,
     onSnapshot,
     addDoc,
-    getDoc,     // <--- we'll need getDoc to load host user
+    getDoc,
     serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -75,6 +75,23 @@ export const DatesProvider = ({ children }) => {
         }
     };
 
+    // NEW: a helper to file a report in Firestore
+    const reportDate = async ({ dateId, hostId, reporterId, reasons }) => {
+        try {
+            const reportsRef = collection(db, 'reports');
+            await addDoc(reportsRef, {
+                dateId,
+                hostId,
+                reporterId,
+                reasons, // array of strings
+                createdAt: serverTimestamp(),
+            });
+        } catch (error) {
+            console.error('Error reporting date:', error);
+            throw error;
+        }
+    };
+
     // You can choose whether you auto‐fetch in the provider or let screens call it
     useEffect(() => {
         // e.g. automatically subscribe to all open dates
@@ -86,6 +103,7 @@ export const DatesProvider = ({ children }) => {
         <DatesContext.Provider value={{
             dates,
             loadingDates,
+            reportDate,
             createDate,
             fetchOpenDates, // so any screen can call it again if needed
         }}>

@@ -7,9 +7,10 @@ import {
     StyleSheet,
     Text,
     Dimensions,
-    TouchableOpacity
+    TouchableOpacity,
+    Modal,
 } from 'react-native';
-import { useTheme } from 'react-native-paper';
+import { useTheme, Checkbox, Button } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import Animated, {
@@ -21,20 +22,35 @@ import Animated, {
     Extrapolate,
     runOnJS
 } from 'react-native-reanimated';
-
+import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
 import { RequestsContext } from '../../contexts/RequestsContext';
 import { getDateCategory } from '../../utils/dateCategory';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Possible reasons for reporting:
+const REPORT_OPTIONS = [
+    'Harassment',
+    'Fake Profile',
+    'Spam',
+    'Sexually explicit content',
+    'Inappropriate date content',
+];
+
 // Number of tiny hearts to explode
 const HEART_COUNT = 6;
 
-export default function WomenFeedScreen() {
-    const { dates, loadingDates } = useContext(DatesContext);
+export default function WomenFeedScreen({ onScroll }) {
+    const { user } = useContext(AuthContext);
+    const { dates, loadingDates, reportDate } = useContext(DatesContext);
     const { sendRequest, cancelRequest, requests } = useContext(RequestsContext);
     const { colors } = useTheme();
+
+    // State for the report modal
+    const [reportModalVisible, setReportModalVisible] = useState(false);
+    const [reportTargetItem, setReportTargetItem] = useState(null);
+    const [reportReasons, setReportReasons] = useState([]);
 
     // Fired when user taps the heart to create a request
     const handleSendRequest = async (dateId, hostId) => {
@@ -57,7 +73,60 @@ export default function WomenFeedScreen() {
         }
     };
 
+    // Called when the user taps the flag icon
+    const handleFlagPress = (item) => {
+        setReportTargetItem(item);
+        setReportReasons([]); // reset any previously selected reasons
+        setReportModalVisible(true);
+    };
+
+    // Submits the report to Firestore
+    const handleSubmitReport = async () => {
+        if (!reportTargetItem) return;
+        if (reportReasons.length === 0) {
+            Alert.alert('Select a reason', 'Please choose at least one reason.');
+            return;
+        }
+
+        const { id: dateId, hostId } = reportTargetItem;
+        const reporterId = user?.uid;                    // <- Use the currently logged-in user’s ID
+
+        if (!reporterId) {
+            Alert.alert('Not Logged In', 'You must be logged in to report a date.');
+            return;
+        }
+
+        try {
+            await reportDate({
+                dateId,
+                hostId,
+                reporterId,
+                reasons: reportReasons,
+            });
+            Alert.alert('Report Submitted', 'Thank you for your feedback.');
+        } catch (error) {
+            Alert.alert('Error', 'Could not submit report. Please try again.');
+            console.error('Report error:', error);
+        } finally {
+            setReportModalVisible(false);
+        }
+    };
+
+    // Toggles a reason on/off from the selected array
+    const toggleReason = (reason) => {
+        setReportReasons((prev) => {
+            if (prev.includes(reason)) {
+                // remove it
+                return prev.filter((r) => r !== reason);
+            } else {
+                // add it
+                return [...prev, reason];
+            }
+        });
+    };
+
     const renderItem = ({ item }) => {
+
         const dateId = item.id;
         const hostId = item.hostId;
         const dateCategory = getDateCategory(item.date || '');
@@ -72,7 +141,7 @@ export default function WomenFeedScreen() {
         );
 
         return (
-            <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.cardContainer, { backgroundColor: colors.overlay }]}>
                 {/* Header */}
                 <View style={styles.header}>
                     <Image
@@ -89,12 +158,14 @@ export default function WomenFeedScreen() {
                             {item.host?.age ? `, ${item.host.age}` : ''}
                         </Text>
                     </View>
-                    <Ionicons
-                        name="flag-outline"
-                        size={20}
-                        color={colors.onSurface ?? '#666'}
-                        style={{ marginRight: 8 }}
-                    />
+                    <TouchableOpacity onPress={() => handleFlagPress(item)}>
+                        <Ionicons
+                            name="flag-outline"
+                            size={20}
+                            color={colors.onSurface ?? '#666'}
+                            style={{ marginRight: 8 }}
+                        />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Carousel */}
@@ -111,7 +182,7 @@ export default function WomenFeedScreen() {
                 <View style={styles.footer}>
                     <Text style={[styles.dateTitle, { color: colors.text }]}>{item.title}</Text>
                     <View style={styles.footerRow}>
-                        <Text style={[styles.location, { color: colors.onSurface }]}>{item.location}</Text>
+                        <Text style={[styles.location, { color: colors.secondary }]}>{item.location}</Text>
                         <Text style={[styles.dateCategory, { color: colors.onSurface }]}>{dateCategory}</Text>
                     </View>
                 </View>
@@ -120,7 +191,7 @@ export default function WomenFeedScreen() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1 }}>
             {loadingDates ? (
                 <Text style={{ textAlign: 'center', marginTop: 20, color: colors.text }}>
                     Loading Dates…
@@ -131,8 +202,71 @@ export default function WomenFeedScreen() {
                     keyExtractor={(date) => date.id}
                     renderItem={renderItem}
                     contentContainerStyle={{ paddingBottom: 20 }}
+                    onScroll={(e) => {
+                        if (onScroll) {
+                            onScroll(e);
+                        }
+                    }}
+                    scrollEventThrottle={16} // Adjust this value for smoother scrolling
                 />
             )}
+            {/* REPORT MODAL */}
+            <Modal
+                animationType="fade"
+                transparent
+                visible={reportModalVisible}
+                onRequestClose={() => setReportModalVisible(false)}
+            >
+                {/* Outer touchable: if the user taps here, close the modal */}
+                <TouchableOpacity
+                    style={styles.modalBackdrop}
+                    activeOpacity={1}
+                    onPressOut={() => setReportModalVisible(false)}
+                >
+                    {/* Inner touchable: tapping inside the modal content does nothing */}
+                    <TouchableOpacity
+                        style={[styles.modalContainer, { backgroundColor: colors.background }]}
+                        activeOpacity={1}
+                        onPress={() => { }}
+                    >
+                        <Text style={[styles.modalTitle, { color: colors.text }]}>
+                            {`Report ${reportTargetItem?.host?.displayName || 'User'}?`}
+                        </Text>
+                        <Text style={[styles.modalSubtitle, { color: colors.secondary }]}>
+                            Choose the reason(s) for your report from the list of options provided:
+                        </Text>
+
+                        {REPORT_OPTIONS.map((reason) => (
+                            <View key={reason} style={styles.checkboxRow}>
+                                <Checkbox.Android
+                                    status={reportReasons.includes(reason) ? 'checked' : 'unchecked'}
+                                    onPress={() => toggleReason(reason)}
+                                    color={colors.primary}
+                                    uncheckedColor={colors.outline}
+                                />
+                                <Text style={[styles.checkboxLabel, { color: colors.text }]}>{reason}</Text>
+                            </View>
+                        ))}
+
+                        <View style={styles.buttonRow}>
+                            <Button
+                                mode="contained"
+                                onPress={handleSubmitReport}
+                                style={styles.reportButton}
+                                textColor={colors.onPrimary}
+                            >
+                                Report
+                            </Button>
+                        </View>
+
+                        <TouchableOpacity onPress={() => setReportModalVisible(false)}>
+                            <Text style={[styles.cancelText, { color: colors.primary }]}>
+                                No, back to profile
+                            </Text>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
         </View>
     );
 }
@@ -151,7 +285,7 @@ function Carousel({
 
     const onScroll = (event) => {
         const offsetX = event.nativeEvent.contentOffset.x;
-        const index = Math.round(offsetX / (SCREEN_WIDTH * 0.8));
+        const index = Math.round(offsetX / (SCREEN_WIDTH * 0.85));
         setCurrentIndex(index);
     };
 
@@ -266,11 +400,11 @@ function HeartCircleButton({
     return (
         <View>
             <TouchableOpacity
-                style={[styles.heartButton, { backgroundColor }]}
+                style={[styles.heartButton, { backgroundColor: colors.background }]}
                 onPress={handlePress}
                 activeOpacity={0.8}
             >
-                <Ionicons name={iconName} size={24} color={colors.onPrimary} />
+                <Ionicons name={iconName} size={24} color={colors.primary} />
             </TouchableOpacity>
             {exploding && <HeartsExplosion progress={progress} />}
         </View>
@@ -348,7 +482,8 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         paddingHorizontal: 25,
         paddingBottom: 12,
-        marginTop: 16
+        marginTop: 16,
+        flex: 1,
     },
     //----------------------------------
     // Header
@@ -395,8 +530,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     indexText: {
-        fontSize: 14,
-        fontWeight: '900'
+        fontSize: 10,
+        fontWeight: '300'
     },
     //----------------------------------
     // Heart Button (bottom-right)
@@ -446,5 +581,52 @@ const styles = StyleSheet.create({
     },
     dateCategory: {
         fontSize: 14,
+    },
+
+    // ----- MODAL STYLES -----
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContainer: {
+        width: '90%',
+        borderRadius: 16,
+        padding: 20,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    checkboxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    checkboxLabel: {
+        marginLeft: 8,
+        fontSize: 14,
+    },
+    buttonRow: {
+        marginVertical: 16,
+        alignItems: 'center',
+    },
+    reportButton: {
+        width: '60%',
+        borderRadius: 20,
+    },
+    cancelText: {
+        textAlign: 'center',
+        marginTop: 8,
+        fontSize: 14,
+        textDecorationLine: 'underline',
     },
 });

@@ -1,5 +1,5 @@
-// src/screens/MenRequestsScreen.js
-import React, { useEffect, useState, useContext } from 'react';
+// src/screens/men/MenRequestsScreen.js
+import React, { useState, useContext } from 'react';
 import { StyleSheet, FlatList, View } from 'react-native';
 import {
     SegmentedButtons,
@@ -8,7 +8,6 @@ import {
     Button as PaperButton,
     useTheme,
 } from 'react-native-paper';
-
 import { AuthContext } from '../../contexts/AuthContext';
 import { RequestsContext } from '../../contexts/RequestsContext';
 
@@ -19,15 +18,13 @@ export default function MenRequestsScreen({ navigation }) {
     const [statusFilter, setStatusFilter] = useState('pending');
     const paperTheme = useTheme();
 
-    // Filter all requests from context for those matching statusFilter
-    // (Men only see requests where hostId = user.uid, as set up in RequestsContext)
+    // Only show requests matching the chosen filter
     const filteredRequests = requests.filter((req) => req.status === statusFilter);
 
-    // Handle "Accept": create a chat, update request -> accepted
+    // Accept request => create chat => update doc
     const handleAccept = async (reqItem) => {
         try {
             const chatId = await acceptRequest(reqItem);
-            // Navigate to Chat screen
             navigation.navigate('Chat', {
                 chatId,
                 dateId: reqItem.dateId,
@@ -39,7 +36,7 @@ export default function MenRequestsScreen({ navigation }) {
         }
     };
 
-    // Handle "Reject": update request -> rejected
+    // Reject request => update doc
     const handleReject = async (reqItem) => {
         try {
             await rejectRequest(reqItem);
@@ -48,7 +45,7 @@ export default function MenRequestsScreen({ navigation }) {
         }
     };
 
-    // If the request is already accepted, user can "Open Chat"
+    // Open chat for requests that were already accepted
     const handleOpenChat = (reqItem) => {
         if (!reqItem.chatId) return;
         navigation.navigate('Chat', {
@@ -60,8 +57,19 @@ export default function MenRequestsScreen({ navigation }) {
     };
 
     const renderRequest = ({ item }) => {
+        // We'll highlight any request that is still "pending"
+        const isNew = item.status === 'pending';
+
         return (
-            <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]} mode="outlined">
+            <Card
+                mode="outlined"
+                style={[
+                    styles.card,
+                    {
+                        backgroundColor: isNew ? '#FFF8E1' : paperTheme.colors.surface,
+                    },
+                ]}
+            >
                 <Card.Title
                     title={`Requester: ${item.requesterId}`}
                     subtitle={`Date ID: ${item.dateId}`}
@@ -69,11 +77,18 @@ export default function MenRequestsScreen({ navigation }) {
                     subtitleStyle={{ color: paperTheme.colors.placeholder }}
                 />
                 <Card.Content>
-                    <PaperText variant="bodyMedium" style={{ marginVertical: 4, color: paperTheme.colors.text }}>
+                    {isNew && (
+                        <PaperText style={{ color: 'red', fontWeight: 'bold' }}>
+                            NEW REQUEST
+                        </PaperText>
+                    )}
+                    <PaperText
+                        variant="bodyMedium"
+                        style={{ marginVertical: 4, color: paperTheme.colors.text }}
+                    >
                         Status: {item.status}
                     </PaperText>
                 </Card.Content>
-
                 <Card.Actions>
                     {statusFilter === 'pending' ? (
                         <>
@@ -81,7 +96,7 @@ export default function MenRequestsScreen({ navigation }) {
                                 mode="contained"
                                 onPress={() => handleAccept(item)}
                                 style={[styles.button, { marginRight: 8 }]}
-                                buttonColor="#4caf50" // Consider replacing with theme color
+                                buttonColor="#4caf50"
                                 textColor="#fff"
                             >
                                 Accept
@@ -90,14 +105,14 @@ export default function MenRequestsScreen({ navigation }) {
                                 mode="contained"
                                 onPress={() => handleReject(item)}
                                 style={styles.button}
-                                buttonColor="#f44336" // Consider replacing with theme color
+                                buttonColor="#f44336"
                                 textColor="#fff"
                             >
                                 Reject
                             </PaperButton>
                         </>
                     ) : (
-                        // If 'accepted', show "Open Chat"
+                        // If 'accepted', let user open the chat
                         <PaperButton
                             mode="contained"
                             onPress={() => handleOpenChat(item)}
@@ -122,7 +137,7 @@ export default function MenRequestsScreen({ navigation }) {
                 Men Requests
             </PaperText>
 
-            {/* Toggle between 'pending' and 'accepted' */}
+            {/* Filter for "pending" or "accepted" */}
             <SegmentedButtons
                 value={statusFilter}
                 onValueChange={setStatusFilter}
@@ -148,7 +163,9 @@ export default function MenRequestsScreen({ navigation }) {
                 renderItem={renderRequest}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 ListEmptyComponent={
-                    <PaperText style={{ color: paperTheme.colors.placeholder, alignSelf: 'center' }}>
+                    <PaperText
+                        style={{ color: paperTheme.colors.placeholder, alignSelf: 'center' }}
+                    >
                         No {statusFilter} requests available.
                     </PaperText>
                 }
@@ -158,11 +175,21 @@ export default function MenRequestsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
-    header: { marginBottom: 16 },
-    segments: { marginBottom: 16 },
-    card: { marginBottom: 12, width: '100%' },
+    container: {
+        flex: 1,
+        padding: 16,
+    },
+    header: {
+        marginBottom: 16,
+    },
+    segments: {
+        marginBottom: 16,
+    },
+    card: {
+        marginBottom: 12,
+        width: '100%',
+    },
     button: {
-        // Optional: Define button styles if needed
+        // style as needed
     },
 });
