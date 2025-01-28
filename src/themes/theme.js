@@ -3,10 +3,12 @@
 export const lightTheme = {
     text: '#1c0304',
     background: '#ffffff',
-    cardBackground: '#f0f0f0',
-    primary: '#ff1a1a',
+    cardBackground: '#f8f4ff',
+    primary: '#e60000',
     secondary: '#6C6F7F',
     accent: '#20FC8F',
+    overlay: 'rgba(255, 255, 255, 0.7)',
+
 };
 
 export const darkTheme = {
@@ -16,4 +18,6 @@ export const darkTheme = {
     primary: '#e60000',
     secondary: '#6C6F7F',
     accent: '#20FC8F',
+    overlay: 'rgba(0,0,0,0.7)',
+
 };

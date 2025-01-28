@@ -1,18 +1,22 @@
 // src/components/HostHeader.js
+
+// HostHeader.js
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { Image } from 'expo-image';
-// udiweuhdiw eudh e
 
 function HostHeader({ photo, name, age, theme = {} }) {
     const firstLetter = (name || 'U')[0].toUpperCase();
 
-    // Use destructuring with defaults
+    // Destructure your theme colors. 
+    // Provide fallback defaults in case they aren't defined.
     const {
-        primary = '#ff1a1a',
-        onPrimary = '#ffffff',
-        text = '#1c0304',
+        colors: {
+            primary = '#ff1a1a',
+            onPrimary = '#ffffff',
+            text = '#1c0304',
+        } = {},
     } = theme;
 
     return (
@@ -32,6 +36,7 @@ function HostHeader({ photo, name, age, theme = {} }) {
                 </View>
             )}
 
+            {/* Use the destructured 'text' color */}
             <Text style={[styles.hostName, { color: text }]}>
                 {name ? `${name}, ${age || ''}` : 'Host'}
             </Text>
@@ -64,5 +69,4 @@ const styles = StyleSheet.create({
     },
 });
 
-// Wrap in React.memo if desired
 export default React.memo(HostHeader);
