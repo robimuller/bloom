@@ -38,7 +38,7 @@ export default function WomenHomeScreen() {
             <View style={styles.mainContent}>
                 {/* If you want a header above the feed */}
                 <Title style={[styles.header, { color: paperTheme.colors.text }]}>
-                    Available Dates
+                    Discover
                 </Title>
 
                 {/* Embed the feed screen */}

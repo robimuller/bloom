@@ -6,6 +6,7 @@ import {
     onSnapshot,
     doc,
     updateDoc,
+    deleteDoc,
     serverTimestamp,
     query,
     where
@@ -25,17 +26,24 @@ export const RequestsProvider = ({ children }) => {
             setRequests([]);
             return;
         }
-        // Subscribe to "requests" that matter to this user, depending on gender
-        // If user is male => fetch requests where hostId = user.uid
-        // If user is female => fetch requests where requesterId = user.uid
         setLoadingRequests(true);
 
         const requestsRef = collection(db, 'requests');
         let q;
+
+        // If the user is male, we show requests that come in from others for the user’s dates
         if (gender === 'male') {
             q = query(requestsRef, where('hostId', '==', user.uid));
-        } else if (gender === 'female') {
+        }
+        // If the user is female, we show requests she sent to hosts
+        else if (gender === 'female') {
             q = query(requestsRef, where('requesterId', '==', user.uid));
+        } else {
+            // If there's a possibility user has a different gender,
+            // we can skip or handle differently:
+            setRequests([]);
+            setLoadingRequests(false);
+            return;
         }
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -50,7 +58,7 @@ export const RequestsProvider = ({ children }) => {
         return () => unsubscribe();
     }, [user, gender]);
 
-    // Create a new request (used by women who see open dates or men who want to invite women, in the future)
+    // Create a new request
     const sendRequest = async ({ dateId, hostId }) => {
         if (!user) return;
         try {
@@ -67,10 +75,20 @@ export const RequestsProvider = ({ children }) => {
         }
     };
 
-    // Accept request => update doc; optionally create a chat
+    // Cancel (delete) the request doc from Firestore
+    const cancelRequest = async (requestId) => {
+        try {
+            await deleteDoc(doc(db, 'requests', requestId));
+        } catch (error) {
+            console.error('Error canceling request:', error);
+            throw error;
+        }
+    };
+
+    // Example accept & reject
     const acceptRequest = async (request) => {
         try {
-            // Create chat doc
+            // Example logic: create a chat doc, then update the request
             const chatRef = await addDoc(collection(db, 'chats'), {
                 hostId: request.hostId,
                 requesterId: request.requesterId,
@@ -78,20 +96,17 @@ export const RequestsProvider = ({ children }) => {
                 createdAt: serverTimestamp(),
             });
 
-            // Update request => accepted, store the chatId
             await updateDoc(doc(db, 'requests', request.id), {
                 status: 'accepted',
                 chatId: chatRef.id,
             });
-
-            return chatRef.id; // so the screen can navigate
+            return chatRef.id;
         } catch (error) {
             console.error('Error accepting request:', error);
             throw error;
         }
     };
 
-    // Reject request => status = 'rejected'
     const rejectRequest = async (request) => {
         try {
             await updateDoc(doc(db, 'requests', request.id), {
@@ -103,7 +118,7 @@ export const RequestsProvider = ({ children }) => {
         }
     };
 
-    // For arbitrary status updates, if needed
+    // For general status updates
     const updateRequestStatus = async (requestId, status) => {
         try {
             await updateDoc(doc(db, 'requests', requestId), { status });
@@ -118,6 +133,7 @@ export const RequestsProvider = ({ children }) => {
                 requests,
                 loadingRequests,
                 sendRequest,
+                cancelRequest,
                 acceptRequest,
                 rejectRequest,
                 updateRequestStatus,

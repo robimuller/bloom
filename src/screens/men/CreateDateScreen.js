@@ -280,7 +280,7 @@ const StepFour = memo(function StepFour({ photos, setPhotos }) {
                             onLongPress={() => handleRemovePhoto(i)}
                             style={{ marginRight: 8, marginBottom: 8 }}
                         >
-                            <Image source={{ uri }} style={styles.photo} resizeMode="cover" />
+                            <Image source={{ uri }} style={styles.photo} contentFit="cover" />
                         </Pressable>
                     ))}
                 </View>

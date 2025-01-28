@@ -1,3 +1,4 @@
+// src/screens/WomenFeedScreen.jsx
 import React, { useContext, useState, useRef } from 'react';
 import {
     View,
@@ -6,10 +7,20 @@ import {
     StyleSheet,
     Text,
     Dimensions,
+    TouchableOpacity
 } from 'react-native';
-import { Button, useTheme } from 'react-native-paper';
+import { useTheme } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
+import Animated, {
+    useSharedValue,
+    withTiming,
+    Easing,
+    useAnimatedStyle,
+    interpolate,
+    Extrapolate,
+    runOnJS
+} from 'react-native-reanimated';
 
 import { DatesContext } from '../../contexts/DatesContext';
 import { RequestsContext } from '../../contexts/RequestsContext';
@@ -17,31 +28,51 @@ import { getDateCategory } from '../../utils/dateCategory';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Number of tiny hearts to explode
+const HEART_COUNT = 6;
+
 export default function WomenFeedScreen() {
     const { dates, loadingDates } = useContext(DatesContext);
-    const { sendRequest } = useContext(RequestsContext);
-
-    // Get Paper’s theme (already merged from your createPaperTheme)
+    const { sendRequest, cancelRequest, requests } = useContext(RequestsContext);
     const { colors } = useTheme();
 
-    const handleRequest = async (dateId, hostId) => {
+    // Fired when user taps the heart to create a request
+    const handleSendRequest = async (dateId, hostId) => {
         try {
             await sendRequest({ dateId, hostId });
-            Alert.alert('Request Sent', 'Your request to join this date has been sent!');
         } catch (error) {
             console.error('Error requesting date:', error);
             Alert.alert('Error', 'Could not send request. Please try again.');
         }
     };
 
+    // Fired when user taps the heart-dislike to cancel an existing request
+    const handleCancelRequest = async (requestId) => {
+        try {
+            await cancelRequest(requestId);
+            Alert.alert('Request Canceled', 'Your request has been canceled.');
+        } catch (error) {
+            console.error('Error canceling request:', error);
+            Alert.alert('Error', 'Could not cancel request. Please try again.');
+        }
+    };
+
     const renderItem = ({ item }) => {
+        const dateId = item.id;
+        const hostId = item.hostId;
         const dateCategory = getDateCategory(item.date || '');
 
+        // Check if there's already a request for this date (and still 'pending')
+        // Because if user is female => requests = all requests with 'requesterId = user.uid'
+        // So we find if there's any matching doc with the same dateId & hostId
+        const existingRequest = requests.find(
+            (r) => r.dateId === dateId &&
+                r.hostId === hostId &&
+                r.status === 'pending'
+        );
+
         return (
-            <View
-                // The card container uses theme’s “cardBackground” color
-                style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}
-            >
+            <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
                 {/* Header */}
                 <View style={styles.header}>
                     <Image
@@ -53,7 +84,6 @@ export default function WomenFeedScreen() {
                         style={styles.profilePic}
                     />
                     <View style={{ flex: 1 }}>
-                        {/* Host name in theme’s text color */}
                         <Text style={[styles.hostName, { color: colors.text }]}>
                             {item.host?.displayName || 'Unknown'}
                             {item.host?.age ? `, ${item.host.age}` : ''}
@@ -62,7 +92,7 @@ export default function WomenFeedScreen() {
                     <Ionicons
                         name="flag-outline"
                         size={20}
-                        color={colors.onSurface ?? '#666'} // fallback
+                        color={colors.onSurface ?? '#666'}
                         style={{ marginRight: 8 }}
                     />
                 </View>
@@ -70,7 +100,11 @@ export default function WomenFeedScreen() {
                 {/* Carousel */}
                 <Carousel
                     photos={item.photos || []}
-                    onRequest={() => handleRequest(item.id, item.hostId)}
+                    dateId={dateId}
+                    hostId={hostId}
+                    onSendRequest={handleSendRequest}
+                    onCancelRequest={handleCancelRequest}
+                    existingRequest={existingRequest}
                 />
 
                 {/* Footer */}
@@ -103,10 +137,16 @@ export default function WomenFeedScreen() {
     );
 }
 
-function Carousel({ photos, onRequest }) {
+function Carousel({
+    photos,
+    dateId,
+    hostId,
+    onSendRequest,
+    onCancelRequest,
+    existingRequest
+}) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef(null);
-
     const { colors } = useTheme();
 
     const onScroll = (event) => {
@@ -132,28 +172,169 @@ function Carousel({ photos, onRequest }) {
                     />
                 )}
             />
-            <View style={[
-                styles.overlayTopRight,
-                { backgroundColor: colors.overlay } // theme-based overlay
-            ]}>
+            <View style={[styles.overlayTopRight, { backgroundColor: colors.overlay }]}>
                 <Text style={[styles.indexText, { color: colors.onBackground }]}>
                     {currentIndex + 1}/{photos.length}
                 </Text>
             </View>
+
+            {/* Heart Circle Button + Explosion */}
             <View style={styles.overlayBottomRight}>
-                <Button
-                    icon={() => <Ionicons name="paper-plane" size={18} color={colors.onPrimary} />}
-                    mode="contained"
-                    onPress={onRequest}
-                    // Use the theme’s primary color
-                    buttonColor={colors.primary}
-                    style={styles.requestButton}
-                    labelStyle={[styles.requestButtonText, { color: colors.onPrimary }]}
-                >
-                    Request
-                </Button>
+                <HeartCircleButton
+                    dateId={dateId}
+                    hostId={hostId}
+                    existingRequest={existingRequest}
+                    onSendRequest={onSendRequest}
+                    onCancelRequest={onCancelRequest}
+                />
             </View>
         </View>
+    );
+}
+
+/**
+ * A circular heart button that toggles between:
+ *   - "heart" (not yet requested => send request)
+ *   - "heart-dislike" (request pending => can cancel request)
+ * With a Reanimated "heart explosion" on send.
+ */
+function HeartCircleButton({
+    dateId,
+    hostId,
+    existingRequest,
+    onSendRequest,
+    onCancelRequest
+}) {
+    const { colors } = useTheme();
+    const [requested, setRequested] = useState(!!existingRequest);
+    const [exploding, setExploding] = useState(false);
+    const progress = useSharedValue(0);
+
+    React.useEffect(() => {
+        setRequested(!!existingRequest);
+    }, [existingRequest]);
+
+    const send = async () => {
+        try {
+            await onSendRequest(dateId, hostId);
+            setExploding(true);
+            progress.value = withTiming(
+                1,
+                { duration: 800, easing: Easing.ease },
+                (isFinished) => {
+                    if (isFinished) {
+                        runOnJS(setExploding)(false);
+                        progress.value = 0;
+                    }
+                }
+            );
+        } catch (error) {
+            console.error('Error sending request:', error);
+        }
+    };
+
+    const cancel = async (requestId) => {
+        try {
+            await onCancelRequest(requestId);
+        } catch (error) {
+            console.error('Error canceling request:', error);
+        }
+    };
+
+    const handlePress = async () => {
+        try {
+            if (!requested) {
+                await send();
+            } else {
+                if (existingRequest && existingRequest.id) {
+                    await cancel(existingRequest.id);
+                } else {
+                    console.error('Existing request is missing or invalid:', existingRequest);
+                }
+            }
+        } catch (error) {
+            console.error('Error in HeartCircleButton handlePress:', error);
+            Alert.alert('Error', 'Something went wrong. Please try again.');
+        }
+    };
+
+    const iconName = requested ? 'heart-dislike' : 'heart';
+    const backgroundColor = requested
+        ? (colors.elevation?.level2 ?? '#888')
+        : colors.primary;
+
+    return (
+        <View>
+            <TouchableOpacity
+                style={[styles.heartButton, { backgroundColor }]}
+                onPress={handlePress}
+                activeOpacity={0.8}
+            >
+                <Ionicons name={iconName} size={24} color={colors.onPrimary} />
+            </TouchableOpacity>
+            {exploding && <HeartsExplosion progress={progress} />}
+        </View>
+    );
+}
+
+/**
+ * A collection of hearts that float away as progress goes from 0 to 1.
+ */
+function HeartsExplosion({ progress }) {
+
+    // We'll create an array of hearts
+    const hearts = Array.from({ length: HEART_COUNT }, (_, i) => ({
+        key: i,
+        angle: (Math.random() * 2 - 1) * Math.PI * 0.6,
+        distance: 60 + Math.random() * 40,
+        scale: 0.5 + Math.random() * 0.8
+    }));
+
+    return (
+        <View style={styles.heartsContainer}>
+            {hearts.map((heart) => (
+                <FloatingHeart
+                    key={heart.key}
+                    progress={progress}
+                    angle={heart.angle}
+                    distance={heart.distance}
+                    scale={heart.scale}
+                />
+            ))}
+        </View>
+    );
+}
+
+/**
+ * A single heart that floats away based on the shared progress value.
+ */
+function FloatingHeart({ progress, angle, distance, scale }) {
+    const animatedStyle = useAnimatedStyle(() => {
+        // fade in quickly from 0 -> 0.05
+        const opacity = interpolate(
+            progress.value,
+            [0, 0.05, 1],
+            [0, 1, 0],
+            Extrapolate.CLAMP
+        );
+        const x = interpolate(progress.value, [0, 1], [0, distance * Math.cos(angle)]);
+        const y = interpolate(progress.value, [0, 1], [0, -distance * Math.sin(angle)]);
+        const _scale = interpolate(progress.value, [0, 1], [scale, scale * 0.8]);
+
+        return {
+            transform: [
+                { translateX: x },
+                { translateY: y },
+                { scale: _scale }
+            ],
+            opacity
+        };
+    });
+
+    return (
+        <Animated.View style={[styles.floatingHeart, animatedStyle]}>
+            <Ionicons name="heart" size={18} color="#ff5c5c" />
+        </Animated.View>
     );
 }
 
@@ -217,16 +398,33 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '900'
     },
+    //----------------------------------
+    // Heart Button (bottom-right)
+    //----------------------------------
     overlayBottomRight: {
         position: 'absolute',
         bottom: 10,
         right: 10,
     },
-    requestButton: {
-        borderRadius: 20,
+    heartButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    requestButtonText: {
-        fontSize: 14,
+    //----------------------------------
+    // Hearts explosion
+    //----------------------------------
+    heartsContainer: {
+        position: 'absolute',
+        bottom: 22,
+        right: 22,
+        width: 0,
+        height: 0,
+    },
+    floatingHeart: {
+        position: 'absolute',
     },
     //----------------------------------
     // Footer
