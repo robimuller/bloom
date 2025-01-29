@@ -1,38 +1,79 @@
-// src/screens/men/MenHomeScreen.js
 import React, { useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { FAB } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import {
+    View,
+    TouchableOpacity,
+    StyleSheet,
+    Text,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from 'react-native-paper';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import { useTheme, FAB } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    interpolate,
+    Extrapolate,
+} from 'react-native-reanimated';
 
 import { RequestsContext } from '../../contexts/RequestsContext';
+import MenFeedScreen from './MenFeedScreen';
 
 export default function MenHomeScreen() {
     const navigation = useNavigation();
     const paperTheme = useTheme();
     const { requests } = useContext(RequestsContext);
+    const { colors } = useTheme();
 
-    // men see pending requests count
+    // Men see pending requests or invites count
     const pendingCount = requests.filter((r) => r.status === 'pending').length;
-    const acceptedCount = requests.filter((r) => r.status === 'accepted').length;
 
-
+    // Grab the gradient array from your Paper theme
     const gradientColors = paperTheme.colors.mainBackground || ['#fff', '#ccc'];
+
+    // Shared value for scroll position
+    const scrollY = useSharedValue(0);
+
+    // Animated style for the header (height + opacity)
+    const headerAnimatedStyle = useAnimatedStyle(() => {
+        const headerHeight = interpolate(
+            scrollY.value,
+            [0, 100], // how far we scroll before it's fully shrunk
+            [100, 60], // initial height and final height
+            Extrapolate.CLAMP
+        );
+
+        const headerOpacity = interpolate(
+            scrollY.value,
+            [0, 100],
+            [1, 0.8], // fade slightly as we scroll
+            Extrapolate.CLAMP
+        );
+
+        return {
+            height: headerHeight,
+            opacity: headerOpacity,
+        };
+    });
 
     return (
         <LinearGradient
             colors={gradientColors}
-            style={{ flex: 1 }}
+            style={styles.gradientContainer}
         >
-            <SafeAreaView style={[styles.safeArea, { backgroundColor: 'transparent' }]} edges={['top']}>
-                {/* Top Bar */}
-                <View style={styles.topBar}>
-                    {/* Left: Settings */}
+            <SafeAreaView
+                style={[styles.safeArea, { backgroundColor: 'transparent' }]}
+                edges={['top']}
+            >
+                {/* Animated Top Bar */}
+                <Animated.View style={[styles.topBar, headerAnimatedStyle]}>
+                    {/* Left: Settings (circle) */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: paperTheme.colors.overlay }]}
+                        style={[
+                            styles.iconCircle,
+                            { marginRight: 16, backgroundColor: colors.overlay },
+                        ]}
                         onPress={() => navigation.navigate('MenSettings')}
                     >
                         <Ionicons
@@ -44,11 +85,10 @@ export default function MenHomeScreen() {
 
                     {/* Middle: Location placeholder */}
                     <View style={styles.locationContainer}>
-                        {/* A label above the location text (optional) */}
                         <Text style={styles.locationLabel}>Location</Text>
                         <View style={styles.locationRow}>
                             <Ionicons
-                                name="location"
+                                name="location-outline"
                                 size={16}
                                 color={paperTheme.colors.primary}
                                 style={{ marginRight: 4 }}
@@ -65,9 +105,9 @@ export default function MenHomeScreen() {
                         </View>
                     </View>
 
-                    {/* Right: Requests */}
+                    {/* Right: Requests/Notifications (circle) */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { backgroundColor: paperTheme.colors.overlay }]}
+                        style={[styles.iconCircle, { backgroundColor: colors.overlay }]}
                         onPress={() => navigation.navigate('MenRequests')}
                     >
                         <View style={{ position: 'relative' }}>
@@ -77,31 +117,28 @@ export default function MenHomeScreen() {
                                 color={paperTheme.colors.text}
                             />
                             {pendingCount > 0 && (
-                                <View style={[styles.badgeContainer, { backgroundColor: paperTheme.colors.accent }]}>
-                                    <Text style={{ color: paperTheme.colors.onSecondary }}>
+                                <View style={styles.badgeContainer}>
+                                    <Text style={styles.badgeText}>
                                         {pendingCount}
                                     </Text>
                                 </View>
                             )}
                         </View>
                     </TouchableOpacity>
-                </View>
+                </Animated.View>
 
-                {/* Main feed content */}
+                {/* Main content: the men’s feed */}
                 <View style={styles.mainContent}>
-                    <Text style={{ color: paperTheme.colors.text }}>
-                        Men's Feed - Main Home Content
-                    </Text>
+                    <MenFeedScreen
+                        onScroll={(e) => {
+                            scrollY.value = e.nativeEvent.contentOffset.y;
+                        }}
+                    />
                 </View>
 
-                {/* Floating Button to Create Date */}
+                {/* Floating Button to create a new date */}
                 <FAB
-                    style={{
-                        position: 'absolute',
-                        right: 16,
-                        bottom: 16,
-                        backgroundColor: paperTheme.colors.background,
-                    }}
+                    style={[styles.fab, { backgroundColor: colors.background }]}
                     icon="plus"
                     color={paperTheme.colors.primary}
                     onPress={() => navigation.navigate('CreateDate')}
@@ -112,11 +149,14 @@ export default function MenHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+    gradientContainer: {
+        flex: 1,
+    },
     safeArea: {
         flex: 1,
     },
     topBar: {
-        // A horizontal layout with space between left & right icons
+        // Same approach as WomenHomeScreen
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -124,7 +164,6 @@ const styles = StyleSheet.create({
         paddingTop: 16,
     },
     iconCircle: {
-        // A circle using the "overlay" color from your theme
         width: 40,
         height: 40,
         borderRadius: 20,
@@ -132,9 +171,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     locationContainer: {
-        // Center label and row
         alignItems: 'center',
-        flex: 1,  // let this expand to center it
+        flex: 1,
     },
     locationLabel: {
         fontSize: 12,
@@ -148,11 +186,6 @@ const styles = StyleSheet.create({
     locationValue: {
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    mainContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     badgeContainer: {
         position: 'absolute',
@@ -170,5 +203,15 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 12,
         fontWeight: 'bold',
+    },
+    mainContent: {
+        flex: 1,
+        paddingHorizontal: 10,
+        paddingTop: 16,
+    },
+    fab: {
+        position: 'absolute',
+        right: 16,
+        bottom: 16,
     },
 });

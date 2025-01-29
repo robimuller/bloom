@@ -2,7 +2,6 @@
 import React, { useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './src/contexts/AuthContext';
-import { UserProfileProvider } from './src/contexts/UserProfileContext';
 import { DatesProvider } from './src/contexts/DatesContext';
 import { RequestsProvider } from './src/contexts/RequestsContext';
 import { ChatProvider } from './src/contexts/ChatContext';
@@ -13,6 +12,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeContext, ThemeProvider } from './src/contexts/ThemeContext';
 import { createPaperTheme } from './src/themes/paper';
 import { Provider as PaperProvider } from 'react-native-paper';
+import { ProfilesProvider } from './src/contexts/ProfilesContext';
 
 
 export default function App() {
@@ -35,7 +35,7 @@ function AppWithPaper() {
       <AuthProvider>
         <SignUpProvider>
           <SettingsProvider>
-            <UserProfileProvider>
+            <ProfilesProvider>
               <DatesProvider>
                 <RequestsProvider>
                   <ChatProvider>
@@ -47,7 +47,7 @@ function AppWithPaper() {
                   </ChatProvider>
                 </RequestsProvider>
               </DatesProvider>
-            </UserProfileProvider>
+            </ProfilesProvider>
           </SettingsProvider>
         </SignUpProvider>
       </AuthProvider>
