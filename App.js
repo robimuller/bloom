@@ -1,5 +1,6 @@
 // App.js
 import React, { useContext } from 'react';
+import { StatusBar } from 'react-native';    // <---- Import StatusBar
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { DatesProvider } from './src/contexts/DatesContext';
@@ -14,7 +15,6 @@ import { createPaperTheme } from './src/themes/paper';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { ProfilesProvider } from './src/contexts/ProfilesContext';
 
-
 export default function App() {
   return (
     <ThemeProvider>
@@ -26,12 +26,17 @@ export default function App() {
 function AppWithPaper() {
   // Access the theme from your custom ThemeContext
   const { theme, themeMode } = useContext(ThemeContext);
-
   // Convert it into Paper's theme
   const paperTheme = createPaperTheme(theme, themeMode);
 
+  // Dynamically choose barStyle based on the themeMode
+  const barStyle = themeMode === 'light' ? 'dark-content' : 'light-content';
+
   return (
     <PaperProvider theme={paperTheme}>
+      {/* Toggle StatusBar appearance based on themeMode */}
+      <StatusBar barStyle={barStyle} backgroundColor={theme.background} />
+
       <AuthProvider>
         <SignUpProvider>
           <SettingsProvider>

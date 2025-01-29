@@ -23,6 +23,7 @@ import Animated, {
     Extrapolate,
     runOnJS,
 } from 'react-native-reanimated';
+import { calculateAge } from '../../utils/deduceAge'; // Adjust the path as necessary
 
 import { ProfilesContext } from '../../contexts/ProfilesContext';
 // If you have a context for invites, import it here
@@ -117,7 +118,10 @@ export default function MenFeedScreen({ onScroll }) {
     }
 
     const renderItem = ({ item }) => {
-        // Example: we check if this user is “requested” by seeing if their ID is in requestedIds
+        // Calculate age using the utility function
+        const age = calculateAge(item.birthday); // Ensure 'birthday' field exists in your data
+
+        // Check if this user is “requested” by seeing if their ID is in requestedIds
         const isRequested = requestedIds.includes(item.id);
 
         return (
@@ -135,14 +139,8 @@ export default function MenFeedScreen({ onScroll }) {
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.hostName, { color: colors.text }]}>
                             {item.displayName || 'Unknown'}
-                            {item.age ? `, ${item.age}` : ''}
+                            {age ? `, ${age}` : ''}
                         </Text>
-                        {/* Example additional info */}
-                        {item.bio && (
-                            <Text style={{ color: colors.text, fontSize: 13, opacity: 0.7 }}>
-                                {item.bio}
-                            </Text>
-                        )}
                     </View>
                     {/* Flag icon to report user (optional) */}
                     <TouchableOpacity onPress={() => handleFlagPress(item)}>
@@ -163,6 +161,13 @@ export default function MenFeedScreen({ onScroll }) {
                     onInvitePress={handleInvitePress}
                     onCancelInvite={handleCancelInvite}
                 />
+
+                {/* Bio placed below the carousel */}
+                {item.bio && (
+                    <Text style={{ color: colors.text, fontSize: 13, opacity: 0.7, marginTop: 8 }}>
+                        {item.bio}
+                    </Text>
+                )}
 
                 {/* Footer (example: location or orientation) */}
                 <View style={styles.footer}>
@@ -334,7 +339,7 @@ function HeartCircleButton({ userId, isRequested, onInvitePress, onCancelInvite 
         }
     };
 
-    const iconName = isRequested ? 'heart-dislike' : 'heart';
+    const iconName = isRequested ? 'mail-open' : 'mail';
 
     return (
         <View>
