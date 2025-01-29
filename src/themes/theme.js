@@ -6,7 +6,7 @@ export const lightTheme = {
     cardBackground: '#f8f4ff',
     primary: '#eeaeca',
     secondary: '#6C6F7F',
-    accent: '#20FC8F',
+    accent: '#0BFFF3',
     overlay: 'rgba(255, 255, 255, 0.2)',
 
     // NEW: gradient colors for the main background
@@ -19,7 +19,7 @@ export const darkTheme = {
     cardBackground: '#17131D',
     primary: '#eeaeca',
     secondary: '#6C6F7F',
-    accent: '#20FC8F',
+    accent: '#0BFFF3',
     overlay: 'rgba(0,0,0,0.5)',
     outline: '#AAAAAA',
 

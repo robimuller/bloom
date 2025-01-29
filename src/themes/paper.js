@@ -17,8 +17,9 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             cardBackground: baseTheme.cardBackground,
             overlay: baseTheme.overlay,
             secondary: baseTheme.secondary,
-            onSecondary: '#fff',
+            onSecondary: '#000',
             outline: baseTheme.outline,
+            accent: baseTheme.accent,
 
             // NEW: carry over the gradient array
             mainBackground: baseTheme.mainBackground,

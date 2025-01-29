@@ -9,7 +9,8 @@ import {
     deleteDoc,
     serverTimestamp,
     query,
-    where
+    where,
+    getDoc // <== make sure to import
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { AuthContext } from './AuthContext';
@@ -31,27 +32,47 @@ export const RequestsProvider = ({ children }) => {
         const requestsRef = collection(db, 'requests');
         let q;
 
-        // If the user is male, we show requests that come in from others for the user’s dates
+        // If the user is male, show requests for his dates
         if (gender === 'male') {
             q = query(requestsRef, where('hostId', '==', user.uid));
         }
-        // If the user is female, we show requests she sent to hosts
+        // If the user is female, show requests she sent
         else if (gender === 'female') {
             q = query(requestsRef, where('requesterId', '==', user.uid));
         } else {
-            // If there's a possibility user has a different gender,
-            // we can skip or handle differently:
             setRequests([]);
             setLoadingRequests(false);
             return;
         }
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const newRequests = snapshot.docs.map((docSnap) => ({
-                id: docSnap.id,
-                ...docSnap.data(),
-            }));
-            setRequests(newRequests);
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            // For each request doc, also fetch the user doc and the date doc:
+            const requestPromises = snapshot.docs.map(async (docSnap) => {
+                const requestData = { id: docSnap.id, ...docSnap.data() };
+
+                // Fetch the requester's user doc
+                if (requestData.requesterId) {
+                    const requesterRef = doc(db, 'users', requestData.requesterId);
+                    const requesterSnap = await getDoc(requesterRef);
+                    if (requesterSnap.exists()) {
+                        requestData.requesterDoc = requesterSnap.data();
+                    }
+                }
+
+                // Fetch the corresponding date doc
+                if (requestData.dateId) {
+                    const dateRef = doc(db, 'dates', requestData.dateId);
+                    const dateSnap = await getDoc(dateRef);
+                    if (dateSnap.exists()) {
+                        requestData.dateDoc = dateSnap.data();
+                    }
+                }
+
+                return requestData;
+            });
+
+            const filledRequests = await Promise.all(requestPromises);
+            setRequests(filledRequests);
             setLoadingRequests(false);
         });
 

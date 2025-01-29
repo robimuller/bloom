@@ -17,6 +17,8 @@ export default function MenHomeScreen() {
 
     // men see pending requests count
     const pendingCount = requests.filter((r) => r.status === 'pending').length;
+    const acceptedCount = requests.filter((r) => r.status === 'accepted').length;
+
 
     const gradientColors = paperTheme.colors.mainBackground || ['#fff', '#ccc'];
 
@@ -75,9 +77,9 @@ export default function MenHomeScreen() {
                                 color={paperTheme.colors.text}
                             />
                             {pendingCount > 0 && (
-                                <View style={styles.badgeContainer}>
-                                    <Text style={styles.badgeText}>
-                                        {acceptedCount}
+                                <View style={[styles.badgeContainer, { backgroundColor: paperTheme.colors.accent }]}>
+                                    <Text style={{ color: paperTheme.colors.onSecondary }}>
+                                        {pendingCount}
                                     </Text>
                                 </View>
                             )}

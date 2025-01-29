@@ -16,10 +16,10 @@ export default function MenMainNavigator() {
     return (
         <Stack.Navigator>
             <Stack.Screen name="MenHome" component={MenHomeScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="MenRequests" component={MenRequestsScreen} />
-            <Stack.Screen name="MenSettings" component={MenSettingsScreen} />
+            <Stack.Screen name="MenRequests" component={MenRequestsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MenSettings" component={MenSettingsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CreateDate" component={CreateDateScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Chat" component={ChatScreen} />
+            <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
     );
 }

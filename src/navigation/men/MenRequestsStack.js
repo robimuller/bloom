@@ -11,12 +11,12 @@ export default function MenRequestsStack() {
             <Stack.Screen
                 name="MenRequests"
                 component={MenRequestsScreen}
-                options={{ title: 'Requests', headerShown: true }}
+                options={{ title: 'Requests', headerShown: false }}
             />
             <Stack.Screen
                 name="Chat"
                 component={ChatScreen}
-                options={{ headerShown: true }}
+                options={{ headerShown: false }}
             />
         </Stack.Navigator>
     );
