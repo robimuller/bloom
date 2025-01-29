@@ -1,12 +1,9 @@
-// src/navigation/AppNavigator.js
 import React, { useContext } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
 // Stacks
 import AuthStack from './AuthStack';
-// import MenTabNavigator from './men/MenTabNavigator'; // remove or comment out
-// import WomenTabNavigator from './women/WomenTabNavigator'; // remove or comment out
 import MenMainNavigator from './men/MenMainNavigator';
 import WomenMainNavigator from './women/WomenMainNavigator';
 

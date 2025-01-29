@@ -29,7 +29,7 @@ function GradientProgressBar({ progress, barHeight = 8 }) {
         >
             <View style={{ width: `${progress * 100}%`, height: '100%' }}>
                 <LinearGradient
-                    colors={['#e60000', '#e6ab00']}
+                    colors={['#eeaeca', '#94bbe9']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={{ width: '100%', height: '100%' }}
@@ -80,7 +80,7 @@ function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
 
     // We'll use the base gradient as the background
     // Then layer a narrow highlight on top
-    const baseColors = ['#e60000', '#e6ab00'];
+    const baseColors = ['#eeaeca', '#94bbe9'];
 
     // The highlight band is basically transparent → white → transparent
     // to create that "light beam" effect

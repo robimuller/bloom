@@ -7,7 +7,7 @@ import {
     createUserWithEmailAndPassword,
     signInWithPhoneNumber,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore'; // <-- getDoc instead of onSnapshot
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
 export const AuthContext = createContext();
@@ -19,40 +19,50 @@ export const AuthProvider = ({ children }) => {
     const [authError, setAuthError] = useState(null);
 
     useEffect(() => {
-        // Watch for Auth state changes
+        // 1) Watch for Auth state changes
         const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
             setLoadingAuth(true);
             setAuthError(null);
 
             if (firebaseUser) {
-                // We have a logged-in user
+                // We have a logged-in user in Firebase Auth
                 setUser(firebaseUser);
 
-                try {
-                    // One-time fetch of user doc, no real-time listening
-                    const userRef = doc(db, 'users', firebaseUser.uid);
-                    const snap = await getDoc(userRef);
+                // 2) Subscribe to the user's Firestore doc in real-time
+                const userRef = doc(db, 'users', firebaseUser.uid);
 
-                    if (snap.exists()) {
-                        setUserDoc(snap.data());
-                    } else {
-                        setUserDoc(null);
+                // IMPORTANT: Cancel any previous subscription if it exists
+                // but in this simple approach, we'll do it in the returned cleanup below.
+                const unsubscribeDoc = onSnapshot(
+                    userRef,
+                    (snapshot) => {
+                        if (snapshot.exists()) {
+                            setUserDoc(snapshot.data());
+                        } else {
+                            setUserDoc(null);
+                        }
+                        setLoadingAuth(false);
+                    },
+                    (error) => {
+                        console.error('Error subscribing to user doc:', error);
+                        setAuthError(error.message);
+                        setLoadingAuth(false);
                     }
-                } catch (error) {
-                    console.error('Error fetching user doc:', error);
-                    setAuthError(error.message);
-                }
+                );
 
-                setLoadingAuth(false);
+                // Return the doc unsubscribe so we can clean it up when this effect re-runs
+                return () => {
+                    unsubscribeDoc();
+                };
             } else {
-                // No user
+                // No user logged in
                 setUser(null);
                 setUserDoc(null);
                 setLoadingAuth(false);
             }
         });
 
-        // Cleanup
+        // Cleanup the auth subscription when the component unmounts
         return () => unsubscribeAuth();
     }, []);
 
@@ -91,7 +101,6 @@ export const AuthProvider = ({ children }) => {
             const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
             // 2) Confirm the code
             const userCredential = await confirmationResult.confirm(code);
-
             const { uid } = userCredential.user;
 
             // 3) Initialize the Firestore doc
@@ -103,8 +112,10 @@ export const AuthProvider = ({ children }) => {
                 createdAt: new Date().toISOString(),
             });
 
+            return userCredential.user;
         } catch (error) {
             setAuthError(error.message);
+            throw error;
         }
     };
 
@@ -115,6 +126,7 @@ export const AuthProvider = ({ children }) => {
             await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
             setAuthError(error.message);
+            throw error;
         }
     };
 

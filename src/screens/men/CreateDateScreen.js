@@ -36,6 +36,8 @@ import CreateDateLayout from '../../components/CreateDateLayout';
 import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { classifyDateCategory } from '../../utils/classifyDateCategory';
+
 
 // We'll need these to measure screen for the carousel
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -471,7 +473,7 @@ export default function CreateDateScreen({ navigation }) {
         setError(null);
 
         try {
-            // 1) Create doc in Firestore "dates" to get the docId
+            // Step 1) Create doc in Firestore "dates" to get the docId
             const docRef = await addDoc(collection(db, 'dates'), {
                 hostId: user.uid,
                 title,
@@ -484,12 +486,16 @@ export default function CreateDateScreen({ navigation }) {
                 photos: [],
             });
 
-            // 2) Upload each photo
+            // Step 2) Classify the date into one of the 7 categories
+            const category = await classifyDateCategory({ title, location });
+
+            // Step 3) Upload each photo
             const photoURLs = await uploadAllPhotos(docRef.id);
 
-            // 3) Update the date doc
+            // Step 4) Update the date doc with photo URLs and the category
             await updateDoc(doc(db, 'dates', docRef.id), {
                 photos: photoURLs,
+                category: category, // <-- new field
             });
 
             // Reset local state
@@ -557,7 +563,7 @@ export default function CreateDateScreen({ navigation }) {
     }
 
     return (
-        <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]} edges={['top']}>
             <CreateDateLayout
                 step={currentStep}
                 totalSteps={5}
@@ -602,6 +608,9 @@ export default function CreateDateScreen({ navigation }) {
 
 /* ============= STYLES ============= */
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+    },
     centered: {
         flex: 1,
         justifyContent: 'center',

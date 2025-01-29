@@ -29,22 +29,55 @@ export default function MenHomeScreen() {
                 {/* Top Bar */}
                 <View style={styles.topBar}>
                     {/* Left: Settings */}
-                    <TouchableOpacity onPress={() => navigation.navigate('MenSettings')}>
-                        <Ionicons name="list-circle-outline" size={30} color={paperTheme.colors.text} />
+                    <TouchableOpacity
+                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: paperTheme.colors.overlay }]}
+                        onPress={() => navigation.navigate('MenSettings')}
+                    >
+                        <Ionicons
+                            name="settings-outline"
+                            size={24}
+                            color={paperTheme.colors.text}
+                        />
                     </TouchableOpacity>
 
+                    {/* Middle: Location placeholder */}
+                    <View style={styles.locationContainer}>
+                        {/* A label above the location text (optional) */}
+                        <Text style={styles.locationLabel}>Location</Text>
+                        <View style={styles.locationRow}>
+                            <Ionicons
+                                name="location"
+                                size={16}
+                                color={paperTheme.colors.primary}
+                                style={{ marginRight: 4 }}
+                            />
+                            <Text style={[styles.locationValue, { color: paperTheme.colors.text }]}>
+                                Naperville, Illinois
+                            </Text>
+                            <Ionicons
+                                name="chevron-down"
+                                size={16}
+                                color={paperTheme.colors.text}
+                                style={{ marginLeft: 4 }}
+                            />
+                        </View>
+                    </View>
+
                     {/* Right: Requests */}
-                    <TouchableOpacity onPress={() => navigation.navigate('MenRequests')}>
+                    <TouchableOpacity
+                        style={[styles.iconCircle, { backgroundColor: paperTheme.colors.overlay }]}
+                        onPress={() => navigation.navigate('MenRequests')}
+                    >
                         <View style={{ position: 'relative' }}>
                             <Ionicons
                                 name="notifications-outline"
-                                size={30}
+                                size={24}
                                 color={paperTheme.colors.text}
                             />
                             {pendingCount > 0 && (
                                 <View style={styles.badgeContainer}>
                                     <Text style={styles.badgeText}>
-                                        {pendingCount}
+                                        {acceptedCount}
                                     </Text>
                                 </View>
                             )}
@@ -65,9 +98,10 @@ export default function MenHomeScreen() {
                         position: 'absolute',
                         right: 16,
                         bottom: 16,
-                        backgroundColor: paperTheme.colors.primary,
+                        backgroundColor: paperTheme.colors.background,
                     }}
                     icon="plus"
+                    color={paperTheme.colors.primary}
                     onPress={() => navigation.navigate('CreateDate')}
                 />
             </SafeAreaView>
@@ -80,10 +114,38 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     topBar: {
+        // A horizontal layout with space between left & right icons
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingTop: 16,
+    },
+    iconCircle: {
+        // A circle using the "overlay" color from your theme
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    locationContainer: {
+        // Center label and row
+        alignItems: 'center',
+        flex: 1,  // let this expand to center it
+    },
+    locationLabel: {
+        fontSize: 12,
+        opacity: 0.8,
+        marginBottom: 2,
+    },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    locationValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     mainContent: {
         flex: 1,

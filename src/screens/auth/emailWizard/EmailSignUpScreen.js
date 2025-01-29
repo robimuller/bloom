@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
     View,
     StyleSheet,
@@ -18,29 +18,63 @@ import { db } from '../../../../config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
 export default function EmailSignUpScreen({ navigation }) {
-    // Instead of one "loading" state, let's keep:
-    // - subStep: controls our wizard steps
-    // - finishing: true once we do the final updateDoc, 
-    //   so we show a "finishing" screen
     const [subStep, setSubStep] = useState(1);
     const [localError, setLocalError] = useState(null);
     const { finishing, setFinishing } = useContext(SignUpContext);
+    const [isUpdating, setIsUpdating] = useState(false);
 
-    // Wizard total
+
     const TOTAL_STEPS = 16;
 
-    // Bring in contexts
     const { user, userDoc, loadingAuth, emailSignup, authError } = useContext(AuthContext);
     const {
         basicInfo,
         profileInfo,
         preferences,
         permissions,
+        locationInfo,
         updateBasicInfo,
         updateProfileInfo,
         updatePreferences,
         updatePermissions,
+        updateLocationInfo,
     } = useContext(SignUpContext);
+
+    useEffect(() => {
+        if (permissions.location) {
+            requestLocationPermission();
+        }
+    }, [permissions.location]);
+
+    const requestLocationPermission = async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            setLocalError('Permission to access location was denied');
+            return;
+        }
+
+        let location = await Location.getCurrentPositionAsync({});
+        updateLocationInfo({ coordinates: location.coords });
+
+        // Deduce city from coordinates
+        const city = await deduceCityFromCoordinates(location.coords);
+        updateLocationInfo({ city });
+    };
+
+    const deduceCityFromCoordinates = async (coords) => {
+        const { latitude, longitude } = coords;
+        const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.GOOGLE_PLACES_API_KEY}`
+        );
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+            const city = data.results[0].address_components.find(component =>
+                component.types.includes('locality')
+            )?.long_name;
+            return city;
+        }
+        return '';
+    };
 
     // 1) SHORT-CIRCUIT if doc already says `onboardingComplete`
     //    so we don’t render Step 1 again while Firestore is still updating.
@@ -67,9 +101,9 @@ export default function EmailSignUpScreen({ navigation }) {
 
     // ====== Final step (subStep == 16 => handleFinish) ======
     const handleFinish = async () => {
-
         setLocalError(null);
         setFinishing(true);
+        setIsUpdating(true);
 
         try {
             // 1) Create user
@@ -82,6 +116,7 @@ export default function EmailSignUpScreen({ navigation }) {
             if (authError) {
                 setLocalError(authError);
                 setFinishing(false);
+                setIsUpdating(false);
                 return;
             }
 
@@ -101,19 +136,22 @@ export default function EmailSignUpScreen({ navigation }) {
                 orientation: profileInfo?.orientation || null,
                 bio: profileInfo?.bio || null,
                 height: profileInfo?.height || null,
-
                 ageRange: preferences?.ageRange || [18, 35],
                 interests: preferences?.interests || [],
                 geoRadius: preferences?.geoRadius || 50,
-
                 notifications: permissions?.notifications || false,
-                location: permissions?.locationCoords || null,
+                location: locationInfo?.coordinates || null,
                 photos: finalPhotoURLs,
-
                 onboardingComplete: true,
                 updatedAt: new Date().toISOString(),
+            }).then(() => {
+                console.log('Firestore document updated successfully');
+            }).catch((err) => {
+                console.error('Error updating Firestore document:', err);
+                throw err;
             });
 
+            setIsUpdating(false);
             Alert.alert('Success!', 'Your account has been created!', [
                 {
                     text: 'OK',
@@ -126,6 +164,7 @@ export default function EmailSignUpScreen({ navigation }) {
         } catch (err) {
             setLocalError(err.message);
             setFinishing(false);
+            setIsUpdating(false);
             console.error('Error finalizing sign up:', err);
         }
     };
@@ -441,6 +480,9 @@ export default function EmailSignUpScreen({ navigation }) {
                     {permissions.location ? 'Enabled' : 'Disabled'}
                 </Text>
             </View>
+            {permissions.location && locationInfo.city && (
+                <Text style={{ marginTop: 10 }}>Detected City: {locationInfo.city}</Text>
+            )}
         </View>
     );
 
