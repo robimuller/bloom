@@ -7,6 +7,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { useTheme } from 'react-native-paper';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ export default function CustomDraggableBottomSheet({
   children,
   sheetHeight = 300,
 }) {
+  const theme = useTheme();
   // Animated value for vertical translation.
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -80,15 +82,19 @@ export default function CustomDraggableBottomSheet({
   if (!isVisible) return null;
 
   return (
-    <View style={styles.overlay}>
+    <View style={styles.cardBackground}>
       {/* Tapping the semi-transparent background will close the sheet */}
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.background} />
+        <View style={[styles.background, { backgroundColor: theme.colors.overlay }]} />
       </TouchableWithoutFeedback>
       <Animated.View
         style={[
           styles.sheet,
-          { height: sheetHeight, transform: [{ translateY }] },
+          {
+            height: sheetHeight,
+            transform: [{ translateY }],
+            backgroundColor: theme.colors.surface,
+          },
         ]}
         {...panResponder.panHandlers}
       >
@@ -99,18 +105,18 @@ export default function CustomDraggableBottomSheet({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  cardBackground: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
   },
   background: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    // The backgroundColor is now provided inline using theme.colors.overlay.
   },
   sheet: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
+    // The backgroundColor is now provided inline using theme.colors.surface.
   },
 });

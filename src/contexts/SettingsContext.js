@@ -19,26 +19,33 @@ export function SettingsProvider({ children }) {
     });
 
     useEffect(() => {
-        // If we have a logged-in user, subscribe to their doc
         if (user) {
             const userDocRef = doc(db, 'users', user.uid);
-
             const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.data();
-                    setSettingsState((prev) => ({
-                        ...prev,
-                        bio: data.bio || '',
-                        height: data.height || '',
-                        orientation: data.orientation || '',
-                        interests: data.interests || [],
-                        education: data.education || '',
-                        ageRange: data.ageRange || [18, 35],
-                        photos: data.photos || Array(6).fill(null),
-                    }));
+                    const newPhotos = data.photos || Array(6).fill(null);
+                    setSettingsState((prev) => {
+                        // Compare using JSON.stringify (or a deep equality check) to avoid updates when nothing changed
+                        if (
+                            JSON.stringify(prev.photos) !== JSON.stringify(newPhotos) ||
+                            prev.bio !== (data.bio || '')
+                        ) {
+                            return {
+                                ...prev,
+                                bio: data.bio || '',
+                                height: data.height || '',
+                                orientation: data.orientation || '',
+                                interests: data.interests || [],
+                                education: data.education || '',
+                                ageRange: data.ageRange || [18, 35],
+                                photos: newPhotos,
+                            };
+                        }
+                        return prev;
+                    });
                 }
             });
-
             return () => unsubscribe();
         }
     }, [user]);

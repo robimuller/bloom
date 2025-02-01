@@ -6,7 +6,6 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    Image,
     TextInput,
     Button,
     ActivityIndicator
@@ -27,6 +26,7 @@ import GradientText from '../../components/GradientText';
 import CustomAccordion from '../../components/CustomAccordion';
 import CustomDraggableBottomSheet from '../../components/CustomDraggableBottomSheet';
 import uploadImageAsync from '../../utils/uploadImage';
+import { Image } from 'expo-image'
 
 export default function SettingsScreen() {
     const { userDoc, logout } = useContext(AuthContext);
@@ -202,21 +202,21 @@ export default function SettingsScreen() {
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                     {/* Greeting Section with Profile Picture */}
                     <View style={styles.greetingSection}>
-                        <TouchableOpacity
-                            onPress={handleSetProfilePicture}
-                            style={styles.profilePictureContainer}
-                        >
+                        <TouchableOpacity onPress={handleSetProfilePicture} style={styles.profilePictureContainer}>
                             {photos[0] ? (
                                 <Image
                                     source={{ uri: photos[0] }}
                                     style={styles.profilePicture}
                                     resizeMode="cover"
+                                    // Caching props:
+                                    cachePolicy="memory-disk"
+                                    cacheKey={`profile-${photos[0]}`}
+                                    transition={false}
                                 />
                             ) : (
                                 <Icon name="account" size={100} color="#ccc" />
                             )}
                             {isUploadingProfile && (
-                                // Use the theme.overlay style (which might be a style object or simply a background color)
                                 <View style={[styles.profilePictureOverlay, paperTheme.colors.overlay]}>
                                     <ActivityIndicator size="large" color={paperTheme.colors.accent} />
                                 </View>
@@ -323,17 +323,18 @@ export default function SettingsScreen() {
                                 {[...Array(6)].map((_, index) => {
                                     const photoUri = photos[index];
                                     const isUploading = uploadingIndexes[index];
+                                    const cacheKey = `photo-${index}-${photoUri || 'placeholder'}`;
                                     return (
                                         <View key={`photo_${index}`} style={styles.photoWrapper}>
-                                            <TouchableOpacity
-                                                style={styles.photoSlot}
-                                                onPress={() => handleChangePhoto(index)}
-                                            >
+                                            <TouchableOpacity style={styles.photoSlot} onPress={() => handleChangePhoto(index)}>
                                                 {photoUri ? (
                                                     <Image
                                                         source={{ uri: photoUri }}
                                                         style={styles.photoImage}
                                                         resizeMode="cover"
+                                                        cachePolicy="memory-disk"
+                                                        cacheKey={cacheKey}
+                                                        transition={false}
                                                     />
                                                 ) : (
                                                     <Icon name="plus" size={30} color="#999" />
@@ -345,10 +346,7 @@ export default function SettingsScreen() {
                                                 )}
                                             </TouchableOpacity>
                                             {photoUri && (
-                                                <TouchableOpacity
-                                                    style={styles.deleteIcon}
-                                                    onPress={() => handleRemovePhoto(index)}
-                                                >
+                                                <TouchableOpacity style={styles.deleteIcon} onPress={() => handleRemovePhoto(index)}>
                                                     <View style={[styles.deleteIconWrapper, { backgroundColor: paperTheme.colors.cardBackground }]}>
                                                         <Icon name="close-circle" size={24} color={paperTheme.colors.error} />
                                                     </View>
@@ -422,16 +420,40 @@ export default function SettingsScreen() {
                     onClose={() => setModalVisible(false)}
                     sheetHeight={300}
                 >
-                    <Text style={styles.sheetHeading}>Edit {editField}</Text>
-                    <TextInput
-                        style={styles.textInput}
-                        value={fieldValue}
-                        onChangeText={setFieldValue}
-                        placeholder={`Enter ${editField}...`}
-                    />
-                    <View style={styles.sheetButtonRow}>
-                        <Button title="Cancel" onPress={() => setModalVisible(false)} />
-                        <Button title="Save" onPress={onSaveField} />
+                    <View style={[styles.sheetContainer, { backgroundColor: paperTheme.colors.surface }]}>
+                        {/* Header with Title and Close Button */}
+                        <View style={styles.sheetHeader}>
+                            <Text style={[styles.sheetHeading, { color: paperTheme.colors.text }]}>
+                                Edit {editField}
+                            </Text>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                <Icon name="close" size={24} color={paperTheme.colors.text} />
+                            </TouchableOpacity>
+                        </View>
+                        {/* Editable Field */}
+                        <TextInput
+                            style={[
+                                styles.textInput,
+                                {
+                                    color: paperTheme.colors.text,
+                                    backgroundColor: paperTheme.colors.background,
+                                    borderColor: paperTheme.colors.placeholder,
+                                },
+                            ]}
+                            value={fieldValue}
+                            onChangeText={setFieldValue}
+                            placeholder={`Enter ${editField}...`}
+                            placeholderTextColor={paperTheme.colors.placeholder}
+                        />
+                        {/* Button Row */}
+                        <View style={styles.sheetButtonRow}>
+                            <Button
+                                title="Cancel"
+                                onPress={() => setModalVisible(false)}
+                                color={paperTheme.colors.primary}
+                            />
+                            <Button title="Save" onPress={onSaveField} color={paperTheme.colors.primary} />
+                        </View>
                     </View>
                 </CustomDraggableBottomSheet>
             </View>
@@ -553,6 +575,38 @@ const styles = StyleSheet.create({
     },
     touchableButton: { paddingVertical: 6, alignItems: 'center', borderRadius: 6 },
     buttonText: { fontSize: 12, color: '#3C7AD6', fontWeight: '300' },
+    // Bottom sheet container for editing fields
+    sheetContainer: {
+        padding: 16,
+        // Optional shadow for iOS
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        // Elevation for Android
+        elevation: 5,
+    },
+    sheetHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    sheetHeading: {
+        fontSize: 20,
+        fontWeight: '600',
+    },
+    textInput: {
+        borderWidth: 1,
+        borderRadius: 6,
+        padding: 12,
+        marginBottom: 16,
+    },
+    sheetButtonRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 8
+    },
     sheetHeading: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
     textInput: {
         borderWidth: 1,
