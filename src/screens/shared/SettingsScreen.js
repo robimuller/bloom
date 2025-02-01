@@ -6,16 +6,17 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    Image
+    Image,
+    TextInput,
+    Button,
+    ActivityIndicator
 } from 'react-native';
 import { useTheme, Divider } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SwitchSelector from 'react-native-switch-selector';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-
-import * as ImagePicker from 'expo-image-picker';  // <-- NEW
-// If uploading to Firebase Storage, you might import firebase storage methods here
+import * as ImagePicker from 'expo-image-picker';
 
 import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
@@ -24,69 +25,112 @@ import { SettingsContext } from '../../contexts/SettingsContext';
 
 import GradientText from '../../components/GradientText';
 import CustomAccordion from '../../components/CustomAccordion';
-import EditFieldBottomSheet from '../../components/EditFieldBottomSheet';
+import CustomDraggableBottomSheet from '../../components/CustomDraggableBottomSheet';
+import uploadImageAsync from '../../utils/uploadImage';
 
 export default function SettingsScreen() {
     const { userDoc, logout } = useContext(AuthContext);
     const { dates } = useContext(DatesContext);
     const { settingsState, updateProfileField, updatePhotoAtIndex } = useContext(SettingsContext);
     const { themeMode, toggleTheme } = useContext(ThemeContext);
+    const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+    // For individual photo slots, you could store an object mapping indexes to booleans:
+    const [uploadingIndexes, setUploadingIndexes] = useState({});
 
     const navigation = useNavigation();
     const paperTheme = useTheme();
 
+    // States for managing the custom bottom sheet modal.
     const [isModalVisible, setModalVisible] = useState(false);
     const [editField, setEditField] = useState(null);
+    const [fieldValue, setFieldValue] = useState('');
 
-    // For real uploads, you might have your own function:
-    async function uploadImageAsync(localUri) {
-        // Example placeholder function:
-        // Here you'd typically upload 'localUri' to your Firestore storage or S3,
-        // returning a downloadable URL. We'll just pretend the local URI is final.
-        // In production, do something like:
-        // const response = await fetch(localUri);
-        // const blob = await response.blob();
-        // const storageRef = ref(firebaseStorage, `photos/${Date.now()}.jpg`);
-        // await uploadBytes(storageRef, blob);
-        // const downloadUrl = await getDownloadURL(storageRef);
-        // return downloadUrl;
-        return localUri; // dummy
+    // Open the modal to edit a field.
+    function handleEdit(fieldName) {
+        console.log("handleEdit called with:", fieldName);
+        setEditField(fieldName);
+        const initialVal = settingsState[fieldName] ? String(settingsState[fieldName]) : '';
+        setFieldValue(initialVal);
+        setModalVisible(true);
     }
 
-    // (1) Trigger the ImagePicker from expo when a photo slot is tapped
-    async function handleChangePhoto(index) {
-        // Request media library permissions at runtime
+    // Save the edited field.
+    async function onSaveField() {
+        await updateProfileField(editField, fieldValue);
+        setModalVisible(false);
+    }
+
+    // Handler for setting the profile picture (first photo slot)
+    async function handleSetProfilePicture() {
+        console.log("handleSetProfilePicture called");
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            alert('Sorry, we need camera roll permissions to make this work!');
+        console.log("Media Library Permission status:", status);
+        if (status !== "granted") {
+            alert("Sorry, we need camera roll permissions to make this work!");
             return;
         }
-
-        // Launch the image library
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true, // user can crop
-            aspect: [4, 4],      // or whichever aspect
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            try {
-                // Since result might contain multiple picks, let's pick the first
-                const picked = result.assets[0]; // expo-image-picker v13 format
-
-                // Optionally upload to storage
-                const uploadedUrl = await uploadImageAsync(picked.uri);
-
-                // Update Firestore doc with the new URL
-                await updatePhotoAtIndex(index, uploadedUrl);
-            } catch (error) {
-                alert('Error uploading photo: ' + error.message);
+        try {
+            setIsUploadingProfile(true); // start uploading indicator
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: 'images', // using the new API string
+                allowsEditing: true,
+                aspect: [1, 1], // square crop for profile picture
+                quality: 1,
+            });
+            console.log("ImagePicker result:", result);
+            if (result.canceled) {
+                console.log("User canceled image picker");
+                setIsUploadingProfile(false);
+                return;
             }
+            const picked = result.assets ? result.assets[0] : result;
+            const uploadedUrl = await uploadImageAsync(picked.uri);
+            await updatePhotoAtIndex(0, uploadedUrl);
+        } catch (error) {
+            console.error("Error launching image picker:", error);
+            alert("Error launching image picker: " + error.message);
+        } finally {
+            setIsUploadingProfile(false); // stop uploading indicator
         }
     }
 
-    // (2) For deletion: set that slot to null
+    // Handler for updating one of the photo slots
+    async function handleChangePhoto(index) {
+        console.log("handleChangePhoto called for index:", index);
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        console.log("Media Library Permission status:", status);
+        if (status !== "granted") {
+            alert("Sorry, we need camera roll permissions to make this work!");
+            return;
+        }
+        try {
+            // Mark this index as uploading.
+            setUploadingIndexes((prev) => ({ ...prev, [index]: true }));
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: 'images', // using the new API string
+                allowsEditing: true,
+                aspect: [4, 4],
+                quality: 1,
+            });
+            console.log("ImagePicker result:", result);
+            if (result.canceled) {
+                console.log("User canceled image picker");
+                setUploadingIndexes((prev) => ({ ...prev, [index]: false }));
+                return;
+            }
+            const picked = result.assets ? result.assets[0] : result;
+            const uploadedUrl = await uploadImageAsync(picked.uri);
+            await updatePhotoAtIndex(index, uploadedUrl);
+        } catch (error) {
+            console.error("Error launching image picker:", error);
+            alert("Error launching image picker: " + error.message);
+        } finally {
+            // Remove the uploading indicator for this slot.
+            setUploadingIndexes((prev) => ({ ...prev, [index]: false }));
+        }
+    }
+
+    // For removing a photo.
     async function handleRemovePhoto(index) {
         try {
             await updatePhotoAtIndex(index, null);
@@ -95,17 +139,7 @@ export default function SettingsScreen() {
         }
     }
 
-    // function for editing text fields
-    function handleEdit(fieldName) {
-        setEditField(fieldName);
-        setModalVisible(true);
-    }
-
-    async function onSaveField(fieldName, newValue) {
-        await updateProfileField(fieldName, newValue);
-    }
-
-    // SwitchSelector for theme
+    // Theme switcher options.
     const themeOptions = [
         {
             label: '',
@@ -119,17 +153,8 @@ export default function SettingsScreen() {
         },
     ];
 
-    const {
-        bio,
-        height,
-        orientation,
-        interests,
-        education,
-        ageRange,
-        photos,
-    } = settingsState;
+    const { bio, height, orientation, interests, education, ageRange, photos } = settingsState;
 
-    // Logout & delete account
     const handleLogout = async () => {
         try {
             await logout();
@@ -138,11 +163,11 @@ export default function SettingsScreen() {
             alert(`Error logging out: ${error.message}`);
         }
     };
+
     const handleDeleteAccount = () => {
         alert('Account deletion not yet implemented.');
     };
 
-    // gradient
     const gradientColors =
         themeMode === 'light'
             ? [paperTheme.colors.primary, paperTheme.colors.accent]
@@ -156,11 +181,7 @@ export default function SettingsScreen() {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Icon name="arrow-left" size={24} color={paperTheme.colors.text} />
                     </TouchableOpacity>
-
-                    <Text style={[styles.headerTitle, { color: paperTheme.colors.text }]}>
-                        Account
-                    </Text>
-
+                    <Text style={[styles.headerTitle, { color: paperTheme.colors.text }]}>Account</Text>
                     <SwitchSelector
                         options={themeOptions}
                         initial={themeMode === 'light' ? 0 : 1}
@@ -178,12 +199,29 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Scrollable Content */}
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                >
-                    {/* Greeting Section */}
+                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+                    {/* Greeting Section with Profile Picture */}
                     <View style={styles.greetingSection}>
+                        <TouchableOpacity
+                            onPress={handleSetProfilePicture}
+                            style={styles.profilePictureContainer}
+                        >
+                            {photos[0] ? (
+                                <Image
+                                    source={{ uri: photos[0] }}
+                                    style={styles.profilePicture}
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <Icon name="account" size={100} color="#ccc" />
+                            )}
+                            {isUploadingProfile && (
+                                // Use the theme.overlay style (which might be a style object or simply a background color)
+                                <View style={[styles.profilePictureOverlay, paperTheme.colors.overlay]}>
+                                    <ActivityIndicator size="large" color={paperTheme.colors.accent} />
+                                </View>
+                            )}
+                        </TouchableOpacity>
                         <GradientText
                             text={`Hello, ${userDoc?.displayName || 'user_name'}`}
                             gradientColors={gradientColors}
@@ -196,7 +234,7 @@ export default function SettingsScreen() {
 
                     {/* Accordion Section */}
                     <View style={styles.accordionSection}>
-                        {/* Settings */}
+                        {/* Settings Accordion */}
                         <CustomAccordion
                             title="Settings"
                             subtitle="Edit your preferences and details"
@@ -269,48 +307,60 @@ export default function SettingsScreen() {
                             </View>
                         </CustomAccordion>
 
-                        {/* Photos */}
+                        {/* Photos Accordion */}
                         <CustomAccordion
-                            title={`Photos (${photos.filter(p => p).length}/6)`}
+                            title={`Photos (${photos.filter((p) => p).length}/6)`}
                             subtitle="Manage or add your profile photos"
                             icon="image"
                             backgroundColor={paperTheme.colors.cardBackground}
                             textColor={paperTheme.colors.text}
                             subtitleColor={paperTheme.colors.secondary}
                         >
+                            <Text style={[styles.hintText, { color: paperTheme.colors.text }]}>
+                                Tip: Tap the profile picture above to update your main profile photo.
+                            </Text>
                             <View style={styles.photosContainer}>
-                                {photos.map((photoUri, index) => (
-                                    <View key={`photo_${index}`} style={styles.photoWrapper}>
-                                        <TouchableOpacity
-                                            style={styles.photoSlot}
-                                            onPress={() => handleChangePhoto(index)}
-                                        >
-                                            {photoUri ? (
-                                                <Image
-                                                    source={{ uri: photoUri }}
-                                                    style={styles.photoImage}
-                                                    resizeMode="cover"
-                                                />
-                                            ) : (
-                                                <Icon name="plus" size={30} color="#999" />
-                                            )}
-                                        </TouchableOpacity>
-
-                                        {/* X icon for deletion if photo exists */}
-                                        {photoUri && (
+                                {[...Array(6)].map((_, index) => {
+                                    const photoUri = photos[index];
+                                    const isUploading = uploadingIndexes[index];
+                                    return (
+                                        <View key={`photo_${index}`} style={styles.photoWrapper}>
                                             <TouchableOpacity
-                                                style={styles.deleteIcon}
-                                                onPress={() => handleRemovePhoto(index)}
+                                                style={styles.photoSlot}
+                                                onPress={() => handleChangePhoto(index)}
                                             >
-                                                <Icon name="close-circle" size={24} color="red" />
+                                                {photoUri ? (
+                                                    <Image
+                                                        source={{ uri: photoUri }}
+                                                        style={styles.photoImage}
+                                                        resizeMode="cover"
+                                                    />
+                                                ) : (
+                                                    <Icon name="plus" size={30} color="#999" />
+                                                )}
+                                                {isUploading && (
+                                                    <View style={styles.overlay}>
+                                                        <ActivityIndicator size="small" color={paperTheme.colors.accent} />
+                                                    </View>
+                                                )}
                                             </TouchableOpacity>
-                                        )}
-                                    </View>
-                                ))}
+                                            {photoUri && (
+                                                <TouchableOpacity
+                                                    style={styles.deleteIcon}
+                                                    onPress={() => handleRemovePhoto(index)}
+                                                >
+                                                    <View style={[styles.deleteIconWrapper, { backgroundColor: paperTheme.colors.cardBackground }]}>
+                                                        <Icon name="close-circle" size={24} color={paperTheme.colors.error} />
+                                                    </View>
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    );
+                                })}
                             </View>
                         </CustomAccordion>
 
-                        {/* My Dates (only if male) */}
+                        {/* My Dates Accordion (if applicable) */}
                         {userDoc?.gender?.toLowerCase() === 'male' && (
                             <CustomAccordion
                                 title="My Dates"
@@ -322,10 +372,7 @@ export default function SettingsScreen() {
                             >
                                 {dates?.length > 0 ? (
                                     dates.map((d) => (
-                                        <Text
-                                            key={d.id}
-                                            style={[styles.value, { color: paperTheme.colors.text }]}
-                                        >
+                                        <Text key={d.id} style={[styles.value, { color: paperTheme.colors.text }]}>
                                             • {d.title || '(untitled date)'}
                                         </Text>
                                     ))
@@ -337,7 +384,7 @@ export default function SettingsScreen() {
                             </CustomAccordion>
                         )}
 
-                        {/* Membership */}
+                        {/* Membership Accordion */}
                         <CustomAccordion
                             title="Membership"
                             subtitle="Choose or upgrade your plan"
@@ -349,15 +396,9 @@ export default function SettingsScreen() {
                             <Text style={[styles.value, { color: paperTheme.colors.text }]}>
                                 Packages available:
                             </Text>
-                            <Text style={[styles.value, { color: paperTheme.colors.text }]}>
-                                • Free
-                            </Text>
-                            <Text style={[styles.value, { color: paperTheme.colors.text }]}>
-                                • Premium
-                            </Text>
-                            <Text style={[styles.value, { color: paperTheme.colors.text }]}>
-                                • Diamond
-                            </Text>
+                            <Text style={[styles.value, { color: paperTheme.colors.text }]}>• Free</Text>
+                            <Text style={[styles.value, { color: paperTheme.colors.text }]}>• Premium</Text>
+                            <Text style={[styles.value, { color: paperTheme.colors.text }]}>• Diamond</Text>
                         </CustomAccordion>
                     </View>
                 </ScrollView>
@@ -367,9 +408,7 @@ export default function SettingsScreen() {
                     <TouchableOpacity onPress={handleLogout} style={styles.touchableButton}>
                         <Text style={styles.buttonText}>Log Out</Text>
                     </TouchableOpacity>
-
                     <View style={{ height: 10 }} />
-
                     <TouchableOpacity onPress={handleDeleteAccount} style={styles.touchableButton}>
                         <Text style={[styles.buttonText, { color: paperTheme.colors.secondary }]}>
                             Delete my account
@@ -377,14 +416,24 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Edit Field Bottom Sheet */}
-                <EditFieldBottomSheet
+                {/* Custom Draggable Bottom Sheet for Editing Fields */}
+                <CustomDraggableBottomSheet
                     isVisible={isModalVisible}
                     onClose={() => setModalVisible(false)}
-                    fieldName={editField}
-                    initialValue={settingsState[editField] ? String(settingsState[editField]) : ''}
-                    onSave={onSaveField}
-                />
+                    sheetHeight={300}
+                >
+                    <Text style={styles.sheetHeading}>Edit {editField}</Text>
+                    <TextInput
+                        style={styles.textInput}
+                        value={fieldValue}
+                        onChangeText={setFieldValue}
+                        placeholder={`Enter ${editField}...`}
+                    />
+                    <View style={styles.sheetButtonRow}>
+                        <Button title="Cancel" onPress={() => setModalVisible(false)} />
+                        <Button title="Save" onPress={onSaveField} />
+                    </View>
+                </CustomDraggableBottomSheet>
             </View>
         </SafeAreaView>
     );
@@ -393,8 +442,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
     container: { flex: 1 },
-
-    // Header
     header: {
         position: 'relative',
         flexDirection: 'row',
@@ -402,10 +449,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
-    backButton: {
-        padding: 8,
-        zIndex: 2,
-    },
+    backButton: { padding: 8, zIndex: 2 },
     headerTitle: {
         position: 'absolute',
         left: 0,
@@ -415,90 +459,107 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         zIndex: 1,
     },
-    themeToggle: {
-        width: 70,
-        marginLeft: 'auto',
-        zIndex: 2,
-    },
-
-    // Scroll
+    themeToggle: { width: 70, marginLeft: 'auto', zIndex: 2 },
     scrollView: { flex: 1 },
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 20,
+    scrollContent: { paddingHorizontal: 16, paddingBottom: 20 },
+    greetingSection: {
+        marginBottom: 24,
+        alignItems: 'center',
     },
-
-    // Greeting
-    greetingSection: { marginBottom: 24 },
+    profilePicture: {
+        width: 100,
+        height: 100,
+        borderRadius: 50, // circular profile picture
+        borderWidth: 2,
+        borderColor: '#ccc',
+        marginBottom: 12,
+    },
     headerText: { fontSize: 22, fontWeight: '600' },
     subText: { fontSize: 14, marginTop: 4 },
-
-    // Accordion
     accordionSection: {},
-
-    // Fields
-    fieldRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    label: {
-        width: 100,
-        fontWeight: 'bold',
-    },
-    value: {
-        flex: 1,
-        marginRight: 6,
-    },
-    divider: {
-        marginVertical: 4,
-    },
-
-    // Photos
+    fieldRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+    label: { width: 100, fontWeight: 'bold' },
+    value: { flex: 1, marginRight: 6 },
+    divider: { marginVertical: 4 },
+    // Updated grid for photos: 2 rows x 3 columns.
     photosContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
+        marginHorizontal: 0,
+        marginTop: 8,
+    },
+    hintText: {
+        fontSize: 12,
+        fontStyle: 'italic',
+        textAlign: 'center',
+        marginBottom: 8,
     },
     photoWrapper: {
+        width: '30%', // roughly 3 per row
+        aspectRatio: 1, // square
+        marginBottom: 16,
         position: 'relative',
-        margin: '2%',
     },
     photoSlot: {
-        width: 100,
-        height: 100,
+        width: '100%',
+        height: '100%',
         borderWidth: 1,
         borderColor: '#ccc',
-        borderRadius: 4,
+        borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
     },
-    photoImage: {
+    photoImage: { width: '100%', height: '100%' },
+    profilePictureContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50, // Circular container
+        overflow: 'hidden', // Clips the overlay and image to a circle
+        position: 'relative',
+    },
+    profilePicture: {
         width: '100%',
         height: '100%',
+    },
+    profilePictureOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+        // The backgroundColor will come from paperTheme.overlay via the style prop.
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     deleteIcon: {
         position: 'absolute',
         top: -5,
-        right: -5,
+        right: -5
     },
-
-    // Bottom
+    deleteIconWrapper: {
+        padding: 2, // adjust padding as needed
+        borderRadius: 12, // half of the icon size (24/2)
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     bottomButtons: {
         height: 100,
         paddingHorizontal: 16,
         paddingTop: 10,
         borderTopWidth: 1,
     },
-    touchableButton: {
-        paddingVertical: 6,
-        alignItems: 'center',
+    touchableButton: { paddingVertical: 6, alignItems: 'center', borderRadius: 6 },
+    buttonText: { fontSize: 12, color: '#3C7AD6', fontWeight: '300' },
+    sheetHeading: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
+    textInput: {
+        borderWidth: 1,
+        borderColor: '#ccc',
         borderRadius: 6,
+        padding: 8,
+        marginBottom: 16,
     },
-    buttonText: {
-        fontSize: 12,
-        color: '#3C7AD6',
-        fontWeight: '300',
-    },
+    sheetButtonRow: { flexDirection: 'row', justifyContent: 'flex-end' },
 });
