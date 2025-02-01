@@ -6,6 +6,9 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
   View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
@@ -85,7 +88,7 @@ export default function CustomDraggableBottomSheet({
     <View style={styles.cardBackground}>
       {/* Tapping the semi-transparent background will close the sheet */}
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={[styles.background, { backgroundColor: theme.colors.overlay }]} />
+        <View style={[styles.background, { backgroundColor: theme.colors.overlay2 }]} />
       </TouchableWithoutFeedback>
       <Animated.View
         style={[
@@ -93,12 +96,22 @@ export default function CustomDraggableBottomSheet({
           {
             height: sheetHeight,
             transform: [{ translateY }],
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.background,
           },
         ]}
         {...panResponder.panHandlers}
       >
-        {children}
+        <KeyboardAvoidingView
+          behavior={'padding'}
+          style={{ flex: 1 }}
+        >
+          {/* Wrap the content so that tapping anywhere dismisses the keyboard */}
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={{ flex: 1 }}>
+              {children}
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Animated.View>
     </View>
   );
@@ -111,12 +124,10 @@ const styles = StyleSheet.create({
   },
   background: {
     ...StyleSheet.absoluteFillObject,
-    // The backgroundColor is now provided inline using theme.colors.overlay.
   },
   sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
-    // The backgroundColor is now provided inline using theme.colors.surface.
   },
 });

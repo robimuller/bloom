@@ -8,7 +8,8 @@ import {
     TouchableOpacity,
     TextInput,
     Button,
-    ActivityIndicator
+    ActivityIndicator,
+    Dimensions
 } from 'react-native';
 import { useTheme, Divider } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,14 @@ import CustomAccordion from '../../components/CustomAccordion';
 import CustomDraggableBottomSheet from '../../components/CustomDraggableBottomSheet';
 import uploadImageAsync from '../../utils/uploadImage';
 import { Image } from 'expo-image'
+import {
+    BioEditor,
+    HeightEditor,
+    OrientationEditor,
+    AgeRangeEditor,
+    EducationEditor,
+    InterestsEditor
+} from '../../components/ProfileEditors';
 
 export default function SettingsScreen() {
     const { userDoc, logout } = useContext(AuthContext);
@@ -39,6 +48,10 @@ export default function SettingsScreen() {
 
     const navigation = useNavigation();
     const paperTheme = useTheme();
+    const { height: screenHeight } = Dimensions.get('window');
+
+    const sheetHeight = screenHeight * 0.8;
+
 
     // States for managing the custom bottom sheet modal.
     const [isModalVisible, setModalVisible] = useState(false);
@@ -415,13 +428,14 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Custom Draggable Bottom Sheet for Editing Fields */}
+                {/* Bottom Sheet for Editing Fields */}
                 <CustomDraggableBottomSheet
                     isVisible={isModalVisible}
                     onClose={() => setModalVisible(false)}
-                    sheetHeight={300}
+                    sheetHeight={sheetHeight}
                 >
-                    <View style={[styles.sheetContainer, { backgroundColor: paperTheme.colors.surface }]}>
-                        {/* Header with Title and Close Button */}
+                    <View style={[styles.sheetContainer, { backgroundColor: paperTheme.colors.background }]}>
+                        {/* Header */}
                         <View style={styles.sheetHeader}>
                             <Text style={[styles.sheetHeading, { color: paperTheme.colors.text }]}>
                                 Edit {editField}
@@ -430,29 +444,75 @@ export default function SettingsScreen() {
                                 <Icon name="close" size={24} color={paperTheme.colors.text} />
                             </TouchableOpacity>
                         </View>
-                        {/* Editable Field */}
-                        <TextInput
-                            style={[
-                                styles.textInput,
-                                {
-                                    color: paperTheme.colors.text,
-                                    backgroundColor: paperTheme.colors.background,
-                                    borderColor: paperTheme.colors.placeholder,
-                                },
-                            ]}
-                            value={fieldValue}
-                            onChangeText={setFieldValue}
-                            placeholder={`Enter ${editField}...`}
-                            placeholderTextColor={paperTheme.colors.placeholder}
-                        />
+                        {/* Conditionally render editor based on field */}
+                        {editField === 'interests' ? (
+                            <InterestsEditor
+                                initialInterests={
+                                    Array.isArray(settingsState.interests)
+                                        ? settingsState.interests
+                                        : settingsState.interests?.split(',').map((i) => i.trim()) || []
+                                }
+                                onChange={(newInterests) => {
+                                    setFieldValue(newInterests.join(', '));
+                                }}
+                            />
+                        ) : editField === 'bio' ? (
+                            <BioEditor
+                                initialBio={settingsState.bio}
+                                onChange={(newBio) => setFieldValue(newBio)}
+                            />
+                        ) : editField === 'height' ? (
+                            <HeightEditor
+                                initialHeight={settingsState.height}
+                                onChange={(newHeight) => setFieldValue(newHeight)}
+                            />
+                        ) : editField === 'orientation' ? (
+                            <OrientationEditor
+                                initialOrientation={settingsState.orientation}
+                                onChange={(newOrientation) => setFieldValue(newOrientation)}
+                            />
+                        ) : editField === 'ageRange' ? (
+                            <AgeRangeEditor
+                                initialAgeRange={settingsState.ageRange || { min: '', max: '' }}
+                                onChange={(newAgeRange) =>
+                                    setFieldValue(`${newAgeRange.min} - ${newAgeRange.max}`)
+                                }
+                            />
+                        ) : editField === 'education' ? (
+                            <EducationEditor
+                                initialEducation={settingsState.education}
+                                onChange={(newEducation) => setFieldValue(newEducation)}
+                            />
+                        ) : (
+                            <TextInput
+                                style={[
+                                    styles.textInput,
+                                    {
+                                        color: paperTheme.colors.text,
+                                        backgroundColor: paperTheme.colors.background,
+                                        borderColor: paperTheme.colors.placeholder,
+                                    },
+                                ]}
+                                value={fieldValue}
+                                onChangeText={setFieldValue}
+                                placeholder={`Enter ${editField}...`}
+                                placeholderTextColor={paperTheme.colors.placeholder}
+                            />
+                        )}
                         {/* Button Row */}
                         <View style={styles.sheetButtonRow}>
-                            <Button
-                                title="Cancel"
+                            <TouchableOpacity
                                 onPress={() => setModalVisible(false)}
-                                color={paperTheme.colors.primary}
-                            />
-                            <Button title="Save" onPress={onSaveField} color={paperTheme.colors.primary} />
+                                style={[styles.sheetButton, { backgroundColor: paperTheme.colors.primary }]}
+                            >
+                                <Text style={styles.sheetButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={onSaveField}
+                                style={[styles.sheetButton, { backgroundColor: paperTheme.colors.primary, marginLeft: 8 }]}
+                            >
+                                <Text style={styles.sheetButtonText}>Save</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </CustomDraggableBottomSheet>
@@ -578,13 +638,6 @@ const styles = StyleSheet.create({
     // Bottom sheet container for editing fields
     sheetContainer: {
         padding: 16,
-        // Optional shadow for iOS
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        // Elevation for Android
-        elevation: 5,
     },
     sheetHeader: {
         flexDirection: 'row',
@@ -605,8 +658,19 @@ const styles = StyleSheet.create({
     sheetButtonRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        gap: 8
+        marginTop: 16,
     },
+    sheetButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 4,
+    },
+    sheetButtonText: {
+        color: '#fff', // or use paperTheme.colors.onPrimary if available
+        fontSize: 16,
+        textAlign: 'center',
+    },
+
     sheetHeading: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
     textInput: {
         borderWidth: 1,
@@ -615,5 +679,4 @@ const styles = StyleSheet.create({
         padding: 8,
         marginBottom: 16,
     },
-    sheetButtonRow: { flexDirection: 'row', justifyContent: 'flex-end' },
 });

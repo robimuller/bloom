@@ -8,6 +8,7 @@ export const lightTheme = {
     secondary: '#6C6F7F',
     accent: '#0BFFF3',
     overlay: 'rgba(255, 255, 255, 0.2)',
+    overlay2: 'rgba(109, 109, 109, 0.23)',
 
     // NEW: gradient colors for the main background
     mainBackground: ['#eeaeca', '#94bbe9'],
@@ -21,6 +22,7 @@ export const darkTheme = {
     secondary: '#6C6F7F',
     accent: '#0BFFF3',
     overlay: 'rgba(0,0,0,0.5)',
+    overlay2: 'rgba(50, 50, 50, 0.2)',
     outline: '#AAAAAA',
 
 

@@ -1,6 +1,7 @@
 // src/screens/auth/LoginScreen.js
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, TextInput, Button, Title, HelperText, useTheme } from 'react-native-paper';
 import { AuthContext } from '../../contexts/AuthContext';
 
 export default function LoginScreen({ navigation }) {
@@ -8,62 +9,113 @@ export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [localError, setLocalError] = useState(null);
+    const theme = useTheme();
 
     const handleLogin = async () => {
-        // Clear local error
         setLocalError(null);
-
         if (!email || !password) {
             setLocalError('Please enter both email and password.');
             return;
         }
-
-        // Call AuthContext login
         await login(email, password);
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Login</Text>
+        <KeyboardAvoidingView
+            style={[styles.container, { backgroundColor: theme.colors.background }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <View style={[styles.innerContainer, { backgroundColor: theme.colors.surface }]}>
+                <Title style={[styles.title, { color: theme.colors.primary }]}>
+                    Welcome Back
+                </Title>
+                <TextInput
+                    label="Email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    mode="outlined"
+                    style={styles.input}
+                    theme={{ colors: { primary: theme.colors.primary } }}
+                />
+                <TextInput
+                    label="Password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    mode="outlined"
+                    style={styles.input}
+                    theme={{ colors: { primary: theme.colors.primary } }}
+                />
 
-            <TextInput
-                placeholder="Email"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-                style={styles.input}
-            />
+                {(localError || authError) && (
+                    <HelperText type="error" visible style={styles.error}>
+                        {localError || authError}
+                    </HelperText>
+                )}
 
-            <TextInput
-                placeholder="Password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-            />
+                <Button mode="contained" onPress={handleLogin} style={styles.button}>
+                    Login
+                </Button>
 
-            {/* Display local or context auth errors */}
-            {localError && <Text style={styles.error}>{localError}</Text>}
-            {authError && <Text style={styles.error}>{authError}</Text>}
-
-            <Button title="Login" onPress={handleLogin} />
-
-            <Text style={styles.switchText}>
-                Don’t have an account?{' '}
-                <Text style={styles.link} onPress={() => navigation.navigate('SignUp')}>
-                    Sign Up
-                </Text>
-            </Text>
-        </View>
+                <View style={styles.footer}>
+                    <Text style={styles.switchText}>Don’t have an account?</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+                        <Text style={[styles.link, { color: theme.colors.primary }]}> Sign Up</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', padding: 20 },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-    input: { borderWidth: 1, marginBottom: 10, padding: 10, borderRadius: 5 },
-    error: { color: 'red', marginVertical: 10 },
-    switchText: { marginTop: 15, textAlign: 'center' },
-    link: { color: 'blue', textDecorationLine: 'underline' },
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        padding: 20,
+    },
+    innerContainer: {
+        borderRadius: 10,
+        padding: 20,
+        // Shadow for iOS
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 },
+        // Elevation for Android
+        elevation: 4,
+    },
+    title: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    input: {
+        marginBottom: 16,
+        backgroundColor: 'transparent',
+    },
+    error: {
+        marginBottom: 10,
+    },
+    button: {
+        marginTop: 10,
+        padding: 8,
+    },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 20,
+    },
+    switchText: {
+        fontSize: 14,
+    },
+    link: {
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
 });

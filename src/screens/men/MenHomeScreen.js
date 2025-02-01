@@ -1,4 +1,5 @@
-import React, { useContext } from 'react';
+// MenHomeScreen.js
+import React, { useContext, useState } from 'react';
 import {
     View,
     TouchableOpacity,
@@ -19,12 +20,15 @@ import Animated, {
 
 import { RequestsContext } from '../../contexts/RequestsContext';
 import MenFeedScreen from './MenFeedScreen';
+import CreateDateModal from '../../components/CreateDateModal';
+import CreateDateScreen from './CreateDateScreen';
 
 export default function MenHomeScreen() {
     const navigation = useNavigation();
     const paperTheme = useTheme();
     const { requests } = useContext(RequestsContext);
     const { colors } = useTheme();
+    const [isCreateDateModalVisible, setIsCreateDateModalVisible] = useState(false);
 
     // Men see pending requests or invites count
     const pendingCount = requests.filter((r) => r.status === 'pending').length;
@@ -39,15 +43,15 @@ export default function MenHomeScreen() {
     const headerAnimatedStyle = useAnimatedStyle(() => {
         const headerHeight = interpolate(
             scrollY.value,
-            [0, 100], // how far we scroll before it's fully shrunk
-            [100, 60], // initial height and final height
+            [0, 100], // scroll offset
+            [100, 60], // initial and final header heights
             Extrapolate.CLAMP
         );
 
         const headerOpacity = interpolate(
             scrollY.value,
             [0, 100],
-            [1, 0.8], // fade slightly as we scroll
+            [1, 0.8],
             Extrapolate.CLAMP
         );
 
@@ -58,92 +62,70 @@ export default function MenHomeScreen() {
     });
 
     return (
-        <LinearGradient
-            colors={gradientColors}
-            style={styles.gradientContainer}
-        >
+        <LinearGradient colors={gradientColors} style={styles.gradientContainer}>
             <SafeAreaView
                 style={[styles.safeArea, { backgroundColor: 'transparent' }]}
                 edges={['top']}
             >
                 {/* Animated Top Bar */}
                 <Animated.View style={[styles.topBar, headerAnimatedStyle]}>
-                    {/* Left: Settings (circle) */}
+                    {/* Left: Settings */}
                     <TouchableOpacity
-                        style={[
-                            styles.iconCircle,
-                            { marginRight: 16, backgroundColor: colors.overlay },
-                        ]}
+                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.overlay }]}
                         onPress={() => navigation.navigate('MenSettings')}
                     >
-                        <Ionicons
-                            name="settings-outline"
-                            size={24}
-                            color={paperTheme.colors.text}
-                        />
+                        <Ionicons name="settings-outline" size={24} color={paperTheme.colors.text} />
                     </TouchableOpacity>
 
-                    {/* Middle: Location placeholder */}
+                    {/* Middle: Location */}
                     <View style={styles.locationContainer}>
                         <Text style={styles.locationLabel}>Location</Text>
                         <View style={styles.locationRow}>
-                            <Ionicons
-                                name="location-outline"
-                                size={16}
-                                color={paperTheme.colors.primary}
-                                style={{ marginRight: 4 }}
-                            />
+                            <Ionicons name="location-outline" size={16} color={paperTheme.colors.primary} style={{ marginRight: 4 }} />
                             <Text style={[styles.locationValue, { color: paperTheme.colors.text }]}>
                                 Naperville, Illinois
                             </Text>
-                            <Ionicons
-                                name="chevron-down"
-                                size={16}
-                                color={paperTheme.colors.text}
-                                style={{ marginLeft: 4 }}
-                            />
+                            <Ionicons name="chevron-down" size={16} color={paperTheme.colors.text} style={{ marginLeft: 4 }} />
                         </View>
                     </View>
 
-                    {/* Right: Requests/Notifications (circle) */}
+                    {/* Right: Notifications */}
                     <TouchableOpacity
                         style={[styles.iconCircle, { backgroundColor: colors.overlay }]}
                         onPress={() => navigation.navigate('MenRequests')}
                     >
                         <View style={{ position: 'relative' }}>
-                            <Ionicons
-                                name="notifications-outline"
-                                size={24}
-                                color={paperTheme.colors.text}
-                            />
+                            <Ionicons name="notifications-outline" size={24} color={paperTheme.colors.text} />
                             {pendingCount > 0 && (
                                 <View style={styles.badgeContainer}>
-                                    <Text style={styles.badgeText}>
-                                        {pendingCount}
-                                    </Text>
+                                    <Text style={styles.badgeText}>{pendingCount}</Text>
                                 </View>
                             )}
                         </View>
                     </TouchableOpacity>
                 </Animated.View>
 
-                {/* Main content: the men’s feed */}
+                {/* Main Content: Men’s Feed */}
                 <View style={styles.mainContent}>
-                    <MenFeedScreen
-                        onScroll={(e) => {
-                            scrollY.value = e.nativeEvent.contentOffset.y;
-                        }}
-                    />
+                    <MenFeedScreen onScroll={(e) => { scrollY.value = e.nativeEvent.contentOffset.y; }} />
                 </View>
 
-                {/* Floating Button to create a new date */}
+                {/* Floating Button to open Create Date Modal */}
                 <FAB
                     style={[styles.fab, { backgroundColor: colors.background }]}
                     icon="plus"
                     color={paperTheme.colors.primary}
-                    onPress={() => navigation.navigate('CreateDate')}
+                    onPress={() => setIsCreateDateModalVisible(true)}
                 />
             </SafeAreaView>
+
+            {/* Create Date Modal */}
+            <CreateDateModal
+                isVisible={isCreateDateModalVisible}
+                onClose={() => setIsCreateDateModalVisible(false)}
+            >
+                <CreateDateScreen />
+            </CreateDateModal>
         </LinearGradient>
     );
 }
@@ -156,7 +138,6 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     topBar: {
-        // Same approach as WomenHomeScreen
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

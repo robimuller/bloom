@@ -570,7 +570,7 @@ export default function CreateDateScreen({ navigation }) {
                 hostPhoto={hostPhoto}
                 hostName={hostName}
                 hostAge={hostAge}
-                title="Create an event"
+                title="Create your date"
                 subtitle={`Step ${currentStep} of 5`}
                 canGoBack={currentStep > 1 && !isPublishing}
                 onBack={handleBack}

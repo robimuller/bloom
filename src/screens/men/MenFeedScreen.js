@@ -26,6 +26,7 @@ import Animated, {
 import { calculateAge } from '../../utils/deduceAge'; // Adjust the path as necessary
 
 import { ProfilesContext } from '../../contexts/ProfilesContext';
+import { LinearGradient } from 'expo-linear-gradient';
 // If you have a context for invites, import it here
 // import { InvitesContext } from '../../contexts/InvitesContext'; 
 
@@ -125,7 +126,7 @@ export default function MenFeedScreen({ onScroll }) {
         const isRequested = requestedIds.includes(item.id);
 
         return (
-            <View style={[styles.cardContainer, { backgroundColor: colors.overlay }]}>
+            <View style={[styles.cardContainer, { backgroundColor: colors.background }]}>
                 {/* Header */}
                 <View style={styles.header}>
                     <Image
@@ -280,6 +281,7 @@ function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 onScroll={onScroll}
+                scrollEnabled={photos.length > 1} // Disable scrolling if only one photo
                 renderItem={({ item }) => (
                     <Image
                         source={{ uri: item }}
@@ -287,12 +289,19 @@ function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }
                     />
                 )}
             />
+            {/* Gradient Filter Bar on the right */}
+            <LinearGradient
+                colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0)']} // Dark on right, transparent on left
+                start={{ x: 1, y: 0.5 }}
+                end={{ x: 0, y: 0.5 }}
+                style={styles.gradientBar}
+                pointerEvents="none"  // Allow touches to pass through if needed
+            />
             <View style={[styles.overlayTopRight, { backgroundColor: colors.overlay }]}>
                 <Text style={[styles.indexText, { color: colors.onBackground }]}>
                     {currentIndex + 1}/{photos.length}
                 </Text>
             </View>
-
             {/* Heart Circle Button + Explosion */}
             <View style={styles.overlayBottomRight}>
                 <HeartCircleButton
@@ -454,6 +463,14 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         marginBottom: 12,
     },
+    gradientBar: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        height: '100%',
+        width: 65, // Adjust width as needed
+        zIndex: 1,
+    },
     carouselImage: {
         width: SCREEN_WIDTH * 0.85,
         height: SCREEN_WIDTH * 0.85,
@@ -467,6 +484,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 1,
         borderRadius: 12,
+        zIndex: 2,
     },
     indexText: {
         fontSize: 10,
@@ -479,6 +497,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 10,
         right: 10,
+        zIndex: 2,
     },
     heartButton: {
         width: 44,

@@ -16,6 +16,7 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             onSurface: baseTheme.text,
             cardBackground: baseTheme.cardBackground,
             overlay: baseTheme.overlay,
+            overlay2: baseTheme.overlay2,
             secondary: baseTheme.secondary,
             onSecondary: '#000',
             outline: baseTheme.outline,
