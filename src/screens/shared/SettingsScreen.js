@@ -464,6 +464,7 @@ export default function SettingsScreen() {
                         ) : editField === 'height' ? (
                             <HeightEditor
                                 initialHeight={settingsState.height}
+                                modalVisible={isModalVisible}  // new prop
                                 onChange={(newHeight) => setFieldValue(newHeight)}
                             />
                         ) : editField === 'orientation' ? (

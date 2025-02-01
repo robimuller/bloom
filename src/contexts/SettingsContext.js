@@ -26,13 +26,17 @@ export function SettingsProvider({ children }) {
                     const data = snapshot.data();
                     const newPhotos = data.photos || Array(6).fill(null);
                     setSettingsState((prev) => {
-                        // Compare using JSON.stringify (or a deep equality check) to avoid updates when nothing changed
+                        // Compare all relevant fields to detect changes
                         if (
-                            JSON.stringify(prev.photos) !== JSON.stringify(newPhotos) ||
-                            prev.bio !== (data.bio || '')
+                            prev.bio !== (data.bio || '') ||
+                            prev.height !== (data.height || '') || // Check height here
+                            prev.orientation !== (data.orientation || '') ||
+                            JSON.stringify(prev.interests) !== JSON.stringify(data.interests || []) ||
+                            prev.education !== (data.education || '') ||
+                            JSON.stringify(prev.ageRange) !== JSON.stringify(data.ageRange || [18, 35]) ||
+                            JSON.stringify(prev.photos) !== JSON.stringify(newPhotos)
                         ) {
                             return {
-                                ...prev,
                                 bio: data.bio || '',
                                 height: data.height || '',
                                 orientation: data.orientation || '',

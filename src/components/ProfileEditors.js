@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextInput, Text, useTheme } from 'react-native-paper';
+import HeightRuler from './HeightRuler'; // adjust the path as needed
 
 /** InterestsEditor: Editor for interests with chips and search */
 export function InterestsEditor({ initialInterests = [], onChange }) {
@@ -146,25 +147,14 @@ export function BioEditor({ initialBio = '', onChange }) {
 
 /** HeightEditor: Numeric input for height */
 export function HeightEditor({ initialHeight = '', onChange }) {
-    const theme = useTheme();
-    const [height, setHeight] = useState(initialHeight);
-
-    useEffect(() => {
-        onChange(height);
-    }, [height]);
+    // Convert the initial height (if provided) to a number; default to 170 cm.
+    const initValue = parseInt(initialHeight, 10) || 170;
 
     return (
-        <View>
-            <TextInput
-                label="Height (cm)"
-                value={height}
-                onChangeText={setHeight}
-                mode="outlined"
-                keyboardType="numeric"
-                style={[styles.input, { backgroundColor: theme.colors.cardBackground }]}
-                theme={{ colors: { primary: theme.colors.primary } }}
-            />
-        </View>
+        <HeightRuler
+            initialValue={initValue}
+            onChange={onChange}
+        />
     );
 }
 
