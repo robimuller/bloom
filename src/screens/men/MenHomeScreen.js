@@ -1,4 +1,4 @@
-// MenHomeScreen.js
+// src/screens/men/MenHomeScreen.js
 import React, { useContext, useState } from 'react';
 import {
     View,
@@ -22,6 +22,7 @@ import { RequestsContext } from '../../contexts/RequestsContext';
 import MenFeedScreen from './MenFeedScreen';
 import CreateDateModal from '../../components/CreateDateModal';
 import CreateDateScreen from './CreateDateScreen';
+import CategoryFilter from '../../components/CategoryFilter'; // <-- Import the filter
 
 export default function MenHomeScreen() {
     const navigation = useNavigation();
@@ -43,23 +44,28 @@ export default function MenHomeScreen() {
     const headerAnimatedStyle = useAnimatedStyle(() => {
         const headerHeight = interpolate(
             scrollY.value,
-            [0, 100], // scroll offset
-            [100, 60], // initial and final header heights
+            [0, 100],
+            [100, 60],
             Extrapolate.CLAMP
         );
-
         const headerOpacity = interpolate(
             scrollY.value,
             [0, 100],
             [1, 0.8],
             Extrapolate.CLAMP
         );
-
         return {
             height: headerHeight,
             opacity: headerOpacity,
         };
     });
+
+    // Optionally, handle filter changes
+    const handleCategorySelect = (categoryId) => {
+        // Implement your filtering logic here.
+        // For example, update a state or trigger a refetch.
+        console.log('Selected category:', categoryId);
+    };
 
     return (
         <LinearGradient colors={gradientColors} style={styles.gradientContainer}>
@@ -71,7 +77,7 @@ export default function MenHomeScreen() {
                 <Animated.View style={[styles.topBar, headerAnimatedStyle]}>
                     {/* Left: Settings */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.overlay }]}
+                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.background }]}
                         onPress={() => navigation.navigate('MenSettings')}
                     >
                         <Ionicons name="settings-outline" size={24} color={paperTheme.colors.text} />
@@ -91,7 +97,7 @@ export default function MenHomeScreen() {
 
                     {/* Right: Notifications */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { backgroundColor: colors.overlay }]}
+                        style={[styles.iconCircle, { backgroundColor: colors.background }]}
                         onPress={() => navigation.navigate('MenRequests')}
                     >
                         <View style={{ position: 'relative' }}>
@@ -105,6 +111,9 @@ export default function MenHomeScreen() {
                     </TouchableOpacity>
                 </Animated.View>
 
+                {/* Category Filter above the feed */}
+                <CategoryFilter onSelect={handleCategorySelect} />
+
                 {/* Main Content: Men’s Feed */}
                 <View style={styles.mainContent}>
                     <MenFeedScreen onScroll={(e) => { scrollY.value = e.nativeEvent.contentOffset.y; }} />
@@ -112,9 +121,9 @@ export default function MenHomeScreen() {
 
                 {/* Floating Button to open Create Date Modal */}
                 <FAB
-                    style={[styles.fab, { backgroundColor: colors.background }]}
+                    style={[styles.fab, { backgroundColor: colors.primary }]}
                     icon="plus"
-                    color={paperTheme.colors.primary}
+                    color={paperTheme.colors.background}
                     onPress={() => setIsCreateDateModalVisible(true)}
                 />
             </SafeAreaView>
@@ -124,7 +133,7 @@ export default function MenHomeScreen() {
                 isVisible={isCreateDateModalVisible}
                 onClose={() => setIsCreateDateModalVisible(false)}
             >
-                <CreateDateScreen />
+                <CreateDateScreen onClose={() => setIsCreateDateModalVisible(false)} />
             </CreateDateModal>
         </LinearGradient>
     );
@@ -192,7 +201,10 @@ const styles = StyleSheet.create({
     },
     fab: {
         position: 'absolute',
-        right: 16,
         bottom: 16,
+        alignSelf: 'center',
+        width: 56,
+        height: 56,
+        borderRadius: 28,
     },
 });

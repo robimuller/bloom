@@ -48,6 +48,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // STEP 1
 const StepOne = memo(function StepOne({ title, setTitle, details, setDetails }) {
+    const paperTheme = useTheme()
     return (
         <View>
             <Text style={styles.stepTitle}>What is the title of your date?</Text>
@@ -71,7 +72,7 @@ const StepOne = memo(function StepOne({ title, setTitle, details, setDetails }) 
                 outlineColor="#252525"
                 theme={{ roundness: 25 }}
             />
-            <Text style={styles.inspirationText}>
+            <Text style={[styles.inspirationText, { color: paperTheme.colors.secondary }]}>
                 Need some inspiration? Try some of our date ideas and save the headache
                 of being creative.{' '}
                 <Text style={styles.clickableLink}>Click here</Text>
@@ -375,11 +376,10 @@ const StepFive = memo(function StepFive({
 /* ============================= */
 /*        MAIN SCREEN           */
 /* ============================= */
-export default function CreateDateScreen({ navigation }) {
+export default function CreateDateScreen({ navigation, onClose }) {
     const paperTheme = useTheme();
     const { user, userDoc } = useContext(AuthContext);
     const { createDate } = useContext(DatesContext);
-    const theme = useTheme();
 
 
     const [currentStep, setCurrentStep] = useState(1);
@@ -473,7 +473,8 @@ export default function CreateDateScreen({ navigation }) {
         setError(null);
 
         try {
-            // Step 1) Create doc in Firestore "dates" to get the docId
+            // Step 1) Create doc in Firestore "dates" to get the docId,
+            // now including requestCount: 0.
             const docRef = await addDoc(collection(db, 'dates'), {
                 hostId: user.uid,
                 title,
@@ -484,6 +485,7 @@ export default function CreateDateScreen({ navigation }) {
                 status: 'open',
                 createdAt: serverTimestamp(),
                 photos: [],
+                requestCount: 0,  // <-- Add this field here!
             });
 
             // Step 2) Classify the date into one of the 7 categories
@@ -506,7 +508,12 @@ export default function CreateDateScreen({ navigation }) {
             setTime('');
             setPhotos([]);
 
-            navigation.navigate('MenHome');
+            // Instead of navigating, close the modal if onClose is provided
+            if (onClose) {
+                onClose();
+            } else if (navigation) {
+                navigation.navigate('MenHome');
+            }
         } catch (err) {
             console.error('Error creating date:', err);
             setError(err.message);
@@ -622,9 +629,9 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     inspirationText: {
-        fontSize: 14,
-        color: '#888',
+        fontSize: 12,
         marginBottom: 16,
+        fontWeight: "300"
     },
     clickableLink: {
         color: '#339af0',

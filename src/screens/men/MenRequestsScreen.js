@@ -26,20 +26,28 @@ export default function MenRequestsScreen({ navigation }) {
     const [expandedRequestId, setExpandedRequestId] = useState(null);
     const paperTheme = useTheme();
 
-    // Toggle expanded card
+    // Toggle the expanded view of a request card
     const toggleExpand = (requestId) => {
         setExpandedRequestId((prev) => (prev === requestId ? null : requestId));
     };
 
+    // Accept a request and then navigate to the Chat screen
     const handleAccept = async (reqItem) => {
         try {
             const chatId = await acceptRequest(reqItem);
-            // ...navigate to chat...
+            // Navigate to the Chat screen after acceptance
+            navigation.navigate('Chat', {
+                chatId,
+                dateId: reqItem.dateId,
+                hostId: reqItem.hostId,
+                requesterId: reqItem.requesterId,
+            });
         } catch (error) {
             console.log('Error accepting request:', error);
         }
     };
 
+    // Reject a request (remains on the same screen)
     const handleReject = async (reqItem) => {
         try {
             await rejectRequest(reqItem);
@@ -48,13 +56,19 @@ export default function MenRequestsScreen({ navigation }) {
         }
     };
 
+    // Open chat if a chatId exists
     const handleOpenChat = (reqItem) => {
         if (!reqItem.chatId) return;
-        // ...navigate to chat...
+        navigation.navigate('Chat', {
+            chatId: reqItem.chatId,
+            dateId: reqItem.dateId,
+            hostId: reqItem.hostId,
+            requesterId: reqItem.requesterId,
+        });
     };
 
     const renderRequest = ({ item }) => {
-        // If this item doesn't match the filter, hide it instead of unmounting
+        // If the item doesn't match the filter, hide it without unmounting
         const visible = item.status === statusFilter;
 
         return (
@@ -72,7 +86,7 @@ export default function MenRequestsScreen({ navigation }) {
         );
     };
 
-    // Check how many requests match the filter (for ListEmptyComponent)
+    // Count how many requests match the filter for the empty list message
     const matchingCount = requests.filter((r) => r.status === statusFilter).length;
 
     return (
@@ -91,7 +105,7 @@ export default function MenRequestsScreen({ navigation }) {
             />
 
             <FlatList
-                data={requests} // pass ALL requests
+                data={requests} // all requests are passed in
                 keyExtractor={(item) => item.id}
                 renderItem={renderRequest}
                 contentContainerStyle={{ paddingBottom: 20 }}
@@ -118,7 +132,6 @@ const RequestItem = memo(function RequestItem({
 }) {
     const { requesterDoc = {}, dateDoc = {} } = item;
     const photoUrl = requesterDoc.photos?.[0] || fallbackPhoto;
-
     const cacheKey = `avatar-${item.requesterId}`;
 
     return (
@@ -146,10 +159,23 @@ const RequestItem = memo(function RequestItem({
                     <View style={styles.buttonRow}>
                         {statusFilter === 'pending' ? (
                             <>
-                                <PaperButton mode="outlined" onPress={() => onReject(item)} textColor="#f44336">
+                                <PaperButton
+                                    mode="outlined"
+                                    onPress={() => onReject(item)}
+                                    textColor="#f44336"
+                                >
                                     Reject
                                 </PaperButton>
-                                <PaperButton mode="outlined" onPress={() => { }}>
+                                <PaperButton
+                                    mode="outlined"
+                                    onPress={() => {
+                                        if (item.chatId) {
+                                            onOpenChat(item);
+                                        } else {
+                                            console.log('Chat is not available until the request is accepted.');
+                                        }
+                                    }}
+                                >
                                     Chat
                                 </PaperButton>
                                 <PaperButton mode="contained" onPress={() => onAccept(item)}>
@@ -168,15 +194,6 @@ const RequestItem = memo(function RequestItem({
     );
 });
 
-function areEqual(prevProps, nextProps) {
-    // ... your usual memo check ...
-    return (
-        prevProps.item.id === nextProps.item.id &&
-        prevProps.isExpanded === nextProps.isExpanded &&
-        prevProps.statusFilter === nextProps.statusFilter
-    );
-}
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -186,7 +203,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     hiddenContainer: {
-        // No space in layout, but item is still mounted
         height: 0,
         overflow: 'hidden',
     },

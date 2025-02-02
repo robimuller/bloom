@@ -11,10 +11,11 @@ import {
     ActivityIndicator,
     StyleSheet,
     Text,
-    KeyboardAvoidingView,
-    Platform,
+    Keyboard,
     Modal,
     Pressable,
+    Platform,
+    KeyboardAvoidingView,
 } from 'react-native';
 import { GiftedChat, Bubble } from 'react-native-gifted-chat';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,14 +36,13 @@ import { useTheme, IconButton } from 'react-native-paper';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Image } from 'expo-image';
 
-
 import TypingDots from './TypingDots'; // new bouncy animation
 
 export default function ChatScreen({ route, navigation }) {
     const { user, userDoc } = useContext(AuthContext);
     const { chatId, dateId, hostId, requesterId } = route.params || {};
     const paperTheme = useTheme();
-    const headerHeight = useHeaderHeight(); // Precisely measure the header
+    const headerHeight = useHeaderHeight(); // precisely measure the header
 
     // Local state
     const [messages, setMessages] = useState([]);
@@ -50,6 +50,7 @@ export default function ChatScreen({ route, navigation }) {
     const [otherUserDoc, setOtherUserDoc] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [dateDetails, setDateDetails] = useState(null);
+    // (keyboardHeight state removed for Android)
 
     // Determine who the "other" person is
     const otherUserId = user?.uid === hostId ? requesterId : hostId;
@@ -86,9 +87,8 @@ export default function ChatScreen({ route, navigation }) {
         fetchDateDetails();
     }, [dateId]);
 
-    // Customize the header once we have `otherUserDoc`
+    // Customize the header once we have otherUserDoc
     useLayoutEffect(() => {
-        // Define a “Back” icon:
         const backButton = () => (
             <IconButton
                 icon="arrow-left"
@@ -97,13 +97,11 @@ export default function ChatScreen({ route, navigation }) {
             />
         );
 
-        // Photo or initial:
         const userPhoto = otherUserDoc?.photos?.[0];
         const userInitial = otherUserDoc?.firstName
             ? otherUserDoc.firstName.charAt(0).toUpperCase()
             : 'U';
 
-        // Show small circle with userPhoto or initial
         const PhotoOrInitial = () => (
             <View style={styles.headerAvatarContainer}>
                 {userPhoto ? (
@@ -111,7 +109,7 @@ export default function ChatScreen({ route, navigation }) {
                         source={{ uri: userPhoto }}
                         style={styles.headerAvatarImage}
                         contentFit="cover"
-                        transition={500}     // optional fade     // optional placeholder
+                        transition={500} // optional fade/placeholder
                     />
                 ) : (
                     <View
@@ -128,10 +126,8 @@ export default function ChatScreen({ route, navigation }) {
             </View>
         );
 
-        // The person’s first name next to photo
         const displayName = otherUserDoc?.firstName || 'Unknown';
 
-        // A hamburger icon => toggles the modal
         const hamburgerButton = () => (
             <IconButton
                 icon="dots-vertical"
@@ -141,7 +137,7 @@ export default function ChatScreen({ route, navigation }) {
         );
 
         navigation.setOptions({
-            headerShown: true, // Ensure it shows
+            headerShown: true,
             headerLeft: backButton,
             headerTitle: () => (
                 <View style={styles.headerTitleContainer}>
@@ -167,23 +163,19 @@ export default function ChatScreen({ route, navigation }) {
                 return {
                     _id: docSnap.id,
                     text: data.text,
-                    createdAt: data.createdAt
-                        ? data.createdAt.toDate()
-                        : new Date(),
+                    createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
                     user: data.user,
                 };
             });
             setMessages(loaded);
         });
 
-        // Subscribe to "typing"
+        // Subscribe to typing status
         const typingRef = collection(db, 'chats', chatId, 'typing');
         const unsubscribeTyping = onSnapshot(typingRef, (snapshot) => {
             const typingData = snapshot.docs
                 .map((docSnap) => docSnap.data())
-                .filter(
-                    (docData) => docData.isTyping && docData.userId !== user.uid
-                );
+                .filter((docData) => docData.isTyping && docData.userId !== user.uid);
             setTypingUsers(typingData);
         });
 
@@ -198,7 +190,6 @@ export default function ChatScreen({ route, navigation }) {
         async (newMsgs = []) => {
             if (!chatId || !user) return;
             const msg = newMsgs[0];
-
             await addDoc(collection(db, 'chats', chatId, 'messages'), {
                 text: msg.text,
                 user: {
@@ -215,7 +206,6 @@ export default function ChatScreen({ route, navigation }) {
     const handleTyping = async (currentText) => {
         if (!chatId || !user) return;
         const isTyping = currentText?.length > 0;
-
         await setDoc(doc(db, 'chats', chatId, 'typing', user.uid), {
             userId: user.uid,
             displayName: userDoc?.displayName || 'Someone',
@@ -224,32 +214,26 @@ export default function ChatScreen({ route, navigation }) {
         });
     };
 
-    // Show the other user's typing status in the GiftedChat footer
+    // Render the footer (typing indicator)
     const renderFooter = () => {
         if (!typingUsers.length) return null;
         const { displayName } = typingUsers[0];
         return (
             <View style={styles.footerContainer}>
-                <Text style={styles.footerText}>
-                    {displayName} is typing
-                </Text>
+                <Text style={styles.footerText}>{displayName} is typing</Text>
                 <TypingDots dotColor="gray" style={{ marginLeft: 4 }} />
             </View>
         );
     };
 
-    // Customize bubbles
+    // Customize chat bubbles
     const renderBubble = (props) => {
         return (
             <Bubble
                 {...props}
                 wrapperStyle={{
-                    right: {
-                        backgroundColor: paperTheme.colors.primary,
-                    },
-                    left: {
-                        backgroundColor: paperTheme.dark ? '#444' : '#e6e6e6',
-                    },
+                    right: { backgroundColor: paperTheme.colors.primary },
+                    left: { backgroundColor: paperTheme.dark ? '#444' : '#e6e6e6' },
                 }}
                 textStyle={{
                     right: { color: '#fff' },
@@ -259,7 +243,7 @@ export default function ChatScreen({ route, navigation }) {
         );
     };
 
-    // Custom Avatar
+    // Render custom avatar if desired
     const renderAvatar = (props) => {
         const name = props.currentMessage.user.name || 'U';
         const initial = name.charAt(0).toUpperCase();
@@ -270,19 +254,13 @@ export default function ChatScreen({ route, navigation }) {
                     { backgroundColor: paperTheme.colors.primary },
                 ]}
             >
-                <Text
-                    style={[
-                        styles.avatarInitial,
-                        { color: paperTheme.colors.background },
-                    ]}
-                >
+                <Text style={[styles.avatarInitial, { color: paperTheme.colors.background }]}>
                     {initial}
                 </Text>
             </View>
         );
     };
 
-    // If there's no chatId yet, show loading
     if (!chatId) {
         return (
             <View style={styles.center}>
@@ -307,12 +285,7 @@ export default function ChatScreen({ route, navigation }) {
                             { backgroundColor: paperTheme.colors.background },
                         ]}
                     >
-                        <Text
-                            style={[
-                                styles.modalTitle,
-                                { color: paperTheme.colors.text },
-                            ]}
-                        >
+                        <Text style={[styles.modalTitle, { color: paperTheme.colors.text }]}>
                             Date Details
                         </Text>
                         {dateDetails ? (
@@ -332,7 +305,6 @@ export default function ChatScreen({ route, navigation }) {
                                 No details available
                             </Text>
                         )}
-
                         <Pressable
                             style={[
                                 styles.closeButton,
@@ -346,27 +318,56 @@ export default function ChatScreen({ route, navigation }) {
                 </View>
             </Modal>
 
-            {/* Chat UI */}
-            <SafeAreaView
-                style={[
-                    styles.safeArea,
-                    { backgroundColor: paperTheme.colors.background },
-                ]}
-                edges={['bottom', 'left', 'right']}
-            >
-                <GiftedChat
-                    messages={messages}
-                    onSend={(msgs) => onSend(msgs)}
-                    user={{ _id: user.uid }}
-                    onInputTextChanged={handleTyping}
-                    renderFooter={renderFooter}
-                    renderBubble={renderBubble}
-                    renderAvatar={renderAvatar}
-                    placeholder="Type a message..."
-                    textInputStyle={{ color: paperTheme.colors.text }}
-                    alwaysShowSend
-                />
-            </SafeAreaView>
+            {/*
+          On iOS we wrap the chat UI in a KeyboardAvoidingView to push the content up,
+          whereas on Android we rely on "pan" mode and simply use a SafeAreaView.
+        */}
+            {Platform.OS === 'ios' ? (
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior="padding"
+                    keyboardVerticalOffset={headerHeight}
+                >
+                    <SafeAreaView
+                        style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]}
+                        edges={['bottom', 'left', 'right']}
+                    >
+                        <GiftedChat
+                            messages={messages}
+                            onSend={(msgs) => onSend(msgs)}
+                            user={{ _id: user.uid }}
+                            onInputTextChanged={handleTyping}
+                            renderFooter={renderFooter}
+                            renderBubble={renderBubble}
+                            renderAvatar={renderAvatar}
+                            placeholder="Type a message..."
+                            textInputStyle={{ color: paperTheme.colors.text }}
+                            alwaysShowSend
+                        />
+                    </SafeAreaView>
+                </KeyboardAvoidingView>
+            ) : (
+                <SafeAreaView
+                    style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]}
+                    edges={['left', 'right']} // Exclude bottom to avoid extra inset
+                >
+                    <View style={{ flex: 1 }}>
+                        <GiftedChat
+                            messages={messages}
+                            onSend={(msgs) => onSend(msgs)}
+                            user={{ _id: user.uid }}
+                            onInputTextChanged={handleTyping}
+                            renderFooter={renderFooter}
+                            renderBubble={renderBubble}
+                            renderAvatar={renderAvatar}
+                            placeholder="Type a message..."
+                            textInputStyle={{ color: paperTheme.colors.text }}
+                            alwaysShowSend
+                            bottomOffset={0}  // Ensure no extra bottom offset
+                        />
+                    </View>
+                </SafeAreaView>
+            )}
         </>
     );
 }
@@ -402,8 +403,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
     },
-
-    // Header
+    // Header styles
     headerTitleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -427,8 +427,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-
-    // Modal
+    // Modal styles
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',

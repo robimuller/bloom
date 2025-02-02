@@ -27,5 +27,5 @@ export const darkTheme = {
 
 
     // NEW: gradient colors for the main background
-    mainBackground: ['#49363e', '#171d24'],
+    mainBackground: ['#23292f', '#171d24'],
 };

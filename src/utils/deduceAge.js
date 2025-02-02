@@ -1,4 +1,4 @@
-// src/utils/dateUtils.js
+// src/utils/deduceAge.js
 
 /**
  * Calculates age based on the birthday string in 'yyyy-mm-dd' format.

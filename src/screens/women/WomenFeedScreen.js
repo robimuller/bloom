@@ -1,5 +1,5 @@
 // src/screens/WomenFeedScreen.jsx
-import React, { useContext, useState, useRef } from 'react';
+import React, { useContext, useState, useRef, useEffect } from 'react';
 import {
     View,
     FlatList,
@@ -20,15 +20,15 @@ import Animated, {
     useAnimatedStyle,
     interpolate,
     Extrapolate,
-    runOnJS
+    runOnJS,
 } from 'react-native-reanimated';
 import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
 import { RequestsContext } from '../../contexts/RequestsContext';
 import { getDateCategory } from '../../utils/dateCategory';
+import { calculateAge } from '../../utils/deduceAge';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Possible reasons for reporting:
 const REPORT_OPTIONS = [
     'Harassment',
@@ -41,9 +41,15 @@ const REPORT_OPTIONS = [
 // Number of tiny hearts to explode
 const HEART_COUNT = 6;
 
-export default function WomenFeedScreen({ onScroll }) {
+const CARD_HEIGHT = 500; // Adjust as needed.
+const CARD_SPACING = 16;
+
+// Create an Animated version of FlatList
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+
+export default function WomenFeedScreen({ selectedCategory, onScroll }) {
     const { user } = useContext(AuthContext);
-    const { dates, loadingDates, reportDate } = useContext(DatesContext);
+    const { dates, loadingDates, fetchDiscoverDates, fetchTrendingDates } = useContext(DatesContext);
     const { sendRequest, cancelRequest, requests } = useContext(RequestsContext);
     const { colors } = useTheme();
 
@@ -51,6 +57,20 @@ export default function WomenFeedScreen({ onScroll }) {
     const [reportModalVisible, setReportModalVisible] = useState(false);
     const [reportTargetItem, setReportTargetItem] = useState(null);
     const [reportReasons, setReportReasons] = useState([]);
+
+    // When the selected category changes, re-run the appropriate query.
+    useEffect(() => {
+        let unsubscribe;
+        if (selectedCategory === 'trending') {
+            unsubscribe = fetchTrendingDates();
+        } else {
+            // Default to "Discover" which shows all open dates
+            unsubscribe = fetchDiscoverDates();
+        }
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [selectedCategory]);
 
     // Fired when user taps the heart to create a request
     const handleSendRequest = async (dateId, hostId) => {
@@ -89,7 +109,7 @@ export default function WomenFeedScreen({ onScroll }) {
         }
 
         const { id: dateId, hostId } = reportTargetItem;
-        const reporterId = user?.uid;                    // <- Use the currently logged-in user’s ID
+        const reporterId = user?.uid; // Use the currently logged-in user’s ID
 
         if (!reporterId) {
             Alert.alert('Not Logged In', 'You must be logged in to report a date.');
@@ -126,22 +146,22 @@ export default function WomenFeedScreen({ onScroll }) {
     };
 
     const renderItem = ({ item }) => {
-
         const dateId = item.id;
         const hostId = item.hostId;
         const dateCategory = getDateCategory(item.date || '');
-
         // Check if there's already a request for this date (and still 'pending')
-        // Because if user is female => requests = all requests with 'requesterId = user.uid'
-        // So we find if there's any matching doc with the same dateId & hostId
         const existingRequest = requests.find(
-            (r) => r.dateId === dateId &&
+            (r) =>
+                r.dateId === dateId &&
                 r.hostId === hostId &&
                 r.status === 'pending'
         );
 
+        // Calculate the host's age based on the birthday field
+        const age = calculateAge(item.host?.birthday);
+
         return (
-            <View style={[styles.cardContainer, { backgroundColor: colors.overlay }]}>
+            <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
                 {/* Header */}
                 <View style={styles.header}>
                     <Image
@@ -155,7 +175,7 @@ export default function WomenFeedScreen({ onScroll }) {
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.hostName, { color: colors.text }]}>
                             {item.host?.displayName || 'Unknown'}
-                            {item.host?.age ? `, ${item.host.age}` : ''}
+                            {age !== null ? `, ${age}` : ''}
                         </Text>
                     </View>
                     <TouchableOpacity onPress={() => handleFlagPress(item)}>
@@ -191,23 +211,23 @@ export default function WomenFeedScreen({ onScroll }) {
     };
 
     return (
-        <View style={{ flex: 1 }}>
+        <View style={{ height: CARD_HEIGHT + CARD_SPACING }}>
             {loadingDates ? (
                 <Text style={{ textAlign: 'center', marginTop: 20, color: colors.text }}>
                     Loading Dates…
                 </Text>
             ) : (
-                <FlatList
+                <AnimatedFlatList
                     data={dates}
                     keyExtractor={(date) => date.id}
                     renderItem={renderItem}
+                    pagingEnabled               // This makes sure one page (card) is shown at a time
+                    decelerationRate="fast"
+                    snapToAlignment="start"
                     contentContainerStyle={{ paddingBottom: 20 }}
-                    onScroll={(e) => {
-                        if (onScroll) {
-                            onScroll(e);
-                        }
-                    }}
-                    scrollEventThrottle={16} // Adjust this value for smoother scrolling
+                    onScroll={onScroll}
+                    scrollEventThrottle={16}
+                    showsVerticalScrollIndicator={false}
                 />
             )}
             {/* REPORT MODAL */}
@@ -277,7 +297,7 @@ function Carousel({
     hostId,
     onSendRequest,
     onCancelRequest,
-    existingRequest
+    existingRequest,
 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef(null);
@@ -306,7 +326,7 @@ function Carousel({
                     />
                 )}
             />
-            <View style={[styles.overlayTopRight, { backgroundColor: colors.overlay }]}>
+            <View style={[styles.overlayTopRight, { backgroundColor: colors.background }]}>
                 <Text style={[styles.indexText, { color: colors.onBackground }]}>
                     {currentIndex + 1}/{photos.length}
                 </Text>
@@ -337,7 +357,7 @@ function HeartCircleButton({
     hostId,
     existingRequest,
     onSendRequest,
-    onCancelRequest
+    onCancelRequest,
 }) {
     const { colors } = useTheme();
     const [requested, setRequested] = useState(!!existingRequest);
@@ -415,13 +435,12 @@ function HeartCircleButton({
  * A collection of hearts that float away as progress goes from 0 to 1.
  */
 function HeartsExplosion({ progress }) {
-
     // We'll create an array of hearts
     const hearts = Array.from({ length: HEART_COUNT }, (_, i) => ({
         key: i,
         angle: (Math.random() * 2 - 1) * Math.PI * 0.6,
         distance: 60 + Math.random() * 40,
-        scale: 0.5 + Math.random() * 0.8
+        scale: 0.5 + Math.random() * 0.8,
     }));
 
     return (
@@ -444,7 +463,7 @@ function HeartsExplosion({ progress }) {
  */
 function FloatingHeart({ progress, angle, distance, scale }) {
     const animatedStyle = useAnimatedStyle(() => {
-        // fade in quickly from 0 -> 0.05
+        // Fade in quickly from 0 -> 0.05, then fade out toward 1
         const opacity = interpolate(
             progress.value,
             [0, 0.05, 1],
@@ -459,9 +478,9 @@ function FloatingHeart({ progress, angle, distance, scale }) {
             transform: [
                 { translateX: x },
                 { translateY: y },
-                { scale: _scale }
+                { scale: _scale },
             ],
-            opacity
+            opacity,
         };
     });
 
@@ -477,13 +496,13 @@ const styles = StyleSheet.create({
     // Card Container
     //----------------------------------
     cardContainer: {
+        height: CARD_HEIGHT,
         marginHorizontal: 2,
         borderRadius: 20,
         overflow: 'hidden',
         paddingHorizontal: 25,
         paddingBottom: 12,
-        marginTop: 16,
-        flex: 1,
+        marginTop: CARD_SPACING, // This should match the spacing used in snapToInterval.
     },
     //----------------------------------
     // Header
@@ -531,7 +550,7 @@ const styles = StyleSheet.create({
     },
     indexText: {
         fontSize: 10,
-        fontWeight: '300'
+        fontWeight: '300',
     },
     //----------------------------------
     // Heart Button (bottom-right)
@@ -582,7 +601,6 @@ const styles = StyleSheet.create({
     dateCategory: {
         fontSize: 14,
     },
-
     // ----- MODAL STYLES -----
     modalBackdrop: {
         flex: 1,

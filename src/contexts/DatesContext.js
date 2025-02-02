@@ -5,10 +5,12 @@ import {
     doc,
     query,
     where,
+    orderBy,
+    limit,
     onSnapshot,
     addDoc,
     getDoc,
-    serverTimestamp
+    serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { AuthContext } from './AuthContext';
@@ -20,39 +22,34 @@ export const DatesProvider = ({ children }) => {
     const [dates, setDates] = useState([]);
     const [loadingDates, setLoadingDates] = useState(false);
 
-    // Fetch all open dates and merge host info
-    const fetchOpenDates = () => {
+    /**
+     * Fetch "Discover" dates – i.e., all open dates.
+     */
+    const fetchDiscoverDates = () => {
         setLoadingDates(true);
         const datesRef = collection(db, 'dates');
+        // "Discover": show all dates where status is "open"
         const q = query(datesRef, where('status', '==', 'open'));
 
-        // Listen for changes in real time
         const unsubscribe = onSnapshot(q, async (snapshot) => {
-            // Map each doc to a promise that loads host user data
             const datePromises = snapshot.docs.map(async (docSnap) => {
                 const dateData = { id: docSnap.id, ...docSnap.data() };
-
-                // If you want host info, fetch from `users/{hostId}`
                 if (dateData.hostId) {
                     const hostRef = doc(db, 'users', dateData.hostId);
                     const hostSnap = await getDoc(hostRef);
                     if (hostSnap.exists()) {
                         const hostData = hostSnap.data();
-                        // Merge host info into the date object
                         dateData.host = {
                             displayName: hostData.displayName,
-                            photos: hostData.photos || [],  // or any other fields you want
-                            // etc...
+                            photos: hostData.photos || [],
+                            birthday: hostData.birthday,
+                            email: hostData.email,
                         };
                     }
                 }
-
                 return dateData;
             });
-
-            // Wait for all host fetches to complete
             const enrichedDates = await Promise.all(datePromises);
-
             setDates(enrichedDates);
             setLoadingDates(false);
         });
@@ -60,22 +57,50 @@ export const DatesProvider = ({ children }) => {
         return unsubscribe;
     };
 
-    const createDate = async (dateData) => {
-        if (!user) return;
-        try {
-            const datesRef = collection(db, 'dates');
-            await addDoc(datesRef, {
-                ...dateData,
-                hostId: user.uid,
-                createdAt: serverTimestamp(),
+    /**
+     * Fetch "Trending" dates – for example, dates that have a requestCount
+     * of 50 or above. (Ensure that you have added and maintained a field
+     * like `requestCount` on each date document.)
+     */
+    const fetchTrendingDates = () => {
+        setLoadingDates(true);
+        const datesRef = collection(db, 'dates');
+        // Trending: open dates with requestCount >= 50, ordered by requestCount descending.
+        const q = query(
+            datesRef,
+            where('status', '==', 'open'),
+            where('requestCount', '>=', 1),
+            orderBy('requestCount', 'desc'),
+            limit(20)
+        );
+
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            const datePromises = snapshot.docs.map(async (docSnap) => {
+                const dateData = { id: docSnap.id, ...docSnap.data() };
+                if (dateData.hostId) {
+                    const hostRef = doc(db, 'users', dateData.hostId);
+                    const hostSnap = await getDoc(hostRef);
+                    if (hostSnap.exists()) {
+                        const hostData = hostSnap.data();
+                        dateData.host = {
+                            displayName: hostData.displayName,
+                            photos: hostData.photos || [],
+                            birthday: hostData.birthday,
+                            email: hostData.email,
+                        };
+                    }
+                }
+                return dateData;
             });
-        } catch (error) {
-            console.error('Error creating date:', error);
-            throw error; // so the screen can handle it
-        }
+            const enrichedDates = await Promise.all(datePromises);
+            setDates(enrichedDates);
+            setLoadingDates(false);
+        });
+
+        return unsubscribe;
     };
 
-    // NEW: a helper to file a report in Firestore
+    // Helper to file a report
     const reportDate = async ({ dateId, hostId, reporterId, reasons }) => {
         try {
             const reportsRef = collection(db, 'reports');
@@ -92,21 +117,23 @@ export const DatesProvider = ({ children }) => {
         }
     };
 
-    // You can choose whether you auto‐fetch in the provider or let screens call it
+    // Initially, subscribe to "Discover" dates
     useEffect(() => {
-        // e.g. automatically subscribe to all open dates
-        const unsub = fetchOpenDates();
+        const unsub = fetchDiscoverDates();
         return () => unsub();
     }, [user]);
 
     return (
-        <DatesContext.Provider value={{
-            dates,
-            loadingDates,
-            reportDate,
-            createDate,
-            fetchOpenDates, // so any screen can call it again if needed
-        }}>
+        <DatesContext.Provider
+            value={{
+                dates,
+                loadingDates,
+                reportDate,
+                fetchDiscoverDates,   // For the default "discover" filter
+                fetchTrendingDates,   // For the "trending" filter
+                // You can add additional functions for filters like latest, nearby, etc.
+            }}
+        >
             {children}
         </DatesContext.Provider>
     );

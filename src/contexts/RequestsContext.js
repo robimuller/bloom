@@ -10,7 +10,8 @@ import {
     serverTimestamp,
     query,
     where,
-    getDoc // <== make sure to import
+    getDoc,
+    increment // <== make sure to import
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { AuthContext } from './AuthContext';
@@ -83,12 +84,19 @@ export const RequestsProvider = ({ children }) => {
     const sendRequest = async ({ dateId, hostId }) => {
         if (!user) return;
         try {
+            // Add the new request to the "requests" collection
             await addDoc(collection(db, 'requests'), {
                 dateId,
                 hostId,
                 requesterId: user.uid,
                 status: 'pending',
                 createdAt: serverTimestamp(),
+            });
+
+            // Increment the requestCount on the date document
+            const dateDocRef = doc(db, 'dates', dateId);
+            await updateDoc(dateDocRef, {
+                requestCount: increment(1)
             });
         } catch (error) {
             console.error('Error sending request:', error);
@@ -97,9 +105,15 @@ export const RequestsProvider = ({ children }) => {
     };
 
     // Cancel (delete) the request doc from Firestore
-    const cancelRequest = async (requestId) => {
+    const cancelRequest = async (requestId, dateId) => {
         try {
             await deleteDoc(doc(db, 'requests', requestId));
+
+            // Decrement the requestCount on the date document
+            const dateDocRef = doc(db, 'dates', dateId);
+            await updateDoc(dateDocRef, {
+                requestCount: increment(-1)
+            });
         } catch (error) {
             console.error('Error canceling request:', error);
             throw error;

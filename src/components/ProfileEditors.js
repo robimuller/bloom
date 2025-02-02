@@ -1,7 +1,7 @@
 // src/components/ProfileEditors.js
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { TextInput, Text, useTheme } from 'react-native-paper';
+import { TextInput, Text, useTheme, Chip } from 'react-native-paper';
 import HeightRuler from './HeightRuler'; // adjust the path as needed
 
 /** InterestsEditor: Editor for interests with chips and search */

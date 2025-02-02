@@ -18,12 +18,14 @@ import { useNavigation } from '@react-navigation/native';
   ============================
 */
 function GradientProgressBar({ progress, barHeight = 8 }) {
+    const theme = useTheme(); // Get theme from react-native-paper
+
     return (
         <View
             style={{
                 height: barHeight,
                 borderRadius: barHeight / 2,
-                backgroundColor: '#ccc',
+                backgroundColor: theme.colors.cardBackground,
                 overflow: 'hidden',
             }}
         >
@@ -48,6 +50,9 @@ const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
     const lightAnim = useRef(new Animated.Value(-1)).current;
+
+    const theme = useTheme(); // Get theme from react-native-paper
+
 
     useEffect(() => {
         const loop = Animated.loop(
@@ -101,10 +106,10 @@ function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
                 <IconButton
                     icon={icon}
                     size={20}
-                    iconColor="#fff"
+                    iconColor={theme.colors.background}
                     style={{ margin: 0, marginRight: 4 }}
                 />
-                <Text style={styles.shootButtonText}>{label}</Text>
+                <Text style={[styles.shootButtonText, { color: theme.colors.background }]}>{label}</Text>
             </View>
         </TouchableOpacity>
     );

@@ -1,159 +1,107 @@
-// src/screens/women/WomenHomeScreen.js
-import React, { useContext } from 'react';
-import {
-    View,
-    TouchableOpacity,
-    StyleSheet,
-    Text,
-} from 'react-native';
+// src/screens/WomenHomeScreen.js
+import React, { useContext, useState } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    interpolate,
-    Extrapolate,
-} from 'react-native-reanimated';
 
 import { RequestsContext } from '../../contexts/RequestsContext';
 import WomenFeedScreen from './WomenFeedScreen';
+import CategoryFilter from '../../components/CategoryFilter';
 
 export default function WomenHomeScreen() {
     const navigation = useNavigation();
-    const paperTheme = useTheme();
+    const theme = useTheme();
     const { requests } = useContext(RequestsContext);
     const { colors } = useTheme();
 
-    // Women see 'accepted' requests count
+    // Count accepted requests
     const acceptedCount = requests.filter((r) => r.status === 'accepted').length;
 
-    // Grab the gradient array from your Paper theme
-    const gradientColors = paperTheme.colors.mainBackground || ['#fff', '#ccc'];
+    // Store the currently selected category
+    const [selectedCategory, setSelectedCategory] = useState('all');
 
-    // Shared value for scroll position
-    const scrollY = useSharedValue(0);
-
-    // Animated style for the header
-    const headerAnimatedStyle = useAnimatedStyle(() => {
-        const headerHeight = interpolate(
-            scrollY.value,
-            [0, 100], // Adjust these values based on how much you want the header to shrink
-            [100, 60], // Initial height and final height of the header
-            Extrapolate.CLAMP
-        );
-
-        const headerOpacity = interpolate(
-            scrollY.value,
-            [0, 100], // Adjust these values based on when you want the opacity to change
-            [1, 0.8], // Initial opacity and final opacity
-            Extrapolate.CLAMP
-        );
-
-        return {
-            height: headerHeight,
-            opacity: headerOpacity,
-        };
-    });
+    // Handler for when a category is selected.
+    const handleCategorySelect = (categoryId) => {
+        console.log('Selected category:', categoryId);
+        setSelectedCategory(categoryId);
+    };
 
     return (
-        <LinearGradient
-            colors={gradientColors}
-            style={styles.gradientContainer}
-        >
-            <SafeAreaView
-                style={[styles.safeArea, { backgroundColor: 'transparent' }]}
-                edges={['top']}
-            >
-                {/* Animated Top Bar */}
-                <Animated.View style={[styles.topBar, headerAnimatedStyle]}>
-                    {/* Left: Settings (circle) */}
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+            {/* Header */}
+            <View style={styles.header}>
+                {/* Top row */}
+                <View style={styles.topRow}>
+                    {/* Settings */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.overlay }]}
+                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.cardBackground }]}
                         onPress={() => navigation.navigate('WomenSettings')}
                     >
-                        <Ionicons
-                            name="settings-outline"
-                            size={24}
-                            color={paperTheme.colors.text}
-                        />
+                        <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
                     </TouchableOpacity>
 
-                    {/* Middle: Location placeholder */}
+                    {/* Location */}
                     <View style={styles.locationContainer}>
-                        {/* A label above the location text (optional) */}
-                        <Text style={styles.locationLabel}>Location</Text>
+                        <Text style={[styles.locationLabel, { color: theme.colors.secondary }]}>Location</Text>
                         <View style={styles.locationRow}>
-                            <Ionicons
-                                name="location-outline"
-                                size={16}
-                                color={paperTheme.colors.primary}
-                                style={{ marginRight: 4 }}
-                            />
-                            <Text style={[styles.locationValue, { color: paperTheme.colors.text }]}>
-                                Naperville, Illinois
-                            </Text>
-                            <Ionicons
-                                name="chevron-down"
-                                size={16}
-                                color={paperTheme.colors.text}
-                                style={{ marginLeft: 4 }}
-                            />
+                            <Ionicons name="location-outline" size={16} color={theme.colors.primary} style={{ marginRight: 4 }} />
+                            <Text style={[styles.locationValue, { color: theme.colors.text }]}>Naperville, Illinois</Text>
+                            <Ionicons name="chevron-down" size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
                         </View>
                     </View>
 
-                    {/* Right: Notifications (circle) */}
+                    {/* Notifications */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { backgroundColor: colors.overlay }]}
+                        style={[styles.iconCircle, { backgroundColor: colors.cardBackground }]}
                         onPress={() => navigation.navigate('WomenRequests')}
                     >
                         <View style={{ position: 'relative' }}>
-                            <Ionicons
-                                name="notifications-outline"
-                                size={24}
-                                color={paperTheme.colors.text}
-                            />
+                            <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
                             {acceptedCount > 0 && (
                                 <View style={styles.badgeContainer}>
-                                    <Text style={styles.badgeText}>
-                                        {acceptedCount}
-                                    </Text>
+                                    <Text style={styles.badgeText}>{acceptedCount}</Text>
                                 </View>
                             )}
                         </View>
                     </TouchableOpacity>
-                </Animated.View>
-
-                {/* Main content: show the feed (optional) */}
-                <View style={styles.mainContent}>
-                    <WomenFeedScreen onScroll={(e) => {
-                        scrollY.value = e.nativeEvent.contentOffset.y;
-                    }} />
                 </View>
-            </SafeAreaView>
-        </LinearGradient>
+
+                {/* Category Filter */}
+                <View style={styles.filterContainer}>
+                    <CategoryFilter onSelect={handleCategorySelect} />
+                </View>
+            </View>
+
+            {/* Main content */}
+            <View style={styles.mainContent}>
+                {/* Pass selectedCategory down to WomenFeedScreen */}
+                <WomenFeedScreen selectedCategory={selectedCategory} />
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    gradientContainer: {
-        flex: 1,
-    },
     safeArea: {
         flex: 1,
     },
-    topBar: {
-        // A horizontal layout with space between left & right icons
+    header: {
+        width: '100%',
+    },
+    topRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingTop: 16,
+        height: 90,
+    },
+    filterContainer: {
+        paddingHorizontal: 10,
     },
     iconCircle: {
-        // A circle using the "overlay" color from your theme
         width: 40,
         height: 40,
         borderRadius: 20,
@@ -161,9 +109,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     locationContainer: {
-        // Center label and row
+        flex: 1,
         alignItems: 'center',
-        flex: 1,  // let this expand to center it
     },
     locationLabel: {
         fontSize: 12,
@@ -181,7 +128,6 @@ const styles = StyleSheet.create({
     mainContent: {
         flex: 1,
         paddingHorizontal: 10,
-        paddingTop: 16,
     },
     badgeContainer: {
         position: 'absolute',

@@ -26,8 +26,7 @@
       }, 
       "package": "dev.expo.bloomapp",
       "googleServicesFile": "./google-services.json", 
-      "softwareKeyboardLayoutMode": "pan"
-    },
+"softwareKeyboardLayoutMode": "resize"    },
     "web": {
       "favicon": "./assets/favicon.png"
     },

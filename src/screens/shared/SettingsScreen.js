@@ -22,11 +22,14 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
 import { ThemeContext } from '../../contexts/ThemeContext';
 import { SettingsContext } from '../../contexts/SettingsContext';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+
 
 import GradientText from '../../components/GradientText';
 import CustomAccordion from '../../components/CustomAccordion';
 import CustomDraggableBottomSheet from '../../components/CustomDraggableBottomSheet';
 import uploadImageAsync from '../../utils/uploadImage';
+import { SafeKeyboardAvoidingView } from '../../components/SafeKeyboardAvoidingView';
 import { Image } from 'expo-image'
 import {
     BioEditor,
@@ -434,88 +437,96 @@ export default function SettingsScreen() {
                     onClose={() => setModalVisible(false)}
                     sheetHeight={sheetHeight}
                 >
-                    <View style={[styles.sheetContainer, { backgroundColor: paperTheme.colors.background }]}>
-                        {/* Header */}
-                        <View style={styles.sheetHeader}>
-                            <Text style={[styles.sheetHeading, { color: paperTheme.colors.text }]}>
-                                Edit {editField}
-                            </Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Icon name="close" size={24} color={paperTheme.colors.text} />
-                            </TouchableOpacity>
+                    <KeyboardAwareScrollView
+                        style={{ flex: 1 }}
+                        contentContainerStyle={{ flexGrow: 1, padding: 16 }}
+                        extraScrollHeight={20} // adjust if needed
+                        enableOnAndroid={true}
+                        keyboardOpeningTime={0}
+                    >
+                        <View style={[styles.sheetContainer, { backgroundColor: paperTheme.colors.background }]}>
+                            {/* Header */}
+                            <View style={styles.sheetHeader}>
+                                <Text style={[styles.sheetHeading, { color: paperTheme.colors.text }]}>
+                                    Edit {editField}
+                                </Text>
+                                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                    <Icon name="close" size={24} color={paperTheme.colors.text} />
+                                </TouchableOpacity>
+                            </View>
+                            {/* Conditionally render editor based on field */}
+                            {editField === 'interests' ? (
+                                <InterestsEditor
+                                    initialInterests={
+                                        Array.isArray(settingsState.interests)
+                                            ? settingsState.interests
+                                            : settingsState.interests?.split(',').map((i) => i.trim()) || []
+                                    }
+                                    onChange={(newInterests) => {
+                                        setFieldValue(newInterests.join(', '));
+                                    }}
+                                />
+                            ) : editField === 'bio' ? (
+                                <BioEditor
+                                    initialBio={settingsState.bio}
+                                    onChange={(newBio) => setFieldValue(newBio)}
+                                />
+                            ) : editField === 'height' ? (
+                                <HeightEditor
+                                    initialHeight={settingsState.height}
+                                    modalVisible={isModalVisible}  // new prop
+                                    onChange={(newHeight) => setFieldValue(newHeight)}
+                                />
+                            ) : editField === 'orientation' ? (
+                                <OrientationEditor
+                                    initialOrientation={settingsState.orientation}
+                                    onChange={(newOrientation) => setFieldValue(newOrientation)}
+                                />
+                            ) : editField === 'ageRange' ? (
+                                <AgeRangeEditor
+                                    initialAgeRange={settingsState.ageRange || { min: '', max: '' }}
+                                    onChange={(newAgeRange) =>
+                                        setFieldValue(`${newAgeRange.min} - ${newAgeRange.max}`)
+                                    }
+                                />
+                            ) : editField === 'education' ? (
+                                <EducationEditor
+                                    initialEducation={settingsState.education}
+                                    onChange={(newEducation) => setFieldValue(newEducation)}
+                                />
+                            ) : (
+                                <TextInput
+                                    style={[
+                                        styles.textInput,
+                                        {
+                                            color: paperTheme.colors.text,
+                                            backgroundColor: paperTheme.colors.background,
+                                            borderColor: paperTheme.colors.placeholder,
+                                        },
+                                    ]}
+                                    value={fieldValue}
+                                    onChangeText={setFieldValue}
+                                    placeholder={`Enter ${editField}...`}
+                                    placeholderTextColor={paperTheme.colors.placeholder}
+                                />
+                            )}
+                            {/* Button Row */}
+                            <View style={styles.sheetButtonRow}>
+                                <TouchableOpacity
+                                    onPress={() => setModalVisible(false)}
+                                    style={[styles.sheetButton, { backgroundColor: paperTheme.colors.primary }]}
+                                >
+                                    <Text style={styles.sheetButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={onSaveField}
+                                    style={[styles.sheetButton, { backgroundColor: paperTheme.colors.primary, marginLeft: 8 }]}
+                                >
+                                    <Text style={styles.sheetButtonText}>Save</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                        {/* Conditionally render editor based on field */}
-                        {editField === 'interests' ? (
-                            <InterestsEditor
-                                initialInterests={
-                                    Array.isArray(settingsState.interests)
-                                        ? settingsState.interests
-                                        : settingsState.interests?.split(',').map((i) => i.trim()) || []
-                                }
-                                onChange={(newInterests) => {
-                                    setFieldValue(newInterests.join(', '));
-                                }}
-                            />
-                        ) : editField === 'bio' ? (
-                            <BioEditor
-                                initialBio={settingsState.bio}
-                                onChange={(newBio) => setFieldValue(newBio)}
-                            />
-                        ) : editField === 'height' ? (
-                            <HeightEditor
-                                initialHeight={settingsState.height}
-                                modalVisible={isModalVisible}  // new prop
-                                onChange={(newHeight) => setFieldValue(newHeight)}
-                            />
-                        ) : editField === 'orientation' ? (
-                            <OrientationEditor
-                                initialOrientation={settingsState.orientation}
-                                onChange={(newOrientation) => setFieldValue(newOrientation)}
-                            />
-                        ) : editField === 'ageRange' ? (
-                            <AgeRangeEditor
-                                initialAgeRange={settingsState.ageRange || { min: '', max: '' }}
-                                onChange={(newAgeRange) =>
-                                    setFieldValue(`${newAgeRange.min} - ${newAgeRange.max}`)
-                                }
-                            />
-                        ) : editField === 'education' ? (
-                            <EducationEditor
-                                initialEducation={settingsState.education}
-                                onChange={(newEducation) => setFieldValue(newEducation)}
-                            />
-                        ) : (
-                            <TextInput
-                                style={[
-                                    styles.textInput,
-                                    {
-                                        color: paperTheme.colors.text,
-                                        backgroundColor: paperTheme.colors.background,
-                                        borderColor: paperTheme.colors.placeholder,
-                                    },
-                                ]}
-                                value={fieldValue}
-                                onChangeText={setFieldValue}
-                                placeholder={`Enter ${editField}...`}
-                                placeholderTextColor={paperTheme.colors.placeholder}
-                            />
-                        )}
-                        {/* Button Row */}
-                        <View style={styles.sheetButtonRow}>
-                            <TouchableOpacity
-                                onPress={() => setModalVisible(false)}
-                                style={[styles.sheetButton, { backgroundColor: paperTheme.colors.primary }]}
-                            >
-                                <Text style={styles.sheetButtonText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={onSaveField}
-                                style={[styles.sheetButton, { backgroundColor: paperTheme.colors.primary, marginLeft: 8 }]}
-                            >
-                                <Text style={styles.sheetButtonText}>Save</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    </KeyboardAwareScrollView>
                 </CustomDraggableBottomSheet>
             </View>
         </SafeAreaView>
