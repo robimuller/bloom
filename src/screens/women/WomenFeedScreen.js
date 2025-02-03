@@ -29,6 +29,9 @@ import { getDateCategory } from '../../utils/dateCategory';
 import { calculateAge } from '../../utils/deduceAge';
 import LoadingDates from '../../components/LoadingDates';
 import RevealAnimation from '../../components/RevealAnimation';
+import ExtraActionButtons from '../../components/ExtraActionButtons';
+import { LinearGradient } from 'expo-linear-gradient';
+
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -330,14 +333,26 @@ function Carousel({
                     />
                 )}
             />
+            {/* Add the gradient overlay behind the action buttons */}
+            <LinearGradient
+                colors={['rgba(0,0,0,0.7)', 'transparent']}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 0 }}
+                style={styles.gradientOverlay}
+                pointerEvents="none"  // Ensure touches pass through to underlying buttons.
+            />
+
             <View style={[styles.overlayTopRight, { backgroundColor: colors.background }]}>
                 <Text style={[styles.indexText, { color: colors.onBackground }]}>
                     {currentIndex + 1}/{photos.length}
                 </Text>
             </View>
 
-            {/* Heart Circle Button + Explosion */}
+            {/* Vertical stack of extra action buttons and the heart button */}
             <View style={styles.overlayBottomRight}>
+                {/* Extra actions (Message, Bookmark, Share) */}
+                <ExtraActionButtons />
+                {/* Heart Circle Button remains as is */}
                 <HeartCircleButton
                     dateId={dateId}
                     hostId={hostId}
@@ -551,6 +566,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 1,
         borderRadius: 12,
+    },
+    gradientOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 120,          // Adjust this value if needed.
+        height: '100%',       // This covers the bottom 40% of the carousel.
+        borderTopLeftRadius: 16,  // Match the carousel's top-left radius.
     },
     indexText: {
         fontSize: 10,
