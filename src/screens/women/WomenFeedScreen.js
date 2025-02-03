@@ -47,7 +47,7 @@ const REPORT_OPTIONS = [
 // Number of tiny hearts to explode
 const HEART_COUNT = 6;
 
-const CARD_HEIGHT = 500; // Adjust as needed.
+const CARD_HEIGHT = 550; // Adjust as needed.
 const CARD_SPACING = 16;
 
 // Create an Animated version of FlatList

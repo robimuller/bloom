@@ -9,6 +9,7 @@ import { useTheme } from 'react-native-paper';
 import { RequestsContext } from '../../contexts/RequestsContext';
 import WomenFeedScreen from './WomenFeedScreen';
 import CategoryFilter from '../../components/CategoryFilter';
+import LocationSelector from '../../components/LocationSelector';
 
 export default function WomenHomeScreen() {
     const navigation = useNavigation();
@@ -16,10 +17,10 @@ export default function WomenHomeScreen() {
     const { requests } = useContext(RequestsContext);
     const { colors } = useTheme();
 
-    // Count accepted requests
+    // Count accepted requests.
     const acceptedCount = requests.filter((r) => r.status === 'accepted').length;
 
-    // Store the currently selected category
+    // Store the currently selected category.
     const [selectedCategory, setSelectedCategory] = useState('all');
 
     // Handler for when a category is selected.
@@ -42,15 +43,8 @@ export default function WomenHomeScreen() {
                         <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
                     </TouchableOpacity>
 
-                    {/* Location */}
-                    <View style={styles.locationContainer}>
-                        <Text style={[styles.locationLabel, { color: theme.colors.secondary }]}>Location</Text>
-                        <View style={styles.locationRow}>
-                            <Ionicons name="location-outline" size={16} color={theme.colors.primary} style={{ marginRight: 4 }} />
-                            <Text style={[styles.locationValue, { color: theme.colors.text }]}>Naperville, Illinois</Text>
-                            <Ionicons name="chevron-down" size={16} color={theme.colors.text} style={{ marginLeft: 4 }} />
-                        </View>
-                    </View>
+                    {/* Location (uses the new LocationSelector component) */}
+                    <LocationSelector />
 
                     {/* Notifications */}
                     <TouchableOpacity
@@ -108,26 +102,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    locationContainer: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    locationLabel: {
-        fontSize: 12,
-        opacity: 0.8,
-        marginBottom: 2,
-    },
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    locationValue: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
     mainContent: {
         flex: 1,
-        // paddingHorizontal: 10,
     },
     badgeContainer: {
         position: 'absolute',

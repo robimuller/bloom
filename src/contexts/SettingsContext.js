@@ -16,6 +16,7 @@ export function SettingsProvider({ children }) {
         education: '',
         ageRange: [18, 35],    // default
         photos: Array(6).fill(null), // 6 slots
+        location: '', // <-- add location here!
     });
 
     useEffect(() => {
@@ -29,12 +30,13 @@ export function SettingsProvider({ children }) {
                         // Compare all relevant fields to detect changes
                         if (
                             prev.bio !== (data.bio || '') ||
-                            prev.height !== (data.height || '') || // Check height here
+                            prev.height !== (data.height || '') ||
                             prev.orientation !== (data.orientation || '') ||
                             JSON.stringify(prev.interests) !== JSON.stringify(data.interests || []) ||
                             prev.education !== (data.education || '') ||
                             JSON.stringify(prev.ageRange) !== JSON.stringify(data.ageRange || [18, 35]) ||
-                            JSON.stringify(prev.photos) !== JSON.stringify(newPhotos)
+                            JSON.stringify(prev.photos) !== JSON.stringify(newPhotos) ||
+                            prev.location !== (data.location || '')
                         ) {
                             return {
                                 bio: data.bio || '',
@@ -44,6 +46,7 @@ export function SettingsProvider({ children }) {
                                 education: data.education || '',
                                 ageRange: data.ageRange || [18, 35],
                                 photos: newPhotos,
+                                location: data.location || '', // <-- update location
                             };
                         }
                         return prev;

@@ -1,6 +1,13 @@
 // src/components/CategoryFilter.js
-import React, { useState, useContext } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, ScrollView } from 'react-native';
+import React, { useState, useContext, useEffect, useRef } from 'react';
+import {
+    View,
+    TouchableOpacity,
+    StyleSheet,
+    Text,
+    ScrollView,
+    Animated,
+} from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -12,13 +19,13 @@ const categoriesMen = [
         id: 'explore',
         label: 'Explore',
         subtitle: 'Browse women’s profiles by style and vibe',
-        gradientColors: ['#FF7E5F', '#FD3A69'],
+        gradientColors: ['#D769C5', '#8F4AE7'],
     },
     {
         id: 'trending',
         label: 'Trending',
         subtitle: 'See profiles that are popular right now',
-        gradientColors: ['#4ECDC4', '#556270'],
+        gradientColors: ['#E1D246', '#ffa10a'],
     },
     {
         id: 'new',
@@ -58,13 +65,13 @@ const categoriesWomen = [
         id: 'discover',
         label: 'Discover',
         subtitle: 'Find dates that match your interests',
-        gradientColors: ['#FFC371', '#FF5F6D'],
+        gradientColors: ['#D769C5', '#8F4AE7'],
     },
     {
         id: 'trending',
         label: 'Trending',
         subtitle: 'Check out dates that are popular right now',
-        gradientColors: ['#4ECDC4', '#556270'],
+        gradientColors: ['#E1D246', '#ffa10a'],
     },
     {
         id: 'latest',
@@ -80,7 +87,7 @@ const categoriesWomen = [
     },
     {
         id: 'recommend',
-        label: 'Recommendations',
+        label: 'For You',
         subtitle: 'Personalized date suggestions for you',
         gradientColors: ['#FCE38A', '#F38181'],
     },
@@ -101,7 +108,6 @@ const categoriesWomen = [
 // Mapping for overlay icons using MaterialCommunityIcons.
 // Adjust icon names as needed.
 const categoryLogos = {
-    all: 'apps',
     // For Men's App
     explore: 'compass-outline',
     trending: 'fire',
@@ -117,6 +123,58 @@ const categoryLogos = {
     active: 'clock-outline',
 };
 
+/**
+ * AnimatedCategoryButton
+ *
+ * This component wraps the category button with an Animated.View. When the button's
+ * `isSelected` prop changes, it animates its scale and opacity.
+ */
+const AnimatedCategoryButton = ({ gradientColors, logoName, isSelected, onPress, theme }) => {
+    // Create animated values for scale and opacity.
+    const scaleAnim = useRef(new Animated.Value(isSelected ? 1.2 : 1)).current;
+    const opacityAnim = useRef(new Animated.Value(isSelected ? 1 : 0.6)).current;
+
+    useEffect(() => {
+        // Animate both scale and opacity in parallel.
+        Animated.parallel([
+            Animated.timing(scaleAnim, {
+                toValue: isSelected ? 1.2 : 1,
+                duration: 200,
+                useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+                toValue: isSelected ? 1 : 0.6,
+                duration: 200,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [isSelected, scaleAnim, opacityAnim]);
+
+    return (
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], opacity: opacityAnim }}>
+            <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.categoryButton}>
+                {isSelected ? (
+                    <LinearGradient colors={gradientColors} style={styles.linearGradient}>
+                        <MaterialCommunityIcons
+                            name={logoName}
+                            style={[styles.logo, { color: theme.colors.background }]}
+                        />
+                    </LinearGradient>
+                ) : (
+                    <LinearGradient colors={gradientColors} style={styles.gradientBorder}>
+                        <View style={[styles.innerCircle, { backgroundColor: theme.colors.background }]}>
+                            <MaterialCommunityIcons
+                                name={logoName}
+                                style={[styles.logo, { color: gradientColors[0] }]}
+                            />
+                        </View>
+                    </LinearGradient>
+                )}
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
 export default function CategoryFilter({ onSelect }) {
     const theme = useTheme();
     const { gender } = useContext(AuthContext); // Get the user's gender from AuthContext
@@ -127,8 +185,8 @@ export default function CategoryFilter({ onSelect }) {
     const appType = gender === 'male' ? 'men' : 'women';
     const categories = appType === 'men' ? categoriesMen : categoriesWomen;
 
-    // Default selected category is "all"
-    const [selected, setSelected] = useState('all');
+    // Set the default selected category to the first category in the list.
+    const [selected, setSelected] = useState(categories[0].id);
 
     // Handler for when a category is pressed.
     const handlePress = (categoryId) => {
@@ -139,49 +197,12 @@ export default function CategoryFilter({ onSelect }) {
     };
 
     // Helper to get the data (title and subtitle) for the selected category.
-    // For "all", we provide default text.
-    const getCategoryData = (categoryId) => {
-        if (categoryId === 'all') {
-            return { label: 'All', subtitle: 'Browse all available profiles' };
-        }
-        return categories.find((cat) => cat.id === categoryId) || {};
-    };
-
-    // Render a category button with a LinearGradient background and an overlaid icon.
-    const renderCategoryButton = (gradientColors, logoName, isSelected, onPress) => (
-        <TouchableOpacity
-            onPress={onPress}
-            style={[
-                styles.categoryButton,
-                isSelected ? styles.selectedButton(theme) : styles.unselectedButton,
-            ]}
-            activeOpacity={0.8}
-        >
-            <LinearGradient colors={gradientColors} style={styles.linearGradient}>
-                <MaterialCommunityIcons name={logoName} style={[styles.logo, { color: theme.colors.background }]} />
-            </LinearGradient>
-        </TouchableOpacity>
-    );
-
-    // Retrieve the currently selected category data.
-    const currentCategory = getCategoryData(selected);
+    const currentCategory = categories.find((cat) => cat.id === selected) || {};
 
     return (
         <View style={{ paddingLeft: 10 }}>
-            {/* The static header is removed */}
             <View style={styles.container}>
-                {/* Fixed "All" category on the left */}
-                <View style={styles.fixedCategory}>
-                    {renderCategoryButton(
-                        ['#eeaeca', '#94bbe9'], // Default gradient for "All"
-                        categoryLogos.all,
-                        selected === 'all',
-                        () => handlePress('all')
-                    )}
-                    <Text style={[styles.categoryLabel, { color: theme.colors.text }]}>All</Text>
-                </View>
-
-                {/* Other categories in a horizontal ScrollView */}
+                {/* Categories in a horizontal ScrollView */}
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -189,33 +210,30 @@ export default function CategoryFilter({ onSelect }) {
                 >
                     {categories.map((cat) => (
                         <View key={cat.id} style={styles.categoryItem}>
-                            {renderCategoryButton(
-                                cat.gradientColors,
-                                categoryLogos[cat.id],
-                                selected === cat.id,
-                                () => handlePress(cat.id)
-                            )}
-                            <View>
-                                <Text style={[styles.categoryLabel, { color: theme.colors.secondary }]}>
-                                    {cat.label}
-                                </Text>
-                            </View>
+                            <AnimatedCategoryButton
+                                gradientColors={cat.gradientColors}
+                                logoName={categoryLogos[cat.id]}
+                                isSelected={selected === cat.id}
+                                onPress={() => handlePress(cat.id)}
+                                theme={theme}
+                            />
+                            <Text style={[styles.categoryLabel, { color: theme.colors.secondary }]}>
+                                {cat.label}
+                            </Text>
                         </View>
                     ))}
                 </ScrollView>
             </View>
 
-            {/* Dynamic title and subtitle based on the selected category (if not "all") */}
-            {selected !== 'all' && (
-                <View style={styles.categoryDetailsContainer}>
-                    <Text style={[styles.categoryTitle, { color: theme.colors.text }]}>
-                        {currentCategory.label}
-                    </Text>
-                    <Text style={[styles.categorySubtitle, { color: theme.colors.secondary }]}>
-                        {currentCategory.subtitle}
-                    </Text>
-                </View>
-            )}
+            {/* Dynamic title and subtitle based on the selected category */}
+            <View style={styles.categoryDetailsContainer}>
+                <Text style={[styles.categoryTitle, { color: theme.colors.text }]}>
+                    {currentCategory.label}
+                </Text>
+                <Text style={[styles.categorySubtitle, { color: theme.colors.secondary }]}>
+                    {currentCategory.subtitle}
+                </Text>
+            </View>
         </View>
     );
 }
@@ -224,23 +242,22 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    fixedCategory: {
-        alignItems: 'center',
-        marginRight: 8,
+        height: 80,
     },
     scrollContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        height: 80,
     },
     categoryItem: {
         alignItems: 'center',
         marginRight: 16,
     },
+    // Make the button smaller.
     categoryButton: {
-        width: 80,
-        height: 80,
-        borderRadius: 15,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -248,22 +265,30 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 4,
     },
-    selectedButton: (theme) => ({
-        borderColor: theme.colors.primary || '#6200ee',
-        backgroundColor: theme.colors.accent || '#e0e0e0',
-    }),
-
+    // Used for the selected state: full gradient background.
     linearGradient: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
+    // Used for the unselected state: a gradient border.
+    gradientBorder: {
+        flex: 1,
+        borderRadius: 20,
+        padding: 2, // space for the border effect
+    },
+    // Inner circle that shows the background when unselected.
+    innerCircle: {
+        flex: 1,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     logo: {
-        fontSize: 30,
-        color: '#fff',
+        fontSize: 24, // slightly smaller icon size for the smaller button
     },
     categoryLabel: {
-        marginTop: 4,
+        marginTop: 8,
         fontSize: 12,
         textAlign: 'center',
     },
