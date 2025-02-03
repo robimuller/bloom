@@ -15,6 +15,8 @@ import {
 import { db } from '../../config/firebase';
 import { AuthContext } from './AuthContext';
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const DatesContext = createContext();
 
 export const DatesProvider = ({ children }) => {
@@ -50,6 +52,7 @@ export const DatesProvider = ({ children }) => {
                 return dateData;
             });
             const enrichedDates = await Promise.all(datePromises);
+            await delay(2000);
             setDates(enrichedDates);
             setLoadingDates(false);
         });
@@ -71,6 +74,47 @@ export const DatesProvider = ({ children }) => {
             where('status', '==', 'open'),
             where('requestCount', '>=', 1),
             orderBy('requestCount', 'desc'),
+            limit(20)
+        );
+
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            const datePromises = snapshot.docs.map(async (docSnap) => {
+                const dateData = { id: docSnap.id, ...docSnap.data() };
+                if (dateData.hostId) {
+                    const hostRef = doc(db, 'users', dateData.hostId);
+                    const hostSnap = await getDoc(hostRef);
+                    if (hostSnap.exists()) {
+                        const hostData = hostSnap.data();
+                        dateData.host = {
+                            displayName: hostData.displayName,
+                            photos: hostData.photos || [],
+                            birthday: hostData.birthday,
+                            email: hostData.email,
+                        };
+                    }
+                }
+                return dateData;
+            });
+            const enrichedDates = await Promise.all(datePromises);
+            setDates(enrichedDates);
+            setLoadingDates(false);
+        });
+
+        return unsubscribe;
+    };
+
+    /**
+     * Fetch "Latest" dates – simply order by the createdAt timestamp descending.
+     * This filter returns the most recently created open dates.
+     */
+    const fetchLatestDates = () => {
+        setLoadingDates(true);
+        const datesRef = collection(db, 'dates');
+        // Latest: open dates ordered by createdAt descending.
+        const q = query(
+            datesRef,
+            where('status', '==', 'open'),
+            orderBy('createdAt', 'desc'),
             limit(20)
         );
 
@@ -131,7 +175,7 @@ export const DatesProvider = ({ children }) => {
                 reportDate,
                 fetchDiscoverDates,   // For the default "discover" filter
                 fetchTrendingDates,   // For the "trending" filter
-                // You can add additional functions for filters like latest, nearby, etc.
+                fetchLatestDates,     // For the "latest" filter
             }}
         >
             {children}

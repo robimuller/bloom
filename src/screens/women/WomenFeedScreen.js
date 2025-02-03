@@ -27,6 +27,9 @@ import { DatesContext } from '../../contexts/DatesContext';
 import { RequestsContext } from '../../contexts/RequestsContext';
 import { getDateCategory } from '../../utils/dateCategory';
 import { calculateAge } from '../../utils/deduceAge';
+import LoadingDates from '../../components/LoadingDates';
+import RevealAnimation from '../../components/RevealAnimation';
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Possible reasons for reporting:
@@ -49,7 +52,7 @@ const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 export default function WomenFeedScreen({ selectedCategory, onScroll }) {
     const { user } = useContext(AuthContext);
-    const { dates, loadingDates, fetchDiscoverDates, fetchTrendingDates } = useContext(DatesContext);
+    const { dates, loadingDates, fetchDiscoverDates, fetchTrendingDates, fetchLatestDates } = useContext(DatesContext);
     const { sendRequest, cancelRequest, requests } = useContext(RequestsContext);
     const { colors } = useTheme();
 
@@ -63,8 +66,9 @@ export default function WomenFeedScreen({ selectedCategory, onScroll }) {
         let unsubscribe;
         if (selectedCategory === 'trending') {
             unsubscribe = fetchTrendingDates();
+        } else if (selectedCategory === 'latest') {
+            unsubscribe = fetchLatestDates();
         } else {
-            // Default to "Discover" which shows all open dates
             unsubscribe = fetchDiscoverDates();
         }
         return () => {
@@ -145,7 +149,7 @@ export default function WomenFeedScreen({ selectedCategory, onScroll }) {
         });
     };
 
-    const renderItem = ({ item }) => {
+    const renderItem = ({ item, index }) => {
         const dateId = item.id;
         const hostId = item.hostId;
         const dateCategory = getDateCategory(item.date || '');
@@ -161,61 +165,61 @@ export default function WomenFeedScreen({ selectedCategory, onScroll }) {
         const age = calculateAge(item.host?.birthday);
 
         return (
-            <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <Image
-                        source={
-                            item.host?.photos?.[0]
-                                ? { uri: item.host.photos[0] }
-                                : require('../../../assets/avatar-placeholder.png')
-                        }
-                        style={styles.profilePic}
-                    />
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.hostName, { color: colors.text }]}>
-                            {item.host?.displayName || 'Unknown'}
-                            {age !== null ? `, ${age}` : ''}
-                        </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => handleFlagPress(item)}>
-                        <Ionicons
-                            name="flag-outline"
-                            size={20}
-                            color={colors.onSurface ?? '#666'}
-                            style={{ marginRight: 8 }}
+            <RevealAnimation index={index}>
+                <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <Image
+                            source={
+                                item.host?.photos?.[0]
+                                    ? { uri: item.host.photos[0] }
+                                    : require('../../../assets/avatar-placeholder.png')
+                            }
+                            style={styles.profilePic}
                         />
-                    </TouchableOpacity>
-                </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.hostName, { color: colors.text }]}>
+                                {item.host?.displayName || 'Unknown'}
+                                {age !== null ? `, ${age}` : ''}
+                            </Text>
+                        </View>
+                        <TouchableOpacity onPress={() => handleFlagPress(item)}>
+                            <Ionicons
+                                name="flag-outline"
+                                size={20}
+                                color={colors.onSurface ?? '#666'}
+                                style={{ marginRight: 8 }}
+                            />
+                        </TouchableOpacity>
+                    </View>
 
-                {/* Carousel */}
-                <Carousel
-                    photos={item.photos || []}
-                    dateId={dateId}
-                    hostId={hostId}
-                    onSendRequest={handleSendRequest}
-                    onCancelRequest={handleCancelRequest}
-                    existingRequest={existingRequest}
-                />
+                    {/* Carousel */}
+                    <Carousel
+                        photos={item.photos || []}
+                        dateId={dateId}
+                        hostId={hostId}
+                        onSendRequest={handleSendRequest}
+                        onCancelRequest={handleCancelRequest}
+                        existingRequest={existingRequest}
+                    />
 
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <Text style={[styles.dateTitle, { color: colors.text }]}>{item.title}</Text>
-                    <View style={styles.footerRow}>
-                        <Text style={[styles.location, { color: colors.secondary }]}>{item.location}</Text>
-                        <Text style={[styles.dateCategory, { color: colors.onSurface }]}>{dateCategory}</Text>
+                    {/* Footer */}
+                    <View style={styles.footer}>
+                        <Text style={[styles.dateTitle, { color: colors.text }]}>{item.title}</Text>
+                        <View style={styles.footerRow}>
+                            <Text style={[styles.location, { color: colors.secondary }]}>{item.location}</Text>
+                            <Text style={[styles.dateCategory, { color: colors.onSurface }]}>{dateCategory}</Text>
+                        </View>
                     </View>
                 </View>
-            </View>
+            </RevealAnimation>
         );
     };
 
     return (
         <View style={{ height: CARD_HEIGHT + CARD_SPACING }}>
             {loadingDates ? (
-                <Text style={{ textAlign: 'center', marginTop: 20, color: colors.text }}>
-                    Loading Dates…
-                </Text>
+                <LoadingDates />
             ) : (
                 <AnimatedFlatList
                     data={dates}

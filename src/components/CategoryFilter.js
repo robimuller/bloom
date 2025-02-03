@@ -173,7 +173,7 @@ export default function CategoryFilter({ onSelect }) {
                 {/* Fixed "All" category on the left */}
                 <View style={styles.fixedCategory}>
                     {renderCategoryButton(
-                        ['#CCCCCC', '#AAAAAA'], // Default gradient for "All"
+                        ['#eeaeca', '#94bbe9'], // Default gradient for "All"
                         categoryLogos.all,
                         selected === 'all',
                         () => handlePress('all')
