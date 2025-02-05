@@ -310,6 +310,12 @@ function Carousel({
     const flatListRef = useRef(null);
     const { colors } = useTheme();
 
+    // Filter out any falsy (invalid) photo entries.
+    const validPhotos = (photos || []).filter(photo => !!photo);
+    // Optionally, if no valid photos exist, fallback to a placeholder.
+    const dataToRender =
+        validPhotos.length > 0 ? validPhotos : [require('../../../assets/avatar-placeholder.png')];
+
     const onScroll = (event) => {
         const offsetX = event.nativeEvent.contentOffset.x;
         const index = Math.round(offsetX / (SCREEN_WIDTH * 0.85));
@@ -319,40 +325,41 @@ function Carousel({
     return (
         <View style={styles.carouselWrapper}>
             <FlatList
-                data={photos}
-                keyExtractor={(uri, idx) => `${uri}-${idx}`}
+                data={dataToRender}
+                keyExtractor={(item, idx) => `${item}-${idx}`}
                 ref={flatListRef}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 onScroll={onScroll}
-                renderItem={({ item }) => (
-                    <Image
-                        source={{ uri: item }}
-                        style={styles.carouselImage}
-                    />
-                )}
+                renderItem={({ item }) => {
+                    // Check if the item is a string (a valid URL) or a local image (placeholder)
+                    return (
+                        <Image
+                            source={typeof item === 'string' ? { uri: item } : item}
+                            style={styles.carouselImage}
+                        />
+                    );
+                }}
             />
-            {/* Add the gradient overlay behind the action buttons */}
+            {/* Gradient overlay behind action buttons */}
             <LinearGradient
                 colors={['rgba(0,0,0,0.7)', 'transparent']}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 0, y: 0 }}
                 style={styles.gradientOverlay}
-                pointerEvents="none"  // Ensure touches pass through to underlying buttons.
+                pointerEvents="none"
             />
-
             <View style={[styles.overlayTopRight, { backgroundColor: colors.background }]}>
+                {/* Use validPhotos.length so the index reflects only valid images */}
                 <Text style={[styles.indexText, { color: colors.onBackground }]}>
-                    {currentIndex + 1}/{photos.length}
+                    {currentIndex + 1}/{validPhotos.length}
                 </Text>
             </View>
 
             {/* Vertical stack of extra action buttons and the heart button */}
             <View style={styles.overlayBottomRight}>
-                {/* Extra actions (Message, Bookmark, Share) */}
                 <ExtraActionButtons />
-                {/* Heart Circle Button remains as is */}
                 <HeartCircleButton
                     dateId={dateId}
                     hostId={hostId}

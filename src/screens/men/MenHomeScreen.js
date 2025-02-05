@@ -1,107 +1,62 @@
 // src/screens/men/MenHomeScreen.js
 import React, { useContext, useState } from 'react';
-import {
-    View,
-    TouchableOpacity,
-    StyleSheet,
-    Text,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme, FAB } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    interpolate,
-    Extrapolate,
-} from 'react-native-reanimated';
 
 import { RequestsContext } from '../../contexts/RequestsContext';
 import MenFeedScreen from './MenFeedScreen';
+import CategoryFilter from '../../components/CategoryFilter';
+import LocationSelector from '../../components/LocationSelector';
 import CreateDateModal from '../../components/CreateDateModal';
 import CreateDateScreen from './CreateDateScreen';
-import CategoryFilter from '../../components/CategoryFilter'; // <-- Import the filter
 
 export default function MenHomeScreen() {
     const navigation = useNavigation();
-    const paperTheme = useTheme();
+    const theme = useTheme();
     const { requests } = useContext(RequestsContext);
     const { colors } = useTheme();
-    const [isCreateDateModalVisible, setIsCreateDateModalVisible] = useState(false);
 
-    // Men see pending requests or invites count
+    // Count pending requests for the badge.
     const pendingCount = requests.filter((r) => r.status === 'pending').length;
 
-    // Grab the gradient array from your Paper theme
-    const gradientColors = paperTheme.colors.mainBackground || ['#fff', '#ccc'];
+    // Manage the selected category.
+    const [selectedCategory, setSelectedCategory] = useState('all');
 
-    // Shared value for scroll position
-    const scrollY = useSharedValue(0);
+    // State to control the Create Date modal visibility.
+    const [isCreateDateModalVisible, setIsCreateDateModalVisible] = useState(false);
 
-    // Animated style for the header (height + opacity)
-    const headerAnimatedStyle = useAnimatedStyle(() => {
-        const headerHeight = interpolate(
-            scrollY.value,
-            [0, 100],
-            [100, 60],
-            Extrapolate.CLAMP
-        );
-        const headerOpacity = interpolate(
-            scrollY.value,
-            [0, 100],
-            [1, 0.8],
-            Extrapolate.CLAMP
-        );
-        return {
-            height: headerHeight,
-            opacity: headerOpacity,
-        };
-    });
-
-    // Optionally, handle filter changes
+    // Handler for when a category is selected.
     const handleCategorySelect = (categoryId) => {
-        // Implement your filtering logic here.
-        // For example, update a state or trigger a refetch.
         console.log('Selected category:', categoryId);
+        setSelectedCategory(categoryId);
     };
 
     return (
-        <LinearGradient colors={gradientColors} style={styles.gradientContainer}>
-            <SafeAreaView
-                style={[styles.safeArea, { backgroundColor: 'transparent' }]}
-                edges={['top']}
-            >
-                {/* Animated Top Bar */}
-                <Animated.View style={[styles.topBar, headerAnimatedStyle]}>
-                    {/* Left: Settings */}
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+            {/* Header */}
+            <View style={styles.header}>
+                <View style={styles.topRow}>
+                    {/* Settings Button */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.background }]}
+                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.cardBackground }]}
                         onPress={() => navigation.navigate('MenSettings')}
                     >
-                        <Ionicons name="settings-outline" size={24} color={paperTheme.colors.text} />
+                        <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
                     </TouchableOpacity>
 
-                    {/* Middle: Location */}
-                    <View style={styles.locationContainer}>
-                        <Text style={styles.locationLabel}>Location</Text>
-                        <View style={styles.locationRow}>
-                            <Ionicons name="location-outline" size={16} color={paperTheme.colors.primary} style={{ marginRight: 4 }} />
-                            <Text style={[styles.locationValue, { color: paperTheme.colors.text }]}>
-                                Naperville, Illinois
-                            </Text>
-                            <Ionicons name="chevron-down" size={16} color={paperTheme.colors.text} style={{ marginLeft: 4 }} />
-                        </View>
-                    </View>
+                    {/* Location Selector */}
+                    <LocationSelector />
 
-                    {/* Right: Notifications */}
+                    {/* Notifications Button */}
                     <TouchableOpacity
-                        style={[styles.iconCircle, { backgroundColor: colors.background }]}
+                        style={[styles.iconCircle, { backgroundColor: colors.cardBackground }]}
                         onPress={() => navigation.navigate('MenRequests')}
                     >
                         <View style={{ position: 'relative' }}>
-                            <Ionicons name="notifications-outline" size={24} color={paperTheme.colors.text} />
+                            <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
                             {pendingCount > 0 && (
                                 <View style={styles.badgeContainer}>
                                     <Text style={styles.badgeText}>{pendingCount}</Text>
@@ -109,24 +64,26 @@ export default function MenHomeScreen() {
                             )}
                         </View>
                     </TouchableOpacity>
-                </Animated.View>
-
-                {/* Category Filter above the feed */}
-                <CategoryFilter onSelect={handleCategorySelect} />
-
-                {/* Main Content: Men’s Feed */}
-                <View style={styles.mainContent}>
-                    <MenFeedScreen onScroll={(e) => { scrollY.value = e.nativeEvent.contentOffset.y; }} />
                 </View>
 
-                {/* Floating Button to open Create Date Modal */}
-                <FAB
-                    style={[styles.fab, { backgroundColor: colors.primary }]}
-                    icon="plus"
-                    color={paperTheme.colors.background}
-                    onPress={() => setIsCreateDateModalVisible(true)}
-                />
-            </SafeAreaView>
+                {/* Category Filter */}
+                <View style={styles.filterContainer}>
+                    <CategoryFilter onSelect={handleCategorySelect} />
+                </View>
+            </View>
+
+            {/* Main Content: Men’s Feed */}
+            <View style={styles.mainContent}>
+                <MenFeedScreen selectedCategory={selectedCategory} />
+            </View>
+
+            {/* Floating Action Button for Creating Dates */}
+            <FAB
+                style={[styles.fab, { backgroundColor: colors.primary }]}
+                icon="plus"
+                color={theme.colors.background}
+                onPress={() => setIsCreateDateModalVisible(true)}
+            />
 
             {/* Create Date Modal */}
             <CreateDateModal
@@ -135,23 +92,27 @@ export default function MenHomeScreen() {
             >
                 <CreateDateScreen onClose={() => setIsCreateDateModalVisible(false)} />
             </CreateDateModal>
-        </LinearGradient>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    gradientContainer: {
-        flex: 1,
-    },
     safeArea: {
         flex: 1,
     },
-    topBar: {
+    header: {
+        width: '100%',
+    },
+    topRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingTop: 16,
+        height: 90,
+    },
+    filterContainer: {
+        paddingHorizontal: 10,
     },
     iconCircle: {
         width: 40,
@@ -160,22 +121,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    locationContainer: {
-        alignItems: 'center',
+    mainContent: {
         flex: 1,
     },
-    locationLabel: {
-        fontSize: 12,
-        opacity: 0.8,
-        marginBottom: 2,
-    },
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    locationValue: {
-        fontSize: 16,
-        fontWeight: 'bold',
+    fab: {
+        position: 'absolute',
+        bottom: 16,
+        alignSelf: 'center',
+        width: 56,
+        height: 56,
+        borderRadius: 28,
     },
     badgeContainer: {
         position: 'absolute',
@@ -193,18 +148,5 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 12,
         fontWeight: 'bold',
-    },
-    mainContent: {
-        flex: 1,
-        paddingHorizontal: 10,
-        paddingTop: 16,
-    },
-    fab: {
-        position: 'absolute',
-        bottom: 16,
-        alignSelf: 'center',
-        width: 56,
-        height: 56,
-        borderRadius: 28,
     },
 });

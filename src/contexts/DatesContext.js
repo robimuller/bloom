@@ -72,7 +72,7 @@ export const DatesProvider = ({ children }) => {
         const q = query(
             datesRef,
             where('status', '==', 'open'),
-            where('requestCount', '>=', 1),
+            where('requestCount', '>=', 10),
             orderBy('requestCount', 'desc'),
             limit(20)
         );

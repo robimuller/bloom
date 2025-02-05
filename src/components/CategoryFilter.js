@@ -29,7 +29,7 @@ const categoriesMen = [
     },
     {
         id: 'new',
-        label: 'New Arrivals',
+        label: 'New',
         subtitle: 'Discover the latest profiles joining',
         gradientColors: ['#FF6B6B', '#FFD93D'],
     },
@@ -41,13 +41,13 @@ const categoriesMen = [
     },
     {
         id: 'top',
-        label: 'Top Picks',
+        label: 'Top',
         subtitle: 'Our recommended selection for you',
         gradientColors: ['#FCE38A', '#F38181'],
     },
     {
         id: 'online',
-        label: 'Online Now',
+        label: 'Online',
         subtitle: 'Connect with profiles that are active',
         gradientColors: ['#1D976C', '#93F9B9'],
     },
