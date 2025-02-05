@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.4.0",
     "@gorhom/bottom-sheet": "^5.0.6",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-native-community/masked-view": "^0.1.11",
@@ -31,6 +32,7 @@
     "expo-splash-screen": "~0.29.21",
     "expo-status-bar": "~2.0.1",
     "firebase": "^11.2.0",
+    "firebase-admin": "^13.0.2",
     "lodash": "^4.17.21",
     "lottie-react-native": "^7.1.0",
     "openai": "^4.80.1",
@@ -49,11 +51,11 @@
     "react-native-ruler-picker": "^0.2.2",
     "react-native-safe-area-context": "^4.12.0",
     "react-native-screens": "~4.4.0",
+    "react-native-svg": "15.8.0",
     "react-native-switch-selector": "^2.3.0",
     "react-native-tab-view": "^4.0.5",
     "react-native-vector-icons": "^10.2.0",
-    "react-navigation": "^5.0.0",
-    "react-native-svg": "15.8.0"
+    "react-navigation": "^5.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
