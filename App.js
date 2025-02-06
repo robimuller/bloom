@@ -14,7 +14,8 @@ import { createPaperTheme } from './src/themes/paper';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { ProfilesProvider } from './src/contexts/ProfilesContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated'; // Add this line
+import OfflineNotice from './src/components/OfflineNotice'; // import your offline component
+import 'react-native-reanimated';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ function AppWithPaper() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider theme={paperTheme}>
         <StatusBar barStyle={barStyle} backgroundColor={theme.background} />
+        <OfflineNotice />
         <AuthProvider>
           <SignUpProvider>
             <SettingsProvider>
