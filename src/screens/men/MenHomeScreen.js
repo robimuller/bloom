@@ -4,7 +4,8 @@ import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme, FAB } from 'react-native-paper';
+import { useTheme } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { RequestsContext } from '../../contexts/RequestsContext';
 import MenFeedScreen from './MenFeedScreen';
@@ -77,13 +78,21 @@ export default function MenHomeScreen() {
                 <MenFeedScreen selectedCategory={selectedCategory} />
             </View>
 
-            {/* Floating Action Button for Creating Dates */}
-            <FAB
-                style={[styles.fab, { backgroundColor: colors.primary }]}
-                icon="plus"
-                color={theme.colors.background}
+            {/* Gradient Floating Action Button for Creating Dates */}
+            <TouchableOpacity
+                style={styles.fabContainer}
                 onPress={() => setIsCreateDateModalVisible(true)}
-            />
+                activeOpacity={0.8}
+            >
+                <LinearGradient
+                    colors={['#f12711', '#f5af19']} // Customize these colors as needed.
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.fabGradient}
+                >
+                    <Ionicons name="add" size={24} color={theme.colors.background} />
+                </LinearGradient>
+            </TouchableOpacity>
 
             {/* Create Date Modal */}
             <CreateDateModal
@@ -124,13 +133,25 @@ const styles = StyleSheet.create({
     mainContent: {
         flex: 1,
     },
-    fab: {
+    // Styles for the gradient FAB
+    fabContainer: {
         position: 'absolute',
         bottom: 16,
         alignSelf: 'center',
+    },
+    fabGradient: {
         width: 56,
         height: 56,
         borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Optional: add shadow for iOS
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        // Optional: add elevation for Android
+        elevation: 5,
     },
     badgeContainer: {
         position: 'absolute',

@@ -1,13 +1,6 @@
 // src/components/CategoryFilter.js
-import React, { useState, useContext, useEffect, useRef } from 'react';
-import {
-    View,
-    TouchableOpacity,
-    StyleSheet,
-    Text,
-    ScrollView,
-    Animated,
-} from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -105,8 +98,7 @@ const categoriesWomen = [
     },
 ];
 
-// Mapping for overlay icons using MaterialCommunityIcons.
-// Adjust icon names as needed.
+// Mapping for icons using MaterialCommunityIcons.
 const categoryLogos = {
     // For Men's App
     explore: 'compass-outline',
@@ -123,72 +115,54 @@ const categoryLogos = {
     active: 'clock-outline',
 };
 
-/**
- * AnimatedCategoryButton
- *
- * This component wraps the category button with an Animated.View. When the button's
- * `isSelected` prop changes, it animates its scale and opacity.
- */
-const AnimatedCategoryButton = ({ gradientColors, logoName, isSelected, onPress, theme }) => {
-    // Create animated values for scale and opacity.
-    const scaleAnim = useRef(new Animated.Value(isSelected ? 1.2 : 1)).current;
-    const opacityAnim = useRef(new Animated.Value(isSelected ? 1 : 0.6)).current;
-
-    useEffect(() => {
-        // Animate both scale and opacity in parallel.
-        Animated.parallel([
-            Animated.timing(scaleAnim, {
-                toValue: isSelected ? 1.2 : 1,
-                duration: 200,
-                useNativeDriver: true,
-            }),
-            Animated.timing(opacityAnim, {
-                toValue: isSelected ? 1 : 0.6,
-                duration: 200,
-                useNativeDriver: true,
-            }),
-        ]).start();
-    }, [isSelected, scaleAnim, opacityAnim]);
-
+// New grid item component – the entire item is the button.
+// The item is split into two sections: left (gradient background with the icon)
+// and right (text label).
+const CategoryGridItem = ({ category, isSelected, onPress, theme }) => {
     return (
-        <Animated.View style={{ transform: [{ scale: scaleAnim }], opacity: opacityAnim }}>
-            <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.categoryButton}>
-                {isSelected ? (
-                    <LinearGradient colors={gradientColors} style={styles.linearGradient}>
-                        <MaterialCommunityIcons
-                            name={logoName}
-                            style={[styles.logo, { color: theme.colors.background }]}
-                        />
-                    </LinearGradient>
-                ) : (
-                    <LinearGradient colors={gradientColors} style={styles.gradientBorder}>
-                        <View style={[styles.innerCircle, { backgroundColor: theme.colors.background }]}>
-                            <MaterialCommunityIcons
-                                name={logoName}
-                                style={[styles.logo, { color: gradientColors[0] }]}
-                            />
-                        </View>
-                    </LinearGradient>
-                )}
-            </TouchableOpacity>
-        </Animated.View>
+        <TouchableOpacity
+            onPress={() => onPress(category.id)}
+            activeOpacity={0.8}
+            style={[styles.gridItem, { backgroundColor: theme.colors.cardBackground }, isSelected && styles.selectedGridItem]}
+        >
+            <View style={styles.itemContent}>
+                {/* Left section with linear gradient background and centered icon */}
+                <LinearGradient
+                    colors={category.gradientColors}
+                    style={styles.leftSection}
+                >
+                    <MaterialCommunityIcons
+                        name={categoryLogos[category.id]}
+                        size={24}
+                        color={theme.colors.background}
+                    />
+                </LinearGradient>
+                {/* Right section with the category label */}
+                <View style={styles.rightSection}>
+                    <Text style={[styles.categoryLabel, { color: theme.colors.text }]}>
+                        {category.label}
+                    </Text>
+                </View>
+            </View>
+        </TouchableOpacity>
     );
 };
 
 export default function CategoryFilter({ onSelect }) {
     const theme = useTheme();
-    const { gender } = useContext(AuthContext); // Get the user's gender from AuthContext
+    const { gender } = useContext(AuthContext); // Get the user's gender
 
-    // Determine app type based on gender:
-    // - If gender === 'male', then use the men's app category set.
-    // - Otherwise, use the women's app category set.
+    // Use the appropriate category set based on gender.
     const appType = gender === 'male' ? 'men' : 'women';
     const categories = appType === 'men' ? categoriesMen : categoriesWomen;
 
-    // Set the default selected category to the first category in the list.
-    const [selected, setSelected] = useState(categories[0].id);
+    // For a grid with 2 columns and 3 rows, display 6 items.
+    const NUM_GRID_ITEMS = 6;
+    const gridCategories = categories.slice(0, NUM_GRID_ITEMS);
 
-    // Handler for when a category is pressed.
+    // Set the default selected category.
+    const [selected, setSelected] = useState(gridCategories[0].id);
+
     const handlePress = (categoryId) => {
         setSelected(categoryId);
         if (onSelect) {
@@ -196,36 +170,25 @@ export default function CategoryFilter({ onSelect }) {
         }
     };
 
-    // Helper to get the data (title and subtitle) for the selected category.
+    // Get details of the selected category.
     const currentCategory = categories.find((cat) => cat.id === selected) || {};
 
     return (
-        <View style={{ paddingLeft: 10 }}>
-            <View style={styles.container}>
-                {/* Categories in a horizontal ScrollView */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContainer}
-                >
-                    {categories.map((cat) => (
-                        <View key={cat.id} style={styles.categoryItem}>
-                            <AnimatedCategoryButton
-                                gradientColors={cat.gradientColors}
-                                logoName={categoryLogos[cat.id]}
-                                isSelected={selected === cat.id}
-                                onPress={() => handlePress(cat.id)}
-                                theme={theme}
-                            />
-                            <Text style={[styles.categoryLabel, { color: theme.colors.secondary }]}>
-                                {cat.label}
-                            </Text>
-                        </View>
-                    ))}
-                </ScrollView>
+        <View style={{ paddingHorizontal: 10 }}>
+            {/* Grid container */}
+            <View style={styles.gridContainer}>
+                {gridCategories.map((cat) => (
+                    <CategoryGridItem
+                        key={cat.id}
+                        category={cat}
+                        isSelected={selected === cat.id}
+                        onPress={handlePress}
+                        theme={theme}
+                    />
+                ))}
             </View>
 
-            {/* Dynamic title and subtitle based on the selected category */}
+            {/* Selected category details */}
             <View style={styles.categoryDetailsContainer}>
                 <Text style={[styles.categoryTitle, { color: theme.colors.text }]}>
                     {currentCategory.label}
@@ -239,62 +202,48 @@ export default function CategoryFilter({ onSelect }) {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    gridItem: {
+        width: '48%', // Two columns
+        marginBottom: 4,
+        borderRadius: 6,
+        // Optional: subtle shadow
+        // shadowColor: '#000',
+        // shadowOffset: { width: 0, height: 2 },
+        // shadowOpacity: 0.2,
+        // shadowRadius: 2,
+        // elevation: 2,
+        height: 60
+    },
+    itemContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        height: 80,
     },
-    scrollContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 80,
-    },
-    categoryItem: {
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    // Make the button smaller.
-    categoryButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-        elevation: 4,
-    },
-    // Used for the selected state: full gradient background.
-    linearGradient: {
-        flex: 1,
+    leftSection: {
+        flex: 0.4,
+        height: 60,
         justifyContent: 'center',
         alignItems: 'center',
+        // Only round the left corners to match the grid item's borderRadius
+        borderTopLeftRadius: 6,
+        borderBottomLeftRadius: 6,
     },
-    // Used for the unselected state: a gradient border.
-    gradientBorder: {
-        flex: 1,
-        borderRadius: 20,
-        padding: 2, // space for the border effect
-    },
-    // Inner circle that shows the background when unselected.
-    innerCircle: {
-        flex: 1,
-        borderRadius: 20,
+    rightSection: {
+        flex: 0.6,
         justifyContent: 'center',
-        alignItems: 'center',
-    },
-    logo: {
-        fontSize: 24, // slightly smaller icon size for the smaller button
+        paddingLeft: 10,
     },
     categoryLabel: {
-        marginTop: 8,
-        fontSize: 12,
-        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: '500',
     },
     categoryDetailsContainer: {
         marginTop: 16,
-        paddingHorizontal: 10,
     },
     categoryTitle: {
         fontSize: 22,

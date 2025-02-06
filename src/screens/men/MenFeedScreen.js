@@ -26,6 +26,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { calculateAge } from '../../utils/deduceAge';
 import { ProfilesContext } from '../../contexts/ProfilesContext';
 import CarouselItem from '../../components/CarouselItem';
+import { useUserStatus } from '../../hooks/useUserStatus'; // Import your hook
+import ProfileHeader from '../../components/ProfileHeader'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Define fixed dimensions for each card to match the women feed.
@@ -115,37 +117,12 @@ export default function MenFeedScreen({ onScroll }) {
 
     // Each card is rendered with a fixed height and similar structure to the women feed.
     const renderItem = ({ item }) => {
-        const age = calculateAge(item.birthday);
         const isRequested = requestedIds.includes(item.id);
 
         return (
             <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <Image
-                        source={
-                            item.photos && item.photos[0]
-                                ? { uri: item.photos[0] }
-                                : require('../../../assets/avatar-placeholder.png')
-                        }
-                        style={styles.profilePic}
-                    />
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.hostName, { color: colors.text }]}>
-                            {item.displayName || 'Unknown'}
-                            {age ? `, ${age}` : ''}
-                        </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => handleFlagPress(item)}>
-                        <Ionicons
-                            name="flag-outline"
-                            size={20}
-                            color={colors.onSurface ?? '#666'}
-                            style={{ marginRight: 8 }}
-                        />
-                    </TouchableOpacity>
-                </View>
-
+                {/* Header with online indicator */}
+                <ProfileHeader item={item} onFlagPress={handleFlagPress} colors={colors} />
                 {/* Carousel of user photos */}
                 <Carousel
                     photos={item.photos || []}
@@ -426,6 +403,17 @@ const styles = StyleSheet.create({
     hostName: {
         fontWeight: '600',
         fontSize: 16,
+    },
+    onlineIndicator: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: 'green',
+        borderWidth: 2,
+        borderColor: '#fff',
     },
     //----------------------------------
     // Carousel

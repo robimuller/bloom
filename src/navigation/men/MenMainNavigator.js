@@ -7,6 +7,7 @@ import MenNotificationsScreen from '../../screens/men/MenNotificationsScreen';
 import MenSettingsScreen from '../../screens/shared/SettingsScreen';
 import CreateDateScreen from '../../screens/men/CreateDateScreen';
 import ChatScreen from '../../screens/shared/ChatScreen';
+import MenFeedScreen from '../../screens/men/MenFeedScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,11 @@ export default function MenMainNavigator() {
             <Stack.Screen
                 name="Chat"
                 component={ChatScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="MenFeed"
+                component={MenFeedScreen}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>
