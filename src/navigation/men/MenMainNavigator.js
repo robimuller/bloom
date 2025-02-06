@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Screens
 import MenHomeScreen from '../../screens/men/MenHomeScreen';
-import MenRequestsScreen from '../../screens/men/MenRequestsScreen';
+import MenNotificationsScreen from '../../screens/men/MenNotificationsScreen';
 import MenSettingsScreen from '../../screens/shared/SettingsScreen';
 import CreateDateScreen from '../../screens/men/CreateDateScreen';
 import ChatScreen from '../../screens/shared/ChatScreen';
@@ -19,8 +19,8 @@ export default function MenMainNavigator() {
                 options={{ headerShown: false }}
             />
             <Stack.Screen
-                name="MenRequests"
-                component={MenRequestsScreen}
+                name="MenNotifications"
+                component={MenNotificationsScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

@@ -11,7 +11,7 @@ import {
     query,
     where,
     getDoc,
-    increment // <== make sure to import
+    increment
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { AuthContext } from './AuthContext';
@@ -47,7 +47,7 @@ export const RequestsProvider = ({ children }) => {
         }
 
         const unsubscribe = onSnapshot(q, async (snapshot) => {
-            // For each request doc, also fetch the user doc and the date doc:
+            // For each request doc, also fetch the user docs (both requester and host) and the date doc.
             const requestPromises = snapshot.docs.map(async (docSnap) => {
                 const requestData = { id: docSnap.id, ...docSnap.data() };
 
@@ -57,6 +57,15 @@ export const RequestsProvider = ({ children }) => {
                     const requesterSnap = await getDoc(requesterRef);
                     if (requesterSnap.exists()) {
                         requestData.requesterDoc = requesterSnap.data();
+                    }
+                }
+
+                // Fetch the host's user doc (this is new)
+                if (requestData.hostId) {
+                    const hostRef = doc(db, 'users', requestData.hostId);
+                    const hostSnap = await getDoc(hostRef);
+                    if (hostSnap.exists()) {
+                        requestData.hostDoc = hostSnap.data();
                     }
                 }
 
@@ -80,11 +89,10 @@ export const RequestsProvider = ({ children }) => {
         return () => unsubscribe();
     }, [user, gender]);
 
-    // Create a new request
+    // (The rest of your context methods remain the same.)
     const sendRequest = async ({ dateId, hostId }) => {
         if (!user) return;
         try {
-            // Add the new request to the "requests" collection
             await addDoc(collection(db, 'requests'), {
                 dateId,
                 hostId,
@@ -93,7 +101,6 @@ export const RequestsProvider = ({ children }) => {
                 createdAt: serverTimestamp(),
             });
 
-            // Increment the requestCount on the date document
             const dateDocRef = doc(db, 'dates', dateId);
             await updateDoc(dateDocRef, {
                 requestCount: increment(1)
@@ -104,12 +111,9 @@ export const RequestsProvider = ({ children }) => {
         }
     };
 
-    // Cancel (delete) the request doc from Firestore
     const cancelRequest = async (requestId, dateId) => {
         try {
             await deleteDoc(doc(db, 'requests', requestId));
-
-            // Decrement the requestCount on the date document
             const dateDocRef = doc(db, 'dates', dateId);
             await updateDoc(dateDocRef, {
                 requestCount: increment(-1)
@@ -120,10 +124,8 @@ export const RequestsProvider = ({ children }) => {
         }
     };
 
-    // Example accept & reject
     const acceptRequest = async (request) => {
         try {
-            // Example logic: create a chat doc, then update the request
             const chatRef = await addDoc(collection(db, 'chats'), {
                 hostId: request.hostId,
                 requesterId: request.requesterId,
@@ -153,7 +155,6 @@ export const RequestsProvider = ({ children }) => {
         }
     };
 
-    // For general status updates
     const updateRequestStatus = async (requestId, status) => {
         try {
             await updateDoc(doc(db, 'requests', requestId), { status });

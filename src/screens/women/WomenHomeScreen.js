@@ -49,7 +49,7 @@ export default function WomenHomeScreen() {
                     {/* Notifications */}
                     <TouchableOpacity
                         style={[styles.iconCircle, { backgroundColor: colors.cardBackground }]}
-                        onPress={() => navigation.navigate('WomenRequests')}
+                        onPress={() => navigation.navigate('WomenNotifications')}
                     >
                         <View style={{ position: 'relative' }}>
                             <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />

@@ -1,16 +1,16 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import MenRequestsScreen from '../../screens/men/MenRequestsScreen';
+import MenNotificationsScreen from '../../screens/men/MenNotificationsScreen';
 import ChatScreen from '../../screens/shared/ChatScreen';
 
 const Stack = createNativeStackNavigator();
 
-export default function MenRequestsStack() {
+export default function MenNotificationsStack() {
     return (
         <Stack.Navigator>
             <Stack.Screen
-                name="MenRequests"
-                component={MenRequestsScreen}
+                name="MenNotifications"
+                component={MenNotificationsScreen}
                 options={{ title: 'Requests', headerShown: false }}
             />
             <Stack.Screen

@@ -53,7 +53,7 @@ export default function MenHomeScreen() {
                     {/* Notifications Button */}
                     <TouchableOpacity
                         style={[styles.iconCircle, { backgroundColor: colors.cardBackground }]}
-                        onPress={() => navigation.navigate('MenRequests')}
+                        onPress={() => navigation.navigate('MenNotifications')}
                     >
                         <View style={{ position: 'relative' }}>
                             <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
