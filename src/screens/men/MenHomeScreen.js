@@ -1,6 +1,6 @@
 // src/screens/men/MenHomeScreen.js
 import React, { useContext, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -8,31 +8,28 @@ import { useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { RequestsContext } from '../../contexts/RequestsContext';
-import MenFeedScreen from './MenFeedScreen';
+import { PromotionsContext } from '../../contexts/PromotionsContext';
 import CategoryFilter from '../../components/CategoryFilter';
 import LocationSelector from '../../components/LocationSelector';
 import CreateDateModal from '../../components/CreateDateModal';
 import CreateDateScreen from './CreateDateScreen';
+import PromotionsCard from '../../components/PromotionsCard';
 
 export default function MenHomeScreen() {
     const navigation = useNavigation();
     const theme = useTheme();
     const { requests } = useContext(RequestsContext);
+    const { promotions, loading } = useContext(PromotionsContext);
     const { colors } = useTheme();
 
     // Count pending requests for the badge.
     const pendingCount = requests.filter((r) => r.status === 'pending').length;
 
-    // Manage the selected category.
-    const [selectedCategory, setSelectedCategory] = useState('all');
-
     // State to control the Create Date modal visibility.
     const [isCreateDateModalVisible, setIsCreateDateModalVisible] = useState(false);
 
-    // Handler for when a category is selected.
     const handleCategorySelect = (categoryId) => {
-        console.log('Selected category:', categoryId);
-        setSelectedCategory(categoryId);
+        navigation.navigate('MenFeed', { selectedCategory: categoryId });
     };
 
     return (
@@ -40,18 +37,13 @@ export default function MenHomeScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.topRow}>
-                    {/* Settings Button */}
                     <TouchableOpacity
                         style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.cardBackground }]}
                         onPress={() => navigation.navigate('MenSettings')}
                     >
                         <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
                     </TouchableOpacity>
-
-                    {/* Location Selector */}
                     <LocationSelector />
-
-                    {/* Notifications Button */}
                     <TouchableOpacity
                         style={[styles.iconCircle, { backgroundColor: colors.cardBackground }]}
                         onPress={() => navigation.navigate('MenNotifications')}
@@ -66,28 +58,46 @@ export default function MenHomeScreen() {
                         </View>
                     </TouchableOpacity>
                 </View>
-
-                {/* Category Filter */}
                 <View style={styles.filterContainer}>
                     <CategoryFilter onSelect={handleCategorySelect} />
                 </View>
             </View>
 
-            {/* Main Content: Men’s Feed */}
+            {/* Promotions Section */}
             <View style={styles.mainContent}>
-                <MenFeedScreen selectedCategory={selectedCategory} />
+                <View style={styles.promotionsHeader}>
+                    <Text style={[styles.sectionHeader, { color: colors.text }]}>Promotions</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('PromotionsList')}>
+                        <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
+                    </TouchableOpacity>
+                </View>
+                {loading ? (
+                    <Text style={{ color: colors.text }}>Loading promotions...</Text>
+                ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                        {promotions.slice(0, 3).map((promo) => (
+                            <PromotionsCard
+                                key={promo.id}
+                                promotion={promo}
+                                onPress={(promo) => navigation.navigate('MenPromotionDetail', { promo })}
+                                onAttach={(promo) => console.log('Attach promotion:', promo)}
+                                onMarkInterest={(promo) => console.log("I'm interested in:", promo)}
+                            />
+                        ))}
+                    </ScrollView>
+                )}
             </View>
 
-            {/* Gradient Floating Action Button for Creating Dates */}
+            {/* Floating Action Button for Creating Dates */}
             <TouchableOpacity
                 style={styles.fabContainer}
-                onPress={() => setIsCreateDateModalVisible(true)}
+                onPress={() => navigation.navigate('CreateDate')}
                 activeOpacity={0.8}
             >
                 <LinearGradient
-                    colors={['#f12711', '#f5af19']} // Customize these colors as needed.
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                    colors={[colors.primary, colors.primary]}
+                    start={{ x: 1.5, y: 0.3 }}
+                    end={{ x: 0.1, y: 0.3 }}
                     style={styles.fabGradient}
                 >
                     <Ionicons name="add" size={24} color={theme.colors.background} />
@@ -95,12 +105,7 @@ export default function MenHomeScreen() {
             </TouchableOpacity>
 
             {/* Create Date Modal */}
-            <CreateDateModal
-                isVisible={isCreateDateModalVisible}
-                onClose={() => setIsCreateDateModalVisible(false)}
-            >
-                <CreateDateScreen onClose={() => setIsCreateDateModalVisible(false)} />
-            </CreateDateModal>
+
         </SafeAreaView>
     );
 }
@@ -108,6 +113,7 @@ export default function MenHomeScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
+        paddingHorizontal: 16,
     },
     header: {
         width: '100%',
@@ -116,12 +122,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
         paddingTop: 16,
         height: 90,
     },
     filterContainer: {
-        paddingHorizontal: 10,
     },
     iconCircle: {
         width: 40,
@@ -132,8 +136,25 @@ const styles = StyleSheet.create({
     },
     mainContent: {
         flex: 1,
+        paddingVertical: 20,
     },
-    // Styles for the gradient FAB
+    promotionsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    sectionHeader: {
+        fontSize: 20,
+        fontWeight: '600',
+    },
+    viewMoreText: {
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    horizontalScroll: {
+        flexGrow: 0,
+    },
     fabContainer: {
         position: 'absolute',
         bottom: 16,
@@ -145,12 +166,10 @@ const styles = StyleSheet.create({
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        // Optional: add shadow for iOS
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
-        // Optional: add elevation for Android
         elevation: 5,
     },
     badgeContainer: {

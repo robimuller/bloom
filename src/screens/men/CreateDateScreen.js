@@ -37,6 +37,8 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { DatesContext } from '../../contexts/DatesContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { classifyDateCategory } from '../../utils/classifyDateCategory';
+import { useRoute } from '@react-navigation/native';
+
 
 
 // We'll need these to measure screen for the carousel
@@ -379,6 +381,12 @@ const StepFive = memo(function StepFive({
 export default function CreateDateScreen({ navigation, onClose }) {
     const paperTheme = useTheme();
     const { user, userDoc } = useContext(AuthContext);
+
+    // Inside CreateDateScreen:
+    const route = useRoute();
+    const initialPromotion = route.params?.selectedPromotion || null;
+    const [selectedPromotion, setSelectedPromotion] = useState(initialPromotion);
+
     const { createDate } = useContext(DatesContext);
 
 
@@ -584,21 +592,13 @@ export default function CreateDateScreen({ navigation, onClose }) {
                 onNext={handleNext}
                 nextLabel={currentStep === 5 ? 'Publish' : 'Next'}
                 backLabel="Back"
+                selectedPromotion={selectedPromotion}  // Pass the state here
+                onPressBanner={() => navigation.goBack()}
+                onEditPromotion={() => setSelectedPromotion(null)}
+
                 errorComponent={
-                    error && (
-                        <HelperText type="error" visible style={{ marginTop: 8 }}>
-                            {error}
-                        </HelperText>
-                    )
+                    error && <Text style={{ marginTop: 8, color: 'red' }}>{error}</Text>
                 }
-                theme={{
-                    colors: {
-                        text: paperTheme.colors.text,
-                        background: paperTheme.colors.background,
-                        primary: paperTheme.colors.primary,
-                        cardBackground: paperTheme.colors.cardBackground,
-                    },
-                }}
             >
                 {isPublishing ? (
                     <View style={styles.centered}>

@@ -6,7 +6,7 @@ export default function CreateDateModal({ isVisible, onClose, children }) {
     // Get the screen height
     const { height: screenHeight } = Dimensions.get('window');
     // Calculate 90% of the screen height
-    const sheetHeight = screenHeight * 0.9;
+    const sheetHeight = screenHeight;
 
     return (
         <CustomDraggableBottomSheet

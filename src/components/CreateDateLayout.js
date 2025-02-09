@@ -1,125 +1,14 @@
-import React, { useRef, useEffect } from 'react';
-import {
-    View,
-    StyleSheet,
-    TouchableOpacity,
-    Animated,
-    Easing,
-    ScrollView
-} from 'react-native';
+// src/components/CreateDateLayout.js
+import React from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Text, IconButton, useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import GradientProgressBar from './GradientProgressBar';
+import ShootingLightButton from './ShootingLightButton';
+import PromotionSummaryBanner from './PromotionSummaryBanner';
 
-/* 
-  ============================
-     1) STATIC GRADIENT BAR
-  ============================
-*/
-function GradientProgressBar({ progress, barHeight = 8 }) {
-    const theme = useTheme(); // Get theme from react-native-paper
-
-    return (
-        <View
-            style={{
-                height: barHeight,
-                borderRadius: barHeight / 2,
-                backgroundColor: theme.colors.cardBackground,
-                overflow: 'hidden',
-            }}
-        >
-            <View style={{ width: `${progress * 100}%`, height: '100%' }}>
-                <LinearGradient
-                    colors={['#eeaeca', '#94bbe9']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{ width: '100%', height: '100%' }}
-                />
-            </View>
-        </View>
-    );
-}
-
-/*
-  ============================
-    2) SHOOTING LIGHT BUTTON
-  ============================
-*/
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
-
-function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
-    const lightAnim = useRef(new Animated.Value(-1)).current;
-
-    const theme = useTheme(); // Get theme from react-native-paper
-
-
-    useEffect(() => {
-        const loop = Animated.loop(
-            Animated.sequence([
-                Animated.timing(lightAnim, {
-                    toValue: 1,
-                    duration: 300,
-                    easing: Easing.linear,
-                    useNativeDriver: false,
-                }),
-                Animated.timing(lightAnim, {
-                    toValue: -1,
-                    duration: 0,
-                    useNativeDriver: false,
-                }),
-                Animated.delay(5000),
-            ])
-        );
-        loop.start();
-        return () => loop.stop();
-    }, [lightAnim]);
-
-    const baseColors = ['#eeaeca', '#94bbe9'];
-    const highlightColors = [
-        'rgba(255,255,255,0)',
-        'rgba(255, 255, 255, 0.4)',
-        'rgba(255,255,255,0)',
-    ];
-    const startX = lightAnim;
-    const endX = Animated.add(lightAnim, 0.4);
-
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            style={[styles.shootButtonContainer, style]}
-            activeOpacity={0.8}
-        >
-            <LinearGradient
-                colors={baseColors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[StyleSheet.absoluteFill, { borderRadius: 25 }]}
-            />
-            <AnimatedLinearGradient
-                colors={highlightColors}
-                start={{ x: startX, y: -0.1 }}
-                end={{ x: endX, y: 0 }}
-                style={[StyleSheet.absoluteFill, { borderRadius: 25 }]}
-            />
-            <View style={styles.shootButtonContent}>
-                <IconButton
-                    icon={icon}
-                    size={20}
-                    iconColor={theme.colors.background}
-                    style={{ margin: 0, marginRight: 4 }}
-                />
-                <Text style={[styles.shootButtonText, { color: theme.colors.background }]}>{label}</Text>
-            </View>
-        </TouchableOpacity>
-    );
-}
-
-/*
-  ============================
-       3) MAIN LAYOUT WITH HEADER
-  ============================
-*/
 export default function CreateDateLayout({
     step = 1,
     totalSteps = 5,
@@ -135,11 +24,12 @@ export default function CreateDateLayout({
     nextLabel = 'Next',
     backLabel = 'Back',
     children,
+    selectedPromotion, // The selected promotion object
+    onEditPromotion,   // Callback to edit or remove the promotion
+    onPressBanner,     // Callback for when the banner is pressed
 }) {
     const navigation = useNavigation();
-    // Get the theme from Paper instead of from props
     const theme = useTheme();
-    // Default back action if no custom onBack is provided
     const handleBack = onBack ? onBack : () => navigation.navigate('MenHome');
     const progress = step / totalSteps;
 
@@ -150,10 +40,20 @@ export default function CreateDateLayout({
                 <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{title}</Text>
             </View>
 
+            {/* Persistent Promotion Summary Banner */}
+            {/* Persistent Promotion Summary Banner */}
+            {selectedPromotion && (
+                <PromotionSummaryBanner
+                    promotion={selectedPromotion}
+                    onRemove={onEditPromotion}   // Pass your removal callback here using onRemove
+                    onPressBanner={onPressBanner}  // Your existing onPressBanner callback
+                />
+            )}
+
             {/* TOP SECTION */}
             <View style={styles.topSection}>
                 {subtitle && (
-                    <Text variant="bodySmall" style={[styles.subtitle, { color: theme.colors.text }]}>
+                    <Text variant="bodySmall" style={[styles.subtitle, { color: theme.colors.secondary }]}>
                         {subtitle}
                     </Text>
                 )}
@@ -185,9 +85,7 @@ export default function CreateDateLayout({
                             iconColor={theme.colors.primary}
                             style={{ margin: 0, marginRight: 4 }}
                         />
-                        <Text style={[styles.outlinedBtnText, { color: theme.colors.primary }]}>
-                            {backLabel}
-                        </Text>
+                        <Text style={[styles.outlinedBtnText, { color: theme.colors.primary }]}>{backLabel}</Text>
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.buttonPlaceholder} />
@@ -198,9 +96,6 @@ export default function CreateDateLayout({
     );
 }
 
-/* =============================
-       STYLES
-============================= */
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -210,26 +105,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderColor: '#ddd',
-    },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 8,
-    },
-    backText: {
-        marginLeft: 4,
-        fontSize: 16,
     },
     headerTitle: {
         flex: 1,
         textAlign: 'center',
         fontSize: 18,
         fontWeight: '600',
-    },
-    headerPlaceholder: {
-        width: 80,
     },
     /* TOP SECTION */
     topSection: {
@@ -254,7 +135,7 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     cardContent: {
-        flexGrow: 1, // Allow the ScrollView's content container to grow
+        flexGrow: 1,
         padding: 16,
     },
     /* BOTTOM NAVIGATION */
@@ -280,23 +161,5 @@ const styles = StyleSheet.create({
     },
     outlinedBtnText: {
         fontSize: 16,
-    },
-    /* SHOOTING LIGHT BUTTON */
-    shootButtonContainer: {
-        minWidth: 120,
-        height: 48,
-        borderRadius: 25,
-        overflow: 'hidden',
-    },
-    shootButtonContent: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    shootButtonText: {
-        fontSize: 16,
-        color: '#fff',
-        fontWeight: '500',
     },
 });

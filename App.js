@@ -14,6 +14,7 @@ import { createPaperTheme } from './src/themes/paper';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { ProfilesProvider } from './src/contexts/ProfilesContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PromotionsContext, PromotionsProvider } from './src/contexts/PromotionsContext';
 import OfflineNotice from './src/components/OfflineNotice'; // import your offline component
 import 'react-native-reanimated';
 
@@ -40,15 +41,17 @@ function AppWithPaper() {
             <SettingsProvider>
               <ProfilesProvider>
                 <DatesProvider>
-                  <RequestsProvider>
-                    <ChatProvider>
-                      <NotificationsProvider>
-                        <NavigationContainer>
-                          <AppNavigator />
-                        </NavigationContainer>
-                      </NotificationsProvider>
-                    </ChatProvider>
-                  </RequestsProvider>
+                  <PromotionsProvider>
+                    <RequestsProvider>
+                      <ChatProvider>
+                        <NotificationsProvider>
+                          <NavigationContainer>
+                            <AppNavigator />
+                          </NavigationContainer>
+                        </NotificationsProvider>
+                      </ChatProvider>
+                    </RequestsProvider>
+                  </PromotionsProvider>
                 </DatesProvider>
               </ProfilesProvider>
             </SettingsProvider>

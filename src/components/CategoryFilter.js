@@ -170,11 +170,8 @@ export default function CategoryFilter({ onSelect }) {
         }
     };
 
-    // Get details of the selected category.
-    const currentCategory = categories.find((cat) => cat.id === selected) || {};
-
     return (
-        <View style={{ paddingHorizontal: 10 }}>
+        <View style={{}}>
             {/* Grid container */}
             <View style={styles.gridContainer}>
                 {gridCategories.map((cat) => (
@@ -186,16 +183,6 @@ export default function CategoryFilter({ onSelect }) {
                         theme={theme}
                     />
                 ))}
-            </View>
-
-            {/* Selected category details */}
-            <View style={styles.categoryDetailsContainer}>
-                <Text style={[styles.categoryTitle, { color: theme.colors.text }]}>
-                    {currentCategory.label}
-                </Text>
-                <Text style={[styles.categorySubtitle, { color: theme.colors.secondary }]}>
-                    {currentCategory.subtitle}
-                </Text>
             </View>
         </View>
     );
@@ -218,7 +205,7 @@ const styles = StyleSheet.create({
         // shadowOpacity: 0.2,
         // shadowRadius: 2,
         // elevation: 2,
-        height: 60
+        height: 50
     },
     itemContent: {
         flexDirection: 'row',
@@ -226,7 +213,7 @@ const styles = StyleSheet.create({
     },
     leftSection: {
         flex: 0.4,
-        height: 60,
+        height: 50,
         justifyContent: 'center',
         alignItems: 'center',
         // Only round the left corners to match the grid item's borderRadius
