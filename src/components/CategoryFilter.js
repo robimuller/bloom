@@ -1,9 +1,10 @@
 // src/components/CategoryFilter.js
 import React, { useState, useContext } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text, ScrollView } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { AuthContext } from '../contexts/AuthContext';
 
 // Categories for Men's App (male users see women's profiles)
@@ -24,7 +25,7 @@ const categoriesMen = [
         id: 'new',
         label: 'New',
         subtitle: 'Discover the latest profiles joining',
-        gradientColors: ['#FF6B6B', '#FFD93D'],
+        gradientColors: ['#FF6B6B', '#EF4848'],
     },
     {
         id: 'nearby',
@@ -70,7 +71,7 @@ const categoriesWomen = [
         id: 'latest',
         label: 'Latest',
         subtitle: 'See the newest dates posted',
-        gradientColors: ['#FF6B6B', '#FFD93D'],
+        gradientColors: ['#FF6B6B', '#EF4848'],
     },
     {
         id: 'nearby',
@@ -115,34 +116,35 @@ const categoryLogos = {
     active: 'clock-outline',
 };
 
-// New grid item component – the entire item is the button.
-// The item is split into two sections: left (gradient background with the icon)
-// and right (text label).
 const CategoryGridItem = ({ category, isSelected, onPress, theme }) => {
     return (
-        <TouchableOpacity
-            onPress={() => onPress(category.id)}
-            activeOpacity={0.8}
-            style={[styles.gridItem, { backgroundColor: theme.colors.cardBackground }, isSelected && styles.selectedGridItem]}
-        >
-            <View style={styles.itemContent}>
-                {/* Left section with linear gradient background and centered icon */}
+        <TouchableOpacity onPress={() => onPress(category.id)} activeOpacity={0.8} style={styles.touchable}>
+            <View style={styles.gridItem}>
                 <LinearGradient
                     colors={category.gradientColors}
-                    style={styles.leftSection}
+                    style={styles.gradientBorder}
                 >
-                    <MaterialCommunityIcons
-                        name={categoryLogos[category.id]}
-                        size={24}
-                        color={theme.colors.background}
-                    />
+                    <View style={[styles.innerCircle, { backgroundColor: theme.colors.background }]}>
+                        <MaskedView
+                            maskElement={
+                                <MaterialCommunityIcons
+                                    name={categoryLogos[category.id]}
+                                    size={20}
+                                    color="black"
+                                    style={styles.icon}
+                                />
+                            }
+                        >
+                            <LinearGradient
+                                colors={category.gradientColors}
+                                style={styles.iconGradient}
+                            />
+                        </MaskedView>
+                    </View>
                 </LinearGradient>
-                {/* Right section with the category label */}
-                <View style={styles.rightSection}>
-                    <Text style={[styles.categoryLabel, { color: theme.colors.text }]}>
-                        {category.label}
-                    </Text>
-                </View>
+                <Text style={[styles.categoryLabel, { color: theme.colors.secondary }]}>
+                    {category.label}
+                </Text>
             </View>
         </TouchableOpacity>
     );
@@ -152,16 +154,12 @@ export default function CategoryFilter({ onSelect }) {
     const theme = useTheme();
     const { gender } = useContext(AuthContext); // Get the user's gender
 
-    // Use the appropriate category set based on gender.
+    // Select the appropriate category set based on gender.
     const appType = gender === 'male' ? 'men' : 'women';
     const categories = appType === 'men' ? categoriesMen : categoriesWomen;
 
-    // For a grid with 2 columns and 3 rows, display 6 items.
-    const NUM_GRID_ITEMS = 6;
-    const gridCategories = categories.slice(0, NUM_GRID_ITEMS);
-
     // Set the default selected category.
-    const [selected, setSelected] = useState(gridCategories[0].id);
+    const [selected, setSelected] = useState(categories[0].id);
 
     const handlePress = (categoryId) => {
         setSelected(categoryId);
@@ -171,10 +169,9 @@ export default function CategoryFilter({ onSelect }) {
     };
 
     return (
-        <View style={{}}>
-            {/* Grid container */}
-            <View style={styles.gridContainer}>
-                {gridCategories.map((cat) => (
+        <View style={styles.container}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
+                {categories.map((cat) => (
                     <CategoryGridItem
                         key={cat.id}
                         category={cat}
@@ -183,61 +180,53 @@ export default function CategoryFilter({ onSelect }) {
                         theme={theme}
                     />
                 ))}
-            </View>
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    gridContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
+    container: {
         marginTop: 10,
     },
-    gridItem: {
-        width: '48%', // Two columns
-        marginBottom: 4,
-        borderRadius: 6,
-        // Optional: subtle shadow
-        // shadowColor: '#000',
-        // shadowOffset: { width: 0, height: 2 },
-        // shadowOpacity: 0.2,
-        // shadowRadius: 2,
-        // elevation: 2,
-        height: 50
-    },
-    itemContent: {
+    scrollContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 10,
     },
-    leftSection: {
-        flex: 0.4,
-        height: 50,
+    touchable: {
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    gridItem: {
+        alignItems: 'center',
+    },
+    gradientBorder: {
+        width: 60,
+        height: 60,
+        borderRadius: 35,
         justifyContent: 'center',
         alignItems: 'center',
-        // Only round the left corners to match the grid item's borderRadius
-        borderTopLeftRadius: 6,
-        borderBottomLeftRadius: 6,
     },
-    rightSection: {
-        flex: 0.6,
+    innerCircle: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         justifyContent: 'center',
-        paddingLeft: 10,
+        alignItems: 'center',
+    },
+    iconGradient: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+    },
+    icon: {
+        // This style is used by the mask element; no extra styling needed here.
     },
     categoryLabel: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    categoryDetailsContainer: {
-        marginTop: 16,
-    },
-    categoryTitle: {
-        fontSize: 22,
-        fontWeight: '600',
-    },
-    categorySubtitle: {
+        marginTop: 8,
         fontSize: 14,
-        marginTop: 4,
+        textAlign: 'center',
+        fontWeight: '500',
     },
 });

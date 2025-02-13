@@ -21,6 +21,7 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             onSecondary: '#000',
             outline: baseTheme.outline,
             accent: baseTheme.accent,
+            tertiary: baseTheme.tertiary,
 
             // NEW: carry over the gradient array
             mainBackground: baseTheme.mainBackground,

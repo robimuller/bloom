@@ -14,9 +14,10 @@ import { createPaperTheme } from './src/themes/paper';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { ProfilesProvider } from './src/contexts/ProfilesContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PromotionsContext, PromotionsProvider } from './src/contexts/PromotionsContext';
+import { PromotionsProvider } from './src/contexts/PromotionsContext';
 import OfflineNotice from './src/components/OfflineNotice'; // import your offline component
 import 'react-native-reanimated';
+import { UserProfileProvider } from './src/contexts/UserProfileContext';
 
 export default function App() {
   return (
@@ -39,21 +40,23 @@ function AppWithPaper() {
         <AuthProvider>
           <SignUpProvider>
             <SettingsProvider>
-              <ProfilesProvider>
-                <DatesProvider>
-                  <PromotionsProvider>
-                    <RequestsProvider>
-                      <ChatProvider>
-                        <NotificationsProvider>
-                          <NavigationContainer>
-                            <AppNavigator />
-                          </NavigationContainer>
-                        </NotificationsProvider>
-                      </ChatProvider>
-                    </RequestsProvider>
-                  </PromotionsProvider>
-                </DatesProvider>
-              </ProfilesProvider>
+              <UserProfileProvider>
+                <ProfilesProvider>
+                  <DatesProvider>
+                    <PromotionsProvider>
+                      <RequestsProvider>
+                        <ChatProvider>
+                          <NotificationsProvider>
+                            <NavigationContainer>
+                              <AppNavigator />
+                            </NavigationContainer>
+                          </NotificationsProvider>
+                        </ChatProvider>
+                      </RequestsProvider>
+                    </PromotionsProvider>
+                  </DatesProvider>
+                </ProfilesProvider>
+              </UserProfileProvider>
             </SettingsProvider>
           </SignUpProvider>
         </AuthProvider>

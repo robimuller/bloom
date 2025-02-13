@@ -4,7 +4,7 @@ export const lightTheme = {
     text: '#1c0304',
     background: '#ffffff',
     cardBackground: '#f8f4ff',
-    primary: '#C559CE',
+    primary: '#FCABFF',
     secondary: '#6C6F7F',
     accent: '#0BFFF3',
     overlay: 'rgba(255, 255, 255, 0.2)',
@@ -16,10 +16,11 @@ export const lightTheme = {
 
 export const darkTheme = {
     text: '#ffffff',
-    background: '#090909',
-    cardBackground: '#17131D',
-    primary: '#C559CE',
+    background: '#151618',
+    cardBackground: '#222632',
+    primary: '#FCABFF',
     secondary: '#6C6F7F',
+    tertiary: '#30343F',
     accent: '#0BFFF3',
     overlay: 'rgba(0,0,0,0.5)',
     overlay2: 'rgba(50, 50, 50, 0.2)',

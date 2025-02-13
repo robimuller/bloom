@@ -13,7 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true, 
+      "supportsTablet": true,
       "bundleIdentifier": "dev.expo.bloomapp",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "We need access to your photos to let you upload profile pictures."
@@ -23,10 +23,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }, 
+      },
       "package": "dev.expo.bloomapp",
-      "googleServicesFile": "./google-services.json", 
-"softwareKeyboardLayoutMode": "resize"    },
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -35,6 +36,9 @@
         "projectId": "0798b953-06eb-4f0b-8bf7-6aa30b4a3c6c"
       }
     },
-    "owner": "mullerrobi"
+    "owner": "mullerrobi",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

@@ -41,7 +41,7 @@ const PromotionsCard = ({ promotion, onPress }) => {
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: 8,
+        borderRadius: 20,
         marginRight: 12,
         width: 250,
         overflow: 'hidden', // Ensures that the discount badge is clipped if necessary

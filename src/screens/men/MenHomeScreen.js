@@ -67,15 +67,15 @@ export default function MenHomeScreen() {
             <View style={styles.mainContent}>
                 <View style={styles.promotionsHeader}>
                     <Text style={[styles.sectionHeader, { color: colors.text }]}>Promotions</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('PromotionsList')}>
-                        <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('MenPromotionsList')}>
+                        <Text style={[styles.viewMoreText, { color: theme.colors.primary }]}>View More</Text>
                     </TouchableOpacity>
                 </View>
                 {loading ? (
                     <Text style={{ color: colors.text }}>Loading promotions...</Text>
                 ) : (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                        {promotions.slice(0, 3).map((promo) => (
+                        {promotions.slice(0, 10).map((promo) => (
                             <PromotionsCard
                                 key={promo.id}
                                 promotion={promo}
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     sectionHeader: {
-        fontSize: 20,
+        fontSize: 25,
         fontWeight: '600',
     },
     viewMoreText: {

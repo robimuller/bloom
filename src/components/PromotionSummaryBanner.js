@@ -65,7 +65,7 @@ const PromotionSummaryBanner = ({ promotion, onRemove, onPressBanner }) => {
                     <Ionicons name="close-circle-outline" size={24} color={colors.background} />
                 </TouchableOpacity>
                 {/* Promo sticker positioned at bottom center */}
-                <View style={styles.stickerContainer}>
+                <View style={[styles.stickerContainer, { borderColor: colors.primary, backgroundColor: colors.background }]}>
                     <Ionicons name="attach-outline" size={20} color={colors.primary} />
                 </View>
             </Animated.View>
@@ -108,7 +108,8 @@ const styles = StyleSheet.create({
     },
     stickerContainer: {
         position: 'absolute',
-        bottom: -20, // Sticker's half height (if sticker height is 40, half is 20)
+        bottom: -20,
+        left: '47%',
         alignSelf: 'center',
         width: 40,
         height: 40,
