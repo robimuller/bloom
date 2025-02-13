@@ -144,11 +144,7 @@ export default function MenPromotionDetailScreen() {
                     <View style={styles.interestedHeader}>
                         <Text style={[styles.interestedLabel, { color: colors.text }]}>Interested Partners</Text>
                         <TouchableOpacity
-                            onPress={() =>
-                                navigation.navigate('PromotionInterestedWomenScreen', {
-                                    promotion: promo,
-                                })
-                            }
+                            onPress={() => navigation.navigate('PromotionInterestedWomen', { promotion: promo })}
                             style={styles.viewButton}
                         >
                             <Text style={[styles.viewButtonText, { color: colors.primary }]}>Arrange a Date</Text>

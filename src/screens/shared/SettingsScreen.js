@@ -207,7 +207,7 @@ export default function SettingsScreen() {
                         textColor={paperTheme.colors.background}
                         selectedColor={paperTheme.colors.background}
                         buttonColor={paperTheme.colors.primary}
-                        backgroundColor={paperTheme.colors.secondary}
+                        backgroundColor={paperTheme.colors.cardBackground}
                         borderRadius={25}
                         style={styles.themeToggle}
                         height={32}

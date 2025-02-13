@@ -65,7 +65,7 @@ function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
 const styles = StyleSheet.create({
     shootButtonContainer: {
         minWidth: 120,
-        height: 48,
+        height: 60, // updated height
         borderRadius: 25,
         overflow: 'hidden',
     },

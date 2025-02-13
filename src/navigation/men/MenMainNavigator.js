@@ -11,6 +11,7 @@ import ChatScreen from '../../screens/shared/ChatScreen';
 import MenFeedScreen from '../../screens/men/MenFeedScreen';
 import MenPromotionDetailScreen from '../../screens/men/MenPromotionDetailScreen';
 import MenPromotionsListScreen from '../../screens/men/MenPromotionsListScreen';
+import PromotionInterestedWomenScreen from '../../screens/men/PromotionInterestedWomenScreen'
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,7 @@ export default function MenMainNavigator() {
             <Stack.Screen name="MenFeed" component={MenFeedScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MenPromotionDetail" component={MenPromotionDetailScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MenPromotionsList" component={MenPromotionsListScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PromotionInterestedWomen" component={PromotionInterestedWomenScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
     );
 }
