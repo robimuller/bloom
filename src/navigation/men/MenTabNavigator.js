@@ -1,18 +1,21 @@
 // src/navigation/MenTabNavigator.js
 import React from 'react';
+import { View, Dimensions, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 
 // Import your screens
 import MenHomeScreen from '../../screens/men/MenHomeScreen';
-import CreateDateScreen from '../../screens/men/CreateDateScreen'; // For "My Deals"
+import CreateDateScreen from '../../screens/men/CreateDateScreen';
 import MenNotificationsScreen from '../../screens/men/MenNotificationsScreen';
 import MenSettingsScreen from '../../screens/shared/SettingsScreen';
 import MyPerksScreen from '../../screens/shared/MyPerksScreen';
 
 const Tab = createBottomTabNavigator();
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
     const theme = useTheme();
@@ -48,7 +51,7 @@ const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
                 style={[
                     {
                         position: 'absolute',
-                        top: -8, // Position above the icon; adjust as needed
+                        top: -8,
                         width: '100%',
                         backgroundColor: theme.colors.primary,
                         borderRadius: 2,
@@ -60,6 +63,22 @@ const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
                 <Ionicons name={iconName} size={size} color={color} />
             </Animated.View>
         </Animated.View>
+    );
+};
+
+const CreateDateButton = ({ size, focused }) => {
+    const theme = useTheme();
+    return (
+        <View style={styles.createDateButtonContainer}>
+            <LinearGradient
+                colors={[theme.colors.primary, theme.colors.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.createDateButton, { width: size * 2, height: size * 2, borderRadius: size }]}
+            >
+                <Ionicons name="add" size={size} color={theme.colors.background} />
+            </LinearGradient>
+        </View>
     );
 };
 
@@ -81,6 +100,10 @@ export default function MenTabNavigator() {
                     shadowRadius: 3,
                 },
                 tabBarIcon: ({ focused, color, size }) => {
+                    if (route.name === 'Create Date') {
+                        // Return our custom circle button.
+                        return <CreateDateButton size={size} focused={focused} />;
+                    }
                     let iconName;
                     if (route.name === 'Home') {
                         iconName = focused ? 'home' : 'home-outline';
@@ -92,23 +115,32 @@ export default function MenTabNavigator() {
                         iconName = focused ? 'person' : 'person-outline';
                     }
                     return (
-                        <AnimatedTabIcon
-                            iconName={iconName}
-                            focused={focused}
-                            size={size}
-                            color={color}
-                        />
+                        <AnimatedTabIcon iconName={iconName} focused={focused} size={size} color={color} />
                     );
                 },
                 tabBarActiveTintColor: theme.colors.primary,
                 tabBarInactiveTintColor: 'gray',
-                tabBarShowLabel: true,
+                tabBarShowLabel: false,
             })}
         >
             <Tab.Screen name="Home" component={MenHomeScreen} />
             <Tab.Screen name="My Deals" component={MyPerksScreen} />
+            <Tab.Screen name="Create Date" component={CreateDateScreen} />
             <Tab.Screen name="Notifications" component={MenNotificationsScreen} />
             <Tab.Screen name="Settings" component={MenSettingsScreen} />
         </Tab.Navigator>
     );
 }
+
+const styles = StyleSheet.create({
+    createDateButtonContainer: {
+        // This container centers the button and allows it to overlap the tab bar.
+        marginBottom: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    createDateButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});
