@@ -17,17 +17,39 @@ const IMAGE_WIDTH = 160;
 const IMAGE_HEIGHT = 160;
 const SPACING = 5;
 
-// Example images
+// Specific images from your assets folder
 const BASE_IMAGES = [
-    require('../../assets/travel.png'),
-    require('../../assets/travel.png'),
-    require('../../assets/travel.png'),
+    require('../../assets/Maedeh.png'),
+    require('../../assets/Nyuszi.png'),
+    require('../../assets/Maedeh2.jpeg'),
+    require('../../assets/Rozh.png'),
+    require('../../assets/Maedeh3.jpeg'),
+    require('../../assets/Nastaran.png'),
+    require('../../assets/Nastaran2.png'),
+    require('../../assets/Nahal.jpeg'),
+    require('../../assets/Nahal2.png'),
+    require('../../assets/Nahal3.png'),
 ];
 
-// Repeat images to simulate a longer list
-const IMAGES = [...BASE_IMAGES, ...BASE_IMAGES, ...BASE_IMAGES];
+// For this example, we'll use one copy of BASE_IMAGES.
+const IMAGES = [...BASE_IMAGES];
+
+// Helper function to shuffle an array using Fisher–Yates
+function shuffleArray(array) {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+}
 
 export default function ThreeRowsCarouselWithGradients() {
+    // Shuffle images for each row independently.
+    const topImages = shuffleArray(IMAGES);
+    const middleImages = shuffleArray(IMAGES);
+    const bottomImages = shuffleArray(IMAGES);
+
     // ScrollView refs for each row
     const scrollRefTop = useRef(null);
     const scrollRefMiddle = useRef(null);
@@ -94,11 +116,11 @@ export default function ThreeRowsCarouselWithGradients() {
 
         const boostIntervalMiddle = setInterval(() => {
             triggerBoost(speedMiddleRef, 20.0, 1000, 0.1);
-        }, 7100);
+        }, 9100);
 
         const boostIntervalBottom = setInterval(() => {
             triggerBoost(speedBottomRef, 15.0, 1000, 0.1);
-        }, 9200);
+        }, 8200);
 
         return () => {
             clearInterval(scrollInterval);
@@ -123,7 +145,7 @@ export default function ThreeRowsCarouselWithGradients() {
                             style={styles.scrollView}
                             contentContainerStyle={styles.contentContainer}
                         >
-                            {IMAGES.map((src, i) => (
+                            {topImages.map((src, i) => (
                                 <Image key={i} source={src} style={styles.image} />
                             ))}
                         </ScrollView>
@@ -140,7 +162,7 @@ export default function ThreeRowsCarouselWithGradients() {
                             style={styles.scrollView}
                             contentContainerStyle={styles.contentContainer}
                         >
-                            {IMAGES.map((src, i) => (
+                            {middleImages.map((src, i) => (
                                 <Image key={i} source={src} style={styles.image} />
                             ))}
                         </ScrollView>
@@ -157,7 +179,7 @@ export default function ThreeRowsCarouselWithGradients() {
                             style={styles.scrollView}
                             contentContainerStyle={styles.contentContainer}
                         >
-                            {IMAGES.map((src, i) => (
+                            {bottomImages.map((src, i) => (
                                 <Image key={i} source={src} style={styles.image} />
                             ))}
                         </ScrollView>
