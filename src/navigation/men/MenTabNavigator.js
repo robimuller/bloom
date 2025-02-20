@@ -71,7 +71,7 @@ const CreateDateButton = ({ size, focused }) => {
     return (
         <View style={styles.createDateButtonContainer}>
             <LinearGradient
-                colors={[theme.colors.primary, theme.colors.secondary]}
+                colors={[theme.colors.primary, "#7C49C6"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.createDateButton, { width: size * 2, height: size * 2, borderRadius: size }]}

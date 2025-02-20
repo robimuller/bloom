@@ -21,7 +21,6 @@ import { getFeaturedDateConcepts } from '../../utils/recommendDateConcepts';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-
 export default function MenHomeScreen() {
     const navigation = useNavigation();
     const theme = useTheme();
@@ -81,6 +80,17 @@ export default function MenHomeScreen() {
         );
     };
 
+    // A reusable component for "View More" header with chevron icon.
+    const ViewMoreHeader = ({ title, onPress }) => (
+        <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionHeaderText, { color: colors.text }]}>{title}</Text>
+            <TouchableOpacity onPress={onPress} style={styles.viewMoreContainer}>
+                <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.secondary} style={styles.chevronIcon} />
+            </TouchableOpacity>
+        </View>
+    );
+
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
@@ -88,7 +98,7 @@ export default function MenHomeScreen() {
                 <View style={styles.topRow}>
                     <TouchableOpacity
                         style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.cardBackground }]}
-                        onPress={() => navigation.navigate('MenSettings')}
+                        onPress={() => navigation.navigate('Settings')}
                     >
                         <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
                     </TouchableOpacity>
@@ -114,15 +124,9 @@ export default function MenHomeScreen() {
 
             {/* Sections Container */}
             <ScrollView contentContainerStyle={styles.sectionsContainer}>
-
                 {/* Explore Section */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionHeaderText, { color: colors.text }]}>Explore</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('MenFeed')}>
-                            <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <ViewMoreHeader title="Explore" onPress={() => navigation.navigate('MenFeed')} />
                     {loadingWomen ? (
                         <Text style={{ color: colors.text }}>Loading profiles...</Text>
                     ) : (
@@ -139,12 +143,7 @@ export default function MenHomeScreen() {
 
                 {/* Promotions Section */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionHeaderText, { color: colors.text }]}>Promotions</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('MenPromotionsList')}>
-                            <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <ViewMoreHeader title="Promotions" onPress={() => navigation.navigate('MenPromotionsList')} />
                     {loadingPromotions ? (
                         <Text style={{ color: colors.text }}>Loading promotions...</Text>
                     ) : (
@@ -164,12 +163,7 @@ export default function MenHomeScreen() {
 
                 {/* Featured Date Concepts Section */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionHeaderText, { color: colors.text }]}>Daily Ideas</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('FeaturedDateConceptsScreen')}>
-                            <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <ViewMoreHeader title="Daily Ideas" onPress={() => navigation.navigate('FeaturedDateConceptsScreen')} />
                     {loadingDateConcepts ? (
                         <Text style={{ color: colors.text }}>Loading date ideas...</Text>
                     ) : (
@@ -177,7 +171,7 @@ export default function MenHomeScreen() {
                             {featuredDateConcepts.map((idea, index) => (
                                 <TouchableOpacity
                                     key={index}
-                                    style={[styles.featuredCard, { backgroundColor: colors.cardBackground }]}
+                                    style={[styles.featuredCard, { backgroundColor: colors.primary }]}
                                     onPress={() => {
                                         console.log('Selected date concept:', idea);
                                     }}
@@ -189,7 +183,7 @@ export default function MenHomeScreen() {
                                     >
                                         <FontAwesome5 name="magic" size={16} color={colors.primary} />
                                     </LinearGradient>
-                                    <Text style={[styles.featuredTitle, { color: colors.text }]}>{idea.title}</Text>
+                                    <Text style={[styles.featuredTitle, { color: colors.black }]}>{idea.title}</Text>
                                     <Text style={[styles.featuredDescription, { color: colors.secondary }]} numberOfLines={3}>
                                         {idea.description}
                                     </Text>
@@ -201,12 +195,7 @@ export default function MenHomeScreen() {
 
                 {/* Recommended Section */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionHeaderText, { color: colors.text }]}>Recommended</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('MenFeed')}>
-                            <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <ViewMoreHeader title="Recommended" onPress={() => navigation.navigate('MenFeed')} />
                     {loadingWomen ? (
                         <Text style={{ color: colors.text }}>Loading profiles...</Text>
                     ) : (
@@ -224,19 +213,19 @@ export default function MenHomeScreen() {
 
             {/* Floating Action Button for Creating Dates */}
             {/* <TouchableOpacity
-                style={styles.fabContainer}
-                onPress={() => navigation.navigate('CreateDate')}
-                activeOpacity={0.8}
-            >
-                <LinearGradient
-                    colors={[colors.primary, colors.primary]}
-                    start={{ x: 1.5, y: 0.3 }}
-                    end={{ x: 0.1, y: 0.3 }}
-                    style={styles.fabGradient}
-                >
-                    <Ionicons name="add" size={24} color={theme.colors.background} />
-                </LinearGradient>
-            </TouchableOpacity> */}
+          style={styles.fabContainer}
+          onPress={() => navigation.navigate('CreateDate')}
+          activeOpacity={0.8}
+      >
+          <LinearGradient
+              colors={[colors.primary, colors.primary]}
+              start={{ x: 1.5, y: 0.3 }}
+              end={{ x: 0.1, y: 0.3 }}
+              style={styles.fabGradient}
+          >
+              <Ionicons name="add" size={24} color={theme.colors.background} />
+          </LinearGradient>
+      </TouchableOpacity> */}
         </SafeAreaView>
     );
 }
@@ -283,9 +272,17 @@ const styles = StyleSheet.create({
         fontSize: 25,
         fontWeight: '600',
     },
+    viewMoreContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     viewMoreText: {
         fontSize: 12,
         fontWeight: '500',
+    },
+    chevronIcon: {
+        marginLeft: 4,
+        marginRight: 16
     },
     horizontalScroll: {},
     fabContainer: {
@@ -354,7 +351,7 @@ const styles = StyleSheet.create({
         paddingTop: 40, // Extra top padding to leave room for the magic wand icon
         justifyContent: 'flex-start',
         height: 200,
-        position: 'relative'
+        position: 'relative',
     },
     featuredTitle: {
         fontSize: 18,

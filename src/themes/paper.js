@@ -10,6 +10,8 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             ...paperBase.colors,
             primary: baseTheme.primary,
             onPrimary: '#fff',
+            white: baseTheme.white,
+            black: baseTheme.black,
             background: baseTheme.background,
             onBackground: baseTheme.text,
             text: baseTheme.text,

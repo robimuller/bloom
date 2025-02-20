@@ -31,7 +31,7 @@ function ShootingLightButton({ label, icon = 'arrow-right', onPress, style }) {
         return () => loop.stop();
     }, [lightAnim]);
 
-    const baseColors = [theme.colors.primary, '#94bbe9'];
+    const baseColors = [theme.colors.primary, '#7C49C6'];
     const highlightColors = [
         'rgba(255,255,255,0)',
         'rgba(255, 255, 255, 0.4)',

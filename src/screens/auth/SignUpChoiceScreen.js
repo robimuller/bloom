@@ -1,83 +1,123 @@
-// src/screens/auth/SignUpChoiceScreen.js
-import React, { useContext } from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity } from 'react-native';
-import { ThemeContext } from '../../contexts/ThemeContext';
+import React from 'react';
+import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme } from '@react-navigation/native';
 
-export default function SignUpChoiceScreen({ navigation }) {
-    const { theme, toggleTheme, themeMode } = useContext(ThemeContext);
+import TiltedCarousel from '../../components/TiltedCarousel'; // wherever you placed it
+
+export default function GalleoLoginScreen({ navigation }) {
+    const { colors } = useTheme();
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background50 }]}>
-            <Text style={[styles.title, { color: theme.text900 }]}>
-                Gallanty
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.text700 }]}>
-                "Gentlemen Plan, Love Happens"
-            </Text>
-
-            <View style={{ marginVertical: 24 }}>
-                <Button
-                    title="Sign Up with Email"
-                    color={theme.primary500}
-                    onPress={() => navigation.navigate('EmailSignUpStack')}
-                />
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: "#1A1B25" }]}>
+            {/* Top half or partial for the carousel */}
+            <View style={styles.carouselContainer}>
+                <TiltedCarousel />
             </View>
 
-            <View style={{ marginVertical: 12 }}>
-                <Button
-                    title="Sign Up with Phone"
-                    color={theme.secondary500}
-                    onPress={() => navigation.navigate('PhoneSignUpStack')}
-                />
-            </View>
-
-            <Text
-                style={[styles.link, { color: theme.accent400 }]}
-                onPress={() => navigation.navigate('Login')}
-            >
-                Already have an account? Login
-            </Text>
-
-            {/* Theme Toggle Button */}
-            <TouchableOpacity
-                onPress={toggleTheme}
-                style={[
-                    styles.themeToggle,
-                    { backgroundColor: themeMode === 'light' ? theme.background200 : theme.background800 },
-                ]}
-            >
-                <Text style={{ color: theme.text500 }}>
-                    {themeMode === 'light' ? 'Switch to Dark' : 'Switch to Light'}
+            {/* Bottom half for login/register UI */}
+            <View style={styles.bottomContainer}>
+                <Text style={[styles.appName, { color: colors.text }]}>GALLEO</Text>
+                <Text style={[styles.termsText, { color: colors.secondary }]}>
+                    By logging in you accept our{' '}
+                    <Text
+                        style={[styles.linkText, { color: colors.primary }]}
+                        onPress={() => {/* handle terms link */ }}
+                    >
+                        Terms & Conditions
+                    </Text>
                 </Text>
-            </TouchableOpacity>
-        </View>
+
+                {/* Log In Button */}
+                <TouchableOpacity
+                    style={styles.loginButtonWrapper}
+                    onPress={() => navigation.navigate('Login')}
+                    activeOpacity={0.8}
+                >
+                    <LinearGradient
+                        colors={['#7C49C6', '#C867E3']}
+                        style={styles.loginButton}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                    >
+                        <Text style={[styles.loginButtonText, { color: colors.text }]}>Log In</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Register */}
+                <Text style={[styles.registerPrompt, { color: colors.secondary }]}>
+                    Don’t have an account? Register below
+                </Text>
+                <TouchableOpacity
+                    style={styles.registerButton}
+                    onPress={() => navigation.navigate('EmailSignUpStack')}
+                >
+                    <Text style={styles.registerButtonText}>Register</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
         flex: 1,
-        justifyContent: 'center',
+    },
+    carouselContainer: {
+        // Decide how much vertical space you want for the carousel
+        height: 300,
+    },
+    bottomContainer: {
+        flex: 1,
         alignItems: 'center',
-        padding: 20,
+        justifyContent: 'center',
+        paddingHorizontal: 20,
     },
-    title: {
-        fontSize: 26,
-        marginBottom: 10,
-        fontWeight: 'bold',
+    appName: {
+        fontSize: 32,
+        fontWeight: '900',
+        marginTop: 24,
+        marginBottom: 24,
     },
-    subtitle: {
+    termsText: {
         fontSize: 14,
-        fontStyle: 'italic',
+        textAlign: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 20,
     },
-    link: {
-        marginTop: 20,
+    linkText: {
         textDecorationLine: 'underline',
     },
-    themeToggle: {
-        marginTop: 30,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
+    loginButtonWrapper: {
+        width: '80%',
+        marginBottom: 24,
+    },
+    loginButton: {
+        paddingVertical: 15,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    loginButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    registerPrompt: {
+        fontSize: 14,
+        marginBottom: 16,
+    },
+    registerButton: {
+        width: '80%',
+        borderWidth: 1,
+        borderColor: '#C867E3',
+        borderRadius: 25,
+        paddingVertical: 15,
+        alignItems: 'center',
+    },
+    registerButtonText: {
+        color: '#C867E3',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
