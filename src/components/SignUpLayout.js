@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../contexts/ThemeContext';
 import ShootingLightButton from '../components/ShootingLightButton';
 import GradientProgressBar from '../components/GradientProgressBar';
+import AnimatedHeaderTitle from '../components/AnimatedHeaderTitle'; // Import our new component
 
 // Custom error toast component.
 const CustomErrorToast = ({ text1, hideToast }) => {
@@ -68,8 +69,8 @@ export default function SignUpLayout({
     return (
         <KeyboardAvoidingView
             style={[styles.container, { backgroundColor: colors.background }, style]}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={60} // adjust as needed
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} // using "padding" for both platforms
+            keyboardVerticalOffset={0} // adjust as needed
         >
             {/* HEADER AREA */}
             <View style={styles.header}>
@@ -79,9 +80,10 @@ export default function SignUpLayout({
                     </TouchableOpacity>
                 )}
                 {title && (
-                    <Text variant="headlineMedium" style={[styles.title, { color: colors.text }]}>
-                        {title}
-                    </Text>
+                    <AnimatedHeaderTitle
+                        title={title}
+                        style={[styles.title, { color: colors.text }]}
+                    />
                 )}
             </View>
             {subtitle && (
@@ -117,6 +119,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingTop: 60,
+        paddingBottom: 16,
     },
     backButton: {
         marginRight: 16,

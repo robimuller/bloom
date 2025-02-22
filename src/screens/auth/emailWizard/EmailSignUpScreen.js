@@ -23,6 +23,24 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+// At the top of EmailSignUpScreen.js (after your imports)
+const stepTitles = {
+    1: 'Basic Info',
+    2: 'Birthday',
+    3: 'Gender',
+    4: 'Orientation',
+    5: 'Photos',
+    6: 'Height',
+    7: 'Age Range',
+    8: 'Interests',
+    9: 'Bio',
+    10: 'Geo Radius',
+    11: 'Location',
+    12: 'Notifications',
+    13: 'Terms & Conditions',
+    14: 'Preview & Submit',
+};
+
 
 // Regular expression to enforce at least 8 characters, one uppercase, one lowercase, one digit, and one special character.
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -34,6 +52,8 @@ export default function EmailSignUpScreen({ navigation }) {
     const [isUpdating, setIsUpdating] = useState(false);
     const { colors } = useContext(ThemeContext);
     const [showPassword, setShowPassword] = useState(false);
+
+    const dynamicTitle = stepTitles[subStep] || 'Create Your Account';
 
 
     // Updated total steps (we had 16 before, but now three steps become one)
@@ -518,46 +538,20 @@ export default function EmailSignUpScreen({ navigation }) {
         }
     };
 
-    const errorComponent = (
-        <View>
-            {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
-            {localError ? <Text style={styles.errorText}>{localError}</Text> : null}
-        </View>
-    );
+    // Decide the header back action dynamically:
+    const headerBackAction = subStep === 1 ? () => navigation.goBack() : handleBack;
 
-    if (finishing) {
-        return (
-            <SignUpLayout
-                title="Creating Account..."
-                subtitle="Please wait a moment"
-                progress={1}
-                onBack={() => { }}
-                onNext={() => { }}
-                nextLabel="..."
-                canGoBack={false}
-                theme={colors}
-            >
-                <View style={styles.center}>
-                    <Text>Finalizing your account...</Text>
-                    {localError && <Text style={styles.errorText}>{localError}</Text>}
-                </View>
-            </SignUpLayout>
-        );
-    }
-
-    const progress = (subStep - 1) / TOTAL_STEPS;
+    const progressValue = (subStep - 1) / TOTAL_STEPS;
 
     return (
         <SignUpLayout
-            title="Create Your Account"
-            subtitle="Please fill in the details below"
-            progress={progress}
-            errorMessage={localError} // pass your error message here
-            canGoBack={subStep > 1}
-            onBack={handleBack}
+            title={dynamicTitle}
+            progress={progressValue}
+            errorMessage={localError}
+            canGoBack={true} // Always show the header back button.
+            onBack={headerBackAction}
             onNext={handleNext}
             nextLabel={subStep < TOTAL_STEPS ? 'Next' : 'Finish'}
-            theme={colors}
         >
             <ScrollView style={{ flex: 1 }}>{renderCurrentSubStep()}</ScrollView>
         </SignUpLayout>
@@ -646,14 +640,5 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    passwordContainer: {
-        width: '100%',
-        flex: 1,           // Ensure it stretches full width
-        position: 'relative',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        // Remove flexDirection if not required,
-        // or adjust if you need to layout multiple elements
     },
 });
