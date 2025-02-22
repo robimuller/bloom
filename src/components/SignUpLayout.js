@@ -1,122 +1,160 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, Button, ProgressBar } from 'react-native-paper';
+import React, { useEffect, useContext } from 'react';
+import {
+    View,
+    StyleSheet,
+    KeyboardAvoidingView,
+    Platform,
+    TouchableOpacity,
+} from 'react-native';
+import { Text } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
+import { useThemeContext } from '../contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../contexts/ThemeContext';
+import ShootingLightButton from '../components/ShootingLightButton';
+import GradientProgressBar from '../components/GradientProgressBar';
 
-/**
- * A simplified progress bar that goes from 0..1. 
- * `progress` is a number between 0.0 and 1.0
- */
-function SingleProgressBar({ progress, theme }) {
+// Custom error toast component.
+const CustomErrorToast = ({ text1, hideToast }) => {
+    const { colors } = useContext(ThemeContext);
     return (
-        <View style={{ marginTop: 8 }}>
-            <ProgressBar
-                progress={progress}
-                color={theme.primary}
-                style={{ height: 8, borderRadius: 4 }}
+        <View style={toastStyles.container}>
+            <Text style={toastStyles.text}>{text1}</Text>
+            <Ionicons
+                onPress={() => {
+                    Toast.hide();
+                    if (hideToast) hideToast();
+                }}
+                name="close-outline"
+                size={24}
+                color={colors.background}
+                style={{ backgroundColor: colors.primary, borderRadius: 48 }}
             />
         </View>
     );
-}
+};
+
+const toastConfig = {
+    custom_error: ({ text1, hideToast, ...rest }) => (
+        <CustomErrorToast text1={text1} hideToast={hideToast} {...rest} />
+    ),
+};
 
 export default function SignUpLayout({
     title,
     subtitle,
-    // We'll receive a "progress" prop or compute it
     progress = 0,
-    errorComponent,
+    errorMessage, // expects a string error message
     canGoBack = false,
     onBack,
     onNext,
     nextLabel = 'Next',
-    backLabel = 'Back',
     children,
     style,
-    theme,
 }) {
+    const { colors } = useThemeContext();
+
+    useEffect(() => {
+        if (errorMessage) {
+            Toast.show({
+                type: 'custom_error',
+                text1: errorMessage,
+                position: 'bottom',
+                autoHide: false,
+            });
+        }
+    }, [errorMessage]);
+
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }, style]}>
-            {/* TOP AREA */}
-            <View style={styles.topArea}>
-                {/* Title & Subtitle */}
-                {title ? (
-                    <Text variant="headlineMedium" style={[styles.title, { color: theme.text }]}>
+        <KeyboardAvoidingView
+            style={[styles.container, { backgroundColor: colors.background }, style]}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={60} // adjust as needed
+        >
+            {/* HEADER AREA */}
+            <View style={styles.header}>
+                {canGoBack && (
+                    <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={28} color={colors.primary} />
+                    </TouchableOpacity>
+                )}
+                {title && (
+                    <Text variant="headlineMedium" style={[styles.title, { color: colors.text }]}>
                         {title}
                     </Text>
-                ) : null}
-
-                {subtitle ? (
-                    <Text variant="bodySmall" style={[styles.subtitle, { color: theme.text }]}>
-                        {subtitle}
-                    </Text>
-                ) : null}
-
-                {/* Single linear progress bar */}
-                <SingleProgressBar progress={progress} theme={theme} />
-
-                {/* Error Messages */}
-                {errorComponent}
+                )}
             </View>
+            {subtitle && (
+                <Text variant="bodySmall" style={[styles.subtitle, { color: colors.secondary }]}>
+                    {subtitle}
+                </Text>
+            )}
+            <GradientProgressBar progress={progress} barHeight={8} />
 
             {/* MIDDLE CONTENT */}
             <View style={styles.contentArea}>{children}</View>
 
-            {/* BOTTOM NAV AREA */}
+            {/* BOTTOM NAVIGATION */}
             <View style={styles.bottomNav}>
-                {canGoBack ? (
-                    <Button
-                        mode="outlined"
-                        icon="arrow-left"
-                        onPress={onBack}
-                        style={[styles.navButton, { borderColor: theme.primary }]}
-                        textColor={theme.primary}
-                        labelStyle={{ fontSize: 16 }}
-                    >
-                        {backLabel}
-                    </Button>
-                ) : (
-                    <View style={{ width: 120 }} />
-                )}
-
-                <Button
-                    mode="contained"
+                <ShootingLightButton
+                    label={nextLabel}
                     icon="arrow-right"
                     onPress={onNext}
-                    style={styles.navButton}
-                    buttonColor={theme.primary}
-                    labelStyle={{ fontSize: 16, color: '#fff' }}
-                >
-                    {nextLabel}
-                </Button>
+                    style={styles.shootingLightButton}
+                />
             </View>
-        </View>
+            <Toast config={toastConfig} />
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    topArea: {
-        paddingHorizontal: 24,
-        paddingTop: 40,
-    },
-    title: {
-        marginBottom: 4,
-        fontWeight: '600',
-    },
-    subtitle: {
-        marginBottom: 16,
-    },
-    contentArea: {
+    container: {
         flex: 1,
         paddingHorizontal: 24,
     },
-    bottomNav: {
+    header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingBottom: 16,
-        paddingTop: 16,
+        alignItems: 'center',
+        paddingTop: 60,
     },
-    navButton: {
-        minWidth: 120,
+    backButton: {
+        marginRight: 16,
+    },
+    title: {
+        fontWeight: '600',
+        fontSize: 22,
+    },
+    subtitle: {
+        marginBottom: 16,
+        fontSize: 16,
+    },
+    contentArea: {
+        flex: 1,
+        justifyContent: 'flex-start',
+        marginTop: 16,
+    },
+    bottomNav: {
+        paddingVertical: 16,
+    },
+    shootingLightButton: {
+        width: '100%',
+    },
+});
+
+const toastStyles = StyleSheet.create({
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'black',
+        borderRadius: 25,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginHorizontal: 16,
+    },
+    text: {
+        flex: 1,
+        color: 'white',
+        fontSize: 16,
     },
 });

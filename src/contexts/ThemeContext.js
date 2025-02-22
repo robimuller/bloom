@@ -1,47 +1,32 @@
 // src/contexts/ThemeContext.js
-import React, { createContext, useState, useEffect, useMemo } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useState, useMemo, useContext } from 'react';
 import { lightTheme, darkTheme } from '../themes/theme';
 
 export const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-    const [themeMode, setThemeMode] = useState('light');
+  // Temporarily default to dark mode.
+  const [themeMode, setThemeMode] = useState('dark');
 
-    // Load the theme from persistent storage when the component mounts.
-    useEffect(() => {
-        async function loadTheme() {
-            try {
-                const storedTheme = await AsyncStorage.getItem('themeMode');
-                if (storedTheme) {
-                    setThemeMode(storedTheme);
-                }
-            } catch (error) {
-                console.error('Error loading theme from storage:', error);
-            }
-        }
-        loadTheme();
-    }, []);
+  // Memoize the theme colors based on the current theme mode.
+  const theme = useMemo(() => {
+    return themeMode === 'light' ? lightTheme : darkTheme;
+  }, [themeMode]);
 
-    // Memoize the theme colors based on the current theme mode.
-    const theme = useMemo(() => {
-        return themeMode === 'light' ? lightTheme : darkTheme;
-    }, [themeMode]);
+  // Toggle function remains available.
+  function toggleTheme() {
+    setThemeMode(prev => (prev === 'light' ? 'dark' : 'light'));
+  }
 
-    // Toggle the theme and store the new value persistently.
-    async function toggleTheme() {
-        const newTheme = themeMode === 'light' ? 'dark' : 'light';
-        setThemeMode(newTheme);
-        try {
-            await AsyncStorage.setItem('themeMode', newTheme);
-        } catch (error) {
-            console.error('Error saving theme to storage:', error);
-        }
-    }
+  // Here we provide a "colors" property (equal to our theme) for consistency.
+  return (
+    <ThemeContext.Provider value={{ themeMode, theme, colors: theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
 
-    return (
-        <ThemeContext.Provider value={{ themeMode, theme, toggleTheme }}>
-            {children}
-        </ThemeContext.Provider>
-    );
+// Create and export a custom hook to access the theme context.
+export function useThemeContext() {
+  return useContext(ThemeContext);
 }
