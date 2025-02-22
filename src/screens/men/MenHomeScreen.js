@@ -12,12 +12,13 @@ import { Image } from 'expo-image';
 import { RequestsContext } from '../../contexts/RequestsContext';
 import { PromotionsContext } from '../../contexts/PromotionsContext';
 import { ProfilesContext } from '../../contexts/ProfilesContext';
-import { UserProfileContext } from '../../contexts/UserProfileContext'; // To access user's location
+import { UserProfileContext } from '../../contexts/UserProfileContext';
 import CategoryFilter from '../../components/CategoryFilter';
 import LocationSelector from '../../components/LocationSelector';
 import CreateDateScreen from './CreateDateScreen';
 import PromotionsCard from '../../components/PromotionsCard';
 import { getFeaturedDateConcepts } from '../../utils/recommendDateConcepts';
+import { getRecommendedProfiles } from '../../utils/recommendProfiles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -27,7 +28,7 @@ export default function MenHomeScreen() {
     const { requests } = useContext(RequestsContext);
     const { promotions, loading: loadingPromotions } = useContext(PromotionsContext);
     const { womenProfiles, loadingWomen } = useContext(ProfilesContext);
-    const { profile } = useContext(UserProfileContext);
+    const { profile: currentUser } = useContext(UserProfileContext);
     const { colors } = useTheme();
 
     // Count pending requests for the badge.
@@ -43,14 +44,13 @@ export default function MenHomeScreen() {
     useEffect(() => {
         async function fetchDateConcepts() {
             setLoadingDateConcepts(true);
-            // Use user's location from profile if available; otherwise, use a default value.
-            const location = profile?.location || "New York";
+            const location = currentUser?.location || "New York";
             const ideas = await getFeaturedDateConcepts(location);
             setFeaturedDateConcepts(ideas);
             setLoadingDateConcepts(false);
         }
         fetchDateConcepts();
-    }, [profile]);
+    }, [currentUser]);
 
     const handleCategorySelect = (categoryId) => {
         navigation.navigate('MenFeed', { selectedCategory: categoryId });
@@ -60,7 +60,7 @@ export default function MenHomeScreen() {
     const MenFeedCardPreview = ({ item }) => {
         return (
             <TouchableOpacity
-                style={[styles.previewCard, { backgroundColor: colors.cardBackground }]}
+                style={[styles.previewCard]}
                 onPress={() => navigation.navigate('MenFeed')}
                 activeOpacity={0.8}
             >
@@ -90,6 +90,21 @@ export default function MenHomeScreen() {
             </TouchableOpacity>
         </View>
     );
+
+    // Compute recommended profiles based on mutual interests.
+    const recommendedProfiles = currentUser && womenProfiles.length
+        ? getRecommendedProfiles(womenProfiles, currentUser)
+        : [];
+
+    // Log each recommended profile's display name and score when recommendedProfiles updates.
+    useEffect(() => {
+        if (recommendedProfiles.length) {
+            console.log("Recommended Profiles and their scores:");
+            recommendedProfiles.forEach(profile => {
+                console.log(`${profile.displayName}: ${profile.recommendationScore}`);
+            });
+        }
+    }, [recommendedProfiles]);
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
@@ -153,8 +168,6 @@ export default function MenHomeScreen() {
                                     key={promo.id}
                                     promotion={promo}
                                     onPress={(promo) => navigation.navigate('MenPromotionDetail', { promo })}
-                                    onAttach={(promo) => console.log('Attach promotion:', promo)}
-                                    onMarkInterest={(promo) => console.log("I'm interested in:", promo)}
                                 />
                             ))}
                         </ScrollView>
@@ -176,7 +189,6 @@ export default function MenHomeScreen() {
                                         console.log('Selected date concept:', idea);
                                     }}
                                 >
-                                    {/* Magic Wand Icon with Linear Gradient */}
                                     <LinearGradient
                                         colors={[colors.cardBackground, colors.background]}
                                         style={styles.magicIconContainer}
@@ -200,7 +212,7 @@ export default function MenHomeScreen() {
                         <Text style={{ color: colors.text }}>Loading profiles...</Text>
                     ) : (
                         <FlatList
-                            data={womenProfiles.slice(0, 3)}
+                            data={recommendedProfiles.slice(0, 3)} // Show top three recommended profiles
                             horizontal
                             keyExtractor={(item) => item.id}
                             showsHorizontalScrollIndicator={false}
@@ -210,22 +222,6 @@ export default function MenHomeScreen() {
                     )}
                 </View>
             </ScrollView>
-
-            {/* Floating Action Button for Creating Dates */}
-            {/* <TouchableOpacity
-          style={styles.fabContainer}
-          onPress={() => navigation.navigate('CreateDate')}
-          activeOpacity={0.8}
-      >
-          <LinearGradient
-              colors={[colors.primary, colors.primary]}
-              start={{ x: 1.5, y: 0.3 }}
-              end={{ x: 0.1, y: 0.3 }}
-              style={styles.fabGradient}
-          >
-              <Ionicons name="add" size={24} color={theme.colors.background} />
-          </LinearGradient>
-      </TouchableOpacity> */}
         </SafeAreaView>
     );
 }
@@ -246,9 +242,7 @@ const styles = StyleSheet.create({
         paddingTop: 16,
         height: 90,
     },
-    filterContainer: {
-        // Additional styling for the filter container if needed
-    },
+    filterContainer: {},
     iconCircle: {
         width: 40,
         height: 40,
@@ -257,7 +251,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     sectionsContainer: {
-        paddingBottom: 80, // Ensures space at the bottom for the FAB
+        paddingBottom: 80,
     },
     section: {
         marginBottom: 20,
@@ -282,7 +276,7 @@ const styles = StyleSheet.create({
     },
     chevronIcon: {
         marginLeft: 4,
-        marginRight: 16
+        marginRight: 16,
     },
     horizontalScroll: {},
     fabContainer: {
@@ -319,17 +313,15 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
     },
-    // Preview card styles for Explore section
     previewCard: {
-        width: 250,
+        width: 200,
         marginRight: 16,
         borderRadius: 12,
         overflow: 'hidden',
-        padding: 10,
     },
     previewImage: {
         width: '100%',
-        height: 150,
+        height: 225,
         resizeMode: 'cover',
         borderRadius: 8,
     },
@@ -342,13 +334,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginTop: 4,
     },
-    // Featured Date Concepts styles
     featuredCard: {
-        width: SCREEN_WIDTH - 32, // Adjust width as needed
+        width: SCREEN_WIDTH - 32,
         marginRight: 16,
         borderRadius: 12,
         padding: 10,
-        paddingTop: 40, // Extra top padding to leave room for the magic wand icon
+        paddingTop: 40,
         justifyContent: 'flex-start',
         height: 200,
         position: 'relative',

@@ -190,14 +190,14 @@ export default function ThreeRowsCarouselWithGradients() {
             {/* Top Gradient Overlay */}
             <LinearGradient
                 pointerEvents="none"
-                colors={['#1A1B25', 'rgba(0,0,0,0)']}
+                colors={['#1A1423', 'rgba(0,0,0,0)']}
                 style={styles.topGradient}
             />
 
             {/* Bottom Gradient Overlay */}
             <LinearGradient
                 pointerEvents="none"
-                colors={['rgba(0,0,0,0)', '#1A1B25']}
+                colors={['rgba(0,0,0,0)', '#1A1423']}
                 style={styles.bottomGradient}
             />
         </View>

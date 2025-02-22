@@ -145,7 +145,7 @@ export default function GalleoLoginScreen({ navigation }) {
     ]);
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: "#1A1B25" }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: "#1A1423" }]}>
             {/* Animated carousel container */}
             <Animated.View style={[styles.carouselContainer, { opacity: carouselOpacity }]}>
                 <TiltedCarousel />

@@ -20,7 +20,7 @@ export const darkTheme = {
     text: '#ffffff',
     white: '#fff',
     black: '#000',
-    background: '#1D1C2C',
+    background: '#1A1423',
     cardBackground: '#222632',
     primary: '#FCABFF',
     secondary: '#6C6F7F',
