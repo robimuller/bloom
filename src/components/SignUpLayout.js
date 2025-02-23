@@ -52,6 +52,7 @@ export default function SignUpLayout({
     nextLabel = 'Next',
     children,
     style,
+    nextDisabled = false, // new prop with default value
 }) {
     const { colors } = useThemeContext();
 
@@ -69,8 +70,8 @@ export default function SignUpLayout({
     return (
         <KeyboardAvoidingView
             style={[styles.container, { backgroundColor: colors.background }, style]}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} // using "padding" for both platforms
-            keyboardVerticalOffset={0} // adjust as needed
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+            keyboardVerticalOffset={0}
         >
             {/* HEADER AREA */}
             <View style={styles.header}>
@@ -101,8 +102,12 @@ export default function SignUpLayout({
                 <ShootingLightButton
                     label={nextLabel}
                     icon="arrow-right"
-                    onPress={onNext}
-                    style={styles.shootingLightButton}
+                    onPress={nextDisabled ? null : onNext}  // Prevent press if disabled
+                    disabled={nextDisabled} // Pass disabled flag if your button supports it
+                    style={[
+                        styles.shootingLightButton,
+                        nextDisabled && { backgroundColor: colors.secondary } // Change background when disabled
+                    ]}
                 />
             </View>
             <Toast config={toastConfig} />

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
     View,
     StyleSheet,
@@ -22,6 +22,10 @@ import { db } from '../../../../config/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import BirthdayPicker from '../../../components/BirthdayPicker';
+import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
+import { Animated, Dimensions } from 'react-native';
+
 
 // At the top of EmailSignUpScreen.js (after your imports)
 const stepTitles = {
@@ -52,6 +56,8 @@ export default function EmailSignUpScreen({ navigation }) {
     const [isUpdating, setIsUpdating] = useState(false);
     const { colors } = useContext(ThemeContext);
     const [showPassword, setShowPassword] = useState(false);
+    const slideAnim = useRef(new Animated.Value(0)).current;
+    const screenWidth = Dimensions.get('window').width;
 
     const dynamicTitle = stepTitles[subStep] || 'Create Your Account';
 
@@ -230,48 +236,92 @@ export default function EmailSignUpScreen({ navigation }) {
         );
     };
 
+    console.log('basicInfo:', basicInfo);
+
+    // Render function for birthday picker step (step 2)
     const renderStep4Birthday = () => (
         <View style={styles.panel}>
-            <Text style={styles.title}>When's your birthday?</Text>
-            <CustomTextInput
-                placeholder="YYYY-MM-DD"
-                value={profileInfo.birthday || ''}
-                onChangeText={(val) => updateProfileInfo({ birthday: val })}
+            <BirthdayPicker
+                birthday={profileInfo.birthday}
+                updateBirthday={(val) => updateProfileInfo({ birthday: val })}
             />
         </View>
     );
 
+    console.log('Birthday:', profileInfo.birthday);
+
     const renderStep5Gender = () => (
         <View style={styles.panel}>
-            <Text style={styles.title}>Gender</Text>
-            <View style={styles.row}>
-                <TouchableOpacity
-                    onPress={() => updateProfileInfo({ gender: 'male' })}
+            <View style={styles.genderHeader}>
+                <Text style={[styles.title, { color: colors.text, textAlign: 'center', marginBottom: 8 }]}>
+                    {`Hi ${basicInfo.firstName},`}
+                </Text>
+                <Text
                     style={[
-                        styles.genderButton,
-                        profileInfo.gender === 'male' ? styles.buttonContained : styles.buttonOutlined,
+                        styles.subHeader,
+                        { color: colors.secondary, textAlign: 'center', marginBottom: 20 },
                     ]}
                 >
-                    <Text style={styles.buttonText}>Male</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => updateProfileInfo({ gender: 'female' })}
-                    style={[
-                        styles.genderButton,
-                        profileInfo.gender === 'female' ? styles.buttonContained : styles.buttonOutlined,
-                    ]}
-                >
-                    <Text style={styles.buttonText}>Female</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => updateProfileInfo({ gender: 'other' })}
-                    style={[
-                        styles.genderButton,
-                        profileInfo.gender === 'other' ? styles.buttonContained : styles.buttonOutlined,
-                    ]}
-                >
-                    <Text style={styles.buttonText}>Other</Text>
-                </TouchableOpacity>
+                    Please tell us your gender
+                </Text>
+            </View>
+            <View style={styles.genderOptionsContainer}>
+                <View style={styles.genderOption}>
+                    <TouchableOpacity
+                        onPress={() => updateProfileInfo({ gender: 'male' })}
+                        style={[
+                            styles.circleButton,
+                            { opacity: profileInfo.gender === 'male' ? 1 : 0.5 },
+                        ]}
+                    >
+                        <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
+                            <Defs>
+                                <RadialGradient id="gradMale" cx="50%" cy="50%" r="50%">
+                                    <Stop offset="0%" stopColor={colors.primary} stopOpacity="1" />
+                                    <Stop offset="100%" stopColor={'#7C49C6'} stopOpacity="1" />
+                                </RadialGradient>
+                            </Defs>
+                            <Circle cx="50" cy="50" r="50" fill="url(#gradMale)" />
+                        </Svg>
+                        <Ionicons name="male" size={40} color={profileInfo.gender === 'male' ? colors.backgroundColor : colors.tertiary} />
+                    </TouchableOpacity>
+                    <Text
+                        style={[
+                            styles.genderLabel,
+                            { opacity: profileInfo.gender === 'male' ? 1 : 0.5, color: profileInfo.gender === 'male' ? colors.text : colors.secondary },
+                        ]}
+                    >
+                        Male
+                    </Text>
+                </View>
+                <View style={styles.genderOption}>
+                    <TouchableOpacity
+                        onPress={() => updateProfileInfo({ gender: 'female' })}
+                        style={[
+                            styles.circleButton,
+                            { opacity: profileInfo.gender === 'female' ? 1 : 0.5 },
+                        ]}
+                    >
+                        <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
+                            <Defs>
+                                <RadialGradient id="gradFemale" cx="50%" cy="50%" r="50%">
+                                    <Stop offset="0%" stopColor={colors.primary} stopOpacity="1" />
+                                    <Stop offset="100%" stopColor={'#7C49C6'} stopOpacity="1" />
+                                </RadialGradient>
+                            </Defs>
+                            <Circle cx="50" cy="50" r="50" fill="url(#gradFemale)" />
+                        </Svg>
+                        <Ionicons name="female" size={40} color={profileInfo.gender === 'female' ? colors.backgroundColor : colors.tertiary} />
+                    </TouchableOpacity>
+                    <Text
+                        style={[
+                            styles.genderLabel,
+                            { opacity: profileInfo.gender === 'female' ? 1 : 0.5, color: profileInfo.gender === 'female' ? colors.text : colors.secondary },
+                        ]}
+                    >
+                        Female
+                    </Text>
+                </View>
             </View>
         </View>
     );
@@ -522,26 +572,53 @@ export default function EmailSignUpScreen({ navigation }) {
             setLocalError(`${err} ${Date.now()}`);
             return;
         }
-        if (subStep < TOTAL_STEPS) {
-            setSubStep((prev) => prev + 1);
-        } else {
-            handleFinish();
-        }
+        // Animate the current panel sliding out to the left
+        Animated.timing(slideAnim, {
+            toValue: -screenWidth,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            // Update step after slide-out is complete
+            setSubStep(prev => prev + 1);
+            // Reset animated value to start from the right side
+            slideAnim.setValue(screenWidth);
+            // Animate new panel sliding in from the right
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        });
     };
 
     const handleBack = () => {
         setLocalError(null);
-        if (subStep > 1) {
-            setSubStep((prev) => prev - 1);
-        } else {
-            navigation.goBack();
-        }
+        // Animate the current panel sliding out to the right
+        Animated.timing(slideAnim, {
+            toValue: screenWidth,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            // Update step after slide-out is complete
+            setSubStep(prev => prev - 1);
+            // Reset animated value to start from the left side
+            slideAnim.setValue(-screenWidth);
+            // Animate new panel sliding in from the left
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        });
     };
 
     // Decide the header back action dynamically:
     const headerBackAction = subStep === 1 ? () => navigation.goBack() : handleBack;
 
     const progressValue = (subStep - 1) / TOTAL_STEPS;
+
+    // Near your render/return statement in EmailSignUpScreen:
+    const nextDisabled = Boolean(validateCurrentStep());
 
     return (
         <SignUpLayout
@@ -553,7 +630,11 @@ export default function EmailSignUpScreen({ navigation }) {
             onNext={handleNext}
             nextLabel={subStep < TOTAL_STEPS ? 'Next' : 'Finish'}
         >
-            <ScrollView style={{ flex: 1 }}>{renderCurrentSubStep()}</ScrollView>
+            <ScrollView style={{ flex: 1 }} scrollEnabled={false}>
+                <Animated.View style={{ transform: [{ translateX: slideAnim }] }}>
+                    {renderCurrentSubStep()}
+                </Animated.View>
+            </ScrollView>
         </SignUpLayout>
     );
 }
@@ -572,7 +653,7 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top',
     },
     title: {
-        fontSize: 1,
+        fontSize: 25,
         fontWeight: '500',
     },
     subHeader: {
@@ -587,6 +668,49 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: 10,
+    },
+    genderHeader: {
+        flex: 1,
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 20,
+    },
+    genderOptionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    genderOption: {
+        alignItems: 'center',
+        marginHorizontal: 20,
+    },
+    genderLabel: {
+        marginTop: 10,
+        fontSize: 16,
+    },
+    genderLabelSelected: {
+        opacity: 1,
+    },
+    genderLabelUnselected: {
+        opacity: 0.5,
+    },
+    genderSelectionContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    circleButton: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 20,
+        overflow: 'hidden', // Ensures the gradient doesn't bleed outside the circle
+    },
+    circleButtonSelected: {
+        backgroundColor: '#FCABFF',
     },
     genderButton: {
         marginRight: 10,
