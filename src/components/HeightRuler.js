@@ -1,187 +1,163 @@
-// HeightRuler.js
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Animated, StyleSheet, Dimensions, Text } from 'react-native';
-import { NativeViewGestureHandler } from 'react-native-gesture-handler';
-import { useTheme } from 'react-native-paper';
+import { Animated, Dimensions, StyleSheet, View, Text } from 'react-native';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const RULER_HEIGHT = 80;       // Height of the ruler view
-const TICK_SPACING = 20;       // Pixels per 1 cm
-const MIN_HEIGHT = 100;        // Minimum height (cm)
-const MAX_HEIGHT = 220;        // Maximum height (cm)
-const TOTAL_TICKS = MAX_HEIGHT - MIN_HEIGHT + 1;
-const TICKS_WIDTH = TOTAL_TICKS * TICK_SPACING;
+const screenWidth = Dimensions.get('screen').width;
+const width = screenWidth - 48; // proper numeric width
 
-const HeightRuler = ({ initialValue = 170, onChange, modalVisible }) => {
-    const scrollViewRef = useRef(null);
-    // Create an Animated.Value for the horizontal scroll offset.
+const minHeight = 140;
+const maxHeight = 210;
+const segmentsLength = maxHeight - minHeight + 1;
+const segmentWidth = 4;
+const segmentSpacing = 20;
+const snapSegment = segmentWidth + segmentSpacing;
+
+// This spacer centers each segment in the view.
+const spacerWidth = (width / 2) - (segmentWidth / 2);
+
+const indicatorHeight = 40;
+
+// Helper to convert cm → ft/in
+function convertToFeetInches(cm) {
+    const totalInches = Math.round(cm / 2.54);
+    const feet = Math.floor(totalInches / 12);
+    const inches = totalInches % 12;
+    return `${feet}'${inches}"`;
+}
+
+const HeightRuler = ({ onValueChange, initialValue, colors }) => {
+    // Default to 170 cm if no initial value provided.
+    const defaultHeight = 170;
+    const initialHeight = initialValue !== undefined ? initialValue : defaultHeight;
+
     const scrollX = useRef(new Animated.Value(0)).current;
-    const [selectedValue, setSelectedValue] = useState(initialValue);
-    const paperTheme = useTheme();
+    const scrollViewRef = useRef(null);
+    const [displayValue, setDisplayValue] = useState(initialHeight);
 
-    // Scroll to the proper offset based on initialValue.
-    const scrollToCorrectOffset = () => {
-        if (scrollViewRef.current) {
-            const offset = (initialValue - MIN_HEIGHT) * TICK_SPACING;
-            scrollViewRef.current.scrollTo({ x: offset, animated: false });
-        }
-    };
-
-    const handleScrollViewLayout = () => {
-        setTimeout(scrollToCorrectOffset, 100);
-    };
-
-    // When modalVisible or initialValue changes, scroll to the correct offset.
+    // On mount, scroll to the proper offset.
     useEffect(() => {
-        if (modalVisible) {
-            const timeout = setTimeout(scrollToCorrectOffset, 100);
-            return () => clearTimeout(timeout);
-        }
-    }, [initialValue, modalVisible]);
+        const timer = setTimeout(() => {
+            if (scrollViewRef.current) {
+                scrollViewRef.current.scrollTo({
+                    x: (initialHeight - minHeight) * snapSegment,
+                    animated: false,
+                });
+            }
+        }, 50);
+        return () => clearTimeout(timer);
+    }, [initialHeight]);
 
-    // Update the selected value (and call onChange) on scroll.
-    const handleScroll = (event) => {
-        const offsetX = event.nativeEvent.contentOffset.x;
-        const value = Math.round(offsetX / TICK_SPACING) + MIN_HEIGHT;
-        setSelectedValue(value);
-        if (onChange) {
-            onChange(value);
+    // Update display value as user scrolls.
+    useEffect(() => {
+        const listener = scrollX.addListener(({ value }) => {
+            const liveValue = Math.round(value / snapSegment) + minHeight;
+            setDisplayValue(liveValue);
+        });
+        return () => scrollX.removeListener(listener);
+    }, [scrollX]);
+
+    const handleMomentumScrollEnd = (e) => {
+        const x = e.nativeEvent.contentOffset.x;
+        const finalValue = Math.round(x / snapSegment) + minHeight;
+        if (onValueChange) {
+            onValueChange(String(finalValue));
         }
     };
+
+    // Convert cm to ft/in string.
+    const ftInchesValue = convertToFeetInches(displayValue);
 
     return (
         <View style={styles.container}>
-            <View style={styles.rulerContainer}>
-                <NativeViewGestureHandler>
-                    <Animated.ScrollView
-                        ref={scrollViewRef}
-                        horizontal
-                        nestedScrollEnabled={true} // <--- Add this line
-                        showsHorizontalScrollIndicator={false}
-                        snapToInterval={TICK_SPACING}
-                        decelerationRate="fast"
-                        onScroll={Animated.event(
-                            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                            { useNativeDriver: true, listener: handleScroll }
-                        )}
-                        scrollEventThrottle={16}
-                        directionalLockEnabled
-                        contentContainerStyle={styles.scrollContent}
-                        onLayout={handleScrollViewLayout}
-                    >
-                        {/* Left spacer */}
-                        <View style={styles.sideSpacer} />
-                        {/* Ticks container */}
-                        <View style={styles.ticksContainer}>
-                            {Array.from({ length: TOTAL_TICKS }, (_, i) => {
-                                const value = MIN_HEIGHT + i;
-                                const isMajor = value % 10 === 0;
-                                // The center of this tick (in content coordinates)
-                                const tickCenter =
-                                    SCREEN_WIDTH / 2 + i * TICK_SPACING + TICK_SPACING / 2;
-                                // When the tick’s center aligns with the center of the screen,
-                                // scrollX should equal: tickCenter - SCREEN_WIDTH/2.
-                                // Use that as the middle of our interpolation range.
-                                const inputRange = [
-                                    tickCenter - TICK_SPACING,
-                                    tickCenter,
-                                    tickCenter + TICK_SPACING,
-                                ];
-                                // Animate opacity and scale for the tick label.
-                                const animatedOpacity = scrollX.interpolate({
-                                    inputRange,
-                                    outputRange: [0.5, 1, 0.5],
-                                    extrapolate: 'clamp',
-                                });
-                                const animatedScale = scrollX.interpolate({
-                                    inputRange,
-                                    outputRange: [1, 1.4, 1],
-                                    extrapolate: 'clamp',
-                                });
-                                return (
-                                    <View key={value} style={styles.tickContainer}>
-                                        <View
-                                            style={[
-                                                styles.tick,
-                                                {
-                                                    height: isMajor ? 40 : 20,
-                                                    backgroundColor: paperTheme.colors.primary,
-                                                },
-                                            ]}
-                                        />
-                                        {isMajor && (
-                                            <Animated.Text
-                                                style={[
-                                                    styles.tickLabel,
-                                                    {
-                                                        color: paperTheme.colors.text,
-                                                        opacity: animatedOpacity,
-                                                        transform: [{ scale: animatedScale }],
-                                                    },
-                                                ]}
-                                            >
-                                                {value}
-                                            </Animated.Text>
-                                        )}
-                                    </View>
-                                );
-                            })}
-                        </View>
-                        {/* Right spacer */}
-                        <View style={styles.sideSpacer} />
-                    </Animated.ScrollView>
-                </NativeViewGestureHandler>
-                {/* Center indicator */}
-                <View
-                    style={[
-                        styles.indicator,
-                        { backgroundColor: paperTheme.colors.accent },
-                    ]}
-                />
+            {/* Top area: cm value */}
+            <View style={styles.indicatorTopContainer}>
+                <Text style={[styles.valueText, { color: colors.text }]}>{displayValue} cm</Text>
             </View>
-            {/* Optionally, remove this separate display if you prefer the tick label to serve as the value */}
-            <Animated.Text
-                style={[styles.valueText, { color: paperTheme.colors.text }]}
-            >
-                {selectedValue} cm
-            </Animated.Text>
+
+            {/* Middle area: Ruler and indicator */}
+            <View style={styles.rulerContainer}>
+                <Animated.ScrollView
+                    ref={scrollViewRef}
+                    horizontal
+                    bounces={false}
+                    showsHorizontalScrollIndicator={false}
+                    scrollEventThrottle={16}
+                    snapToInterval={snapSegment}
+                    onScroll={Animated.event(
+                        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                        { useNativeDriver: false }
+                    )}
+                    onMomentumScrollEnd={handleMomentumScrollEnd}
+                    contentContainerStyle={styles.scrollViewContainer}
+                >
+                    {/* Left spacer */}
+                    <View style={{ width: spacerWidth }} />
+                    {Array.from({ length: segmentsLength }, (_, i) => {
+                        const value = i + minHeight;
+                        const isTenth = value % 10 === 0;
+                        return (
+                            <View
+                                key={value}
+                                style={[
+                                    styles.segment,
+                                    {
+                                        backgroundColor: isTenth ? colors.text : colors.secondary,
+                                        height: isTenth ? 40 : 20,
+                                        marginRight: i === segmentsLength - 1 ? 0 : segmentSpacing,
+                                    },
+                                ]}
+                            />
+                        );
+                    })}
+                    {/* Right spacer */}
+                    <View style={{ width: spacerWidth }} />
+                </Animated.ScrollView>
+
+                {/* Indicator line with its bottom edge flush with the ruler */}
+                <View style={[styles.indicatorLine, { backgroundColor: colors.primary }]} />
+            </View>
+
+            {/* Bottom area: ft/in value */}
+            <View style={styles.indicatorBottomContainer}>
+                <Text style={[styles.valueText, { color: colors.text }]}>{ftInchesValue}</Text>
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { alignItems: 'center', marginVertical: 20 },
+    container: {
+        width: width,
+        marginVertical: 16,
+    },
+    indicatorTopContainer: {
+        alignItems: 'center',
+        marginBottom: 15,
+    },
     rulerContainer: {
-        width: SCREEN_WIDTH,
-        height: RULER_HEIGHT,
-        justifyContent: 'center',
-        overflow: 'visible',
+        position: 'relative',
     },
-    scrollContent: {
-        width: TICKS_WIDTH + SCREEN_WIDTH,
-        flexDirection: 'row',
+    scrollViewContainer: {
+        alignItems: 'flex-end', // Segments align to the bottom
     },
-    sideSpacer: {
-        width: SCREEN_WIDTH / 2,
-        height: RULER_HEIGHT,
+    segment: {
+        width: segmentWidth,
     },
-    ticksContainer: { flexDirection: 'row' },
-    tickContainer: { width: TICK_SPACING, alignItems: 'center' },
-    tick: { width: 2 },
-    tickLabel: {
-        marginTop: 4,
-        fontSize: 10,
-        width: 30,         // Provide enough horizontal space for the label
-        textAlign: 'center',
-    },
-    indicator: {
+    // This indicator line is absolutely positioned so its bottom is flush with the ruler.
+    indicatorLine: {
         position: 'absolute',
-        top: 0,
         bottom: 0,
-        left: SCREEN_WIDTH / 2 - 1,
-        width: 2,
+        left: (width / 2) - (segmentWidth / 2),
+        height: indicatorHeight,
+        width: segmentWidth,
     },
-    valueText: { fontSize: 16, fontWeight: 'bold', marginTop: 10 },
+    indicatorBottomContainer: {
+        alignItems: 'center',
+        marginTop: 15,
+    },
+    valueText: {
+        fontSize: 20,
+        fontWeight: '600',
+    },
 });
 
 export default HeightRuler;

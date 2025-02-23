@@ -1,4 +1,3 @@
-// src/contexts/SignUpContext.js
 import React, { createContext, useState } from 'react';
 
 export const SignUpContext = createContext();
@@ -15,9 +14,13 @@ export const SignUpProvider = ({ children }) => {
     const [profileInfo, setProfileInfo] = useState({
         birthday: '',
         gender: '',
-        orientation: '',
         bio: '',
         photos: [],
+        // New fields added:
+        height: '',
+        bodyType: '',
+        showHeight: false,
+        showBodyType: false,
     });
 
     const [preferences, setPreferences] = useState({
@@ -64,7 +67,16 @@ export const SignUpProvider = ({ children }) => {
 
     const resetSignUpData = () => {
         setBasicInfo({ firstName: '', lastName: '', email: '', password: '', phone: '' });
-        setProfileInfo({ birthday: '', gender: '', orientation: '', bio: '' });
+        setProfileInfo({
+            birthday: '',
+            gender: '',
+            bio: '',
+            photos: [],
+            height: '',
+            bodyType: '',
+            showHeight: false,
+            showBodyType: false,
+        });
         setPreferences({ ageRange: [18, 35], interests: [], eventTypes: [], geoRadius: 50 });
         setPermissions({ notifications: false, location: false, marketing: false, agreedToTerms: false });
         setLocationInfo({ coordinates: null, city: '' });
