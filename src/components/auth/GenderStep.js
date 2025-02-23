@@ -3,8 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-const GenderStep = ({ profileInfo, updateProfileInfo, colors, basicInfo }) => {
-
+const GenderStep = ({ profileInfo, setProfileInfo, colors, basicInfo }) => {
     const explainerOpacity = useRef(new Animated.Value(0.5)).current;
 
     useEffect(() => {
@@ -36,8 +35,13 @@ const GenderStep = ({ profileInfo, updateProfileInfo, colors, basicInfo }) => {
             <View style={styles.genderOptionsContainer}>
                 <View style={styles.genderOption}>
                     <TouchableOpacity
-                        onPress={() => updateProfileInfo({ gender: 'male' })}
-                        style={[styles.circleButton, { opacity: profileInfo.gender === 'male' ? 1 : 0.5 }]}
+                        onPress={() =>
+                            setProfileInfo({ ...profileInfo, gender: 'male' })
+                        }
+                        style={[
+                            styles.circleButton,
+                            { opacity: profileInfo.gender === 'male' ? 1 : 0.5 },
+                        ]}
                     >
                         <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
                             <Defs>
@@ -51,20 +55,34 @@ const GenderStep = ({ profileInfo, updateProfileInfo, colors, basicInfo }) => {
                         <Ionicons
                             name="male"
                             size={40}
-                            color={profileInfo.gender === 'male' ? colors.backgroundColor : colors.tertiary}
+                            color={
+                                profileInfo.gender === 'male'
+                                    ? colors.backgroundColor
+                                    : colors.tertiary
+                            }
                         />
                     </TouchableOpacity>
-                    <Text style={[
-                        styles.genderLabel,
-                        { opacity: profileInfo.gender === 'male' ? 1 : 0.5, color: profileInfo.gender === 'male' ? colors.text : colors.secondary }
-                    ]}>
+                    <Text
+                        style={[
+                            styles.genderLabel,
+                            {
+                                opacity: profileInfo.gender === 'male' ? 1 : 0.5,
+                                color: profileInfo.gender === 'male' ? colors.text : colors.secondary,
+                            },
+                        ]}
+                    >
                         Male
                     </Text>
                 </View>
                 <View style={styles.genderOption}>
                     <TouchableOpacity
-                        onPress={() => updateProfileInfo({ gender: 'female' })}
-                        style={[styles.circleButton, { opacity: profileInfo.gender === 'female' ? 1 : 0.5 }]}
+                        onPress={() =>
+                            setProfileInfo({ ...profileInfo, gender: 'female' })
+                        }
+                        style={[
+                            styles.circleButton,
+                            { opacity: profileInfo.gender === 'female' ? 1 : 0.5 },
+                        ]}
                     >
                         <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100">
                             <Defs>
@@ -78,13 +96,22 @@ const GenderStep = ({ profileInfo, updateProfileInfo, colors, basicInfo }) => {
                         <Ionicons
                             name="female"
                             size={40}
-                            color={profileInfo.gender === 'female' ? colors.backgroundColor : colors.tertiary}
+                            color={
+                                profileInfo.gender === 'female'
+                                    ? colors.backgroundColor
+                                    : colors.tertiary
+                            }
                         />
                     </TouchableOpacity>
-                    <Text style={[
-                        styles.genderLabel,
-                        { opacity: profileInfo.gender === 'female' ? 1 : 0.5, color: profileInfo.gender === 'female' ? colors.text : colors.secondary }
-                    ]}>
+                    <Text
+                        style={[
+                            styles.genderLabel,
+                            {
+                                opacity: profileInfo.gender === 'female' ? 1 : 0.5,
+                                color: profileInfo.gender === 'female' ? colors.text : colors.secondary,
+                            },
+                        ]}
+                    >
                         Female
                     </Text>
                 </View>
@@ -107,7 +134,14 @@ const styles = StyleSheet.create({
     subHeader: { fontSize: 16, fontWeight: '500' },
     genderOptionsContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     genderOption: { alignItems: 'center', marginHorizontal: 20 },
-    circleButton: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+    circleButton: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
     genderLabel: { marginTop: 10, fontSize: 16 },
     explainerText: { fontSize: 16, textAlign: 'center', marginTop: 20 },
 });

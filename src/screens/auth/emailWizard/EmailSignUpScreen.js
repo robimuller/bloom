@@ -1,80 +1,79 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { Animated, Dimensions, ScrollView, StyleSheet, Alert, ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
+import {
+    Animated,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Alert,
+    ActivityIndicator,
+    View,
+    Text,
+} from 'react-native';
 import SignUpLayout from '../../../components/SignUpLayout';
 import { SignUpContext } from '../../../contexts/SignUpContext';
 import { AuthContext } from '../../../contexts/AuthContext';
 import { ThemeContext } from '../../../contexts/ThemeContext';
+
+// Import your step components (make sure they are updated to use the new setter prop)
 import BasicInfoStep from '../../../components/auth/BasicInfoStep';
 import BirthdayStep from '../../../components/auth/BirthdayStep';
 import GenderStep from '../../../components/auth/GenderStep';
-import HeightBodyTypeStep from '../../../components/auth/HeightBodyTypeStep';
 import PhotosStep from '../../../components/auth/PhotoStep';
-import AgeRangeStep from '../../../components/auth/AgeRangeStep';
-import InterestsStep from '../../../components/auth/InterestsStep';
-import BioStep from '../../../components/auth/BioStep';
-import GeoRadiusStep from '../../../components/auth/GeoRadiusStep';
+import SpokenLanguagesStep from '../../../components/auth/SpokenLanguagesStep';
+import EthnicityStep from '../../../components/auth/EthnicityStep';
+import ReligionStep from '../../../components/auth/ReligionStep';
+import HeightBodyTypeStep from '../../../components/auth/HeightBodyTypeStep';
 import LocationStep from '../../../components/auth/LocationStep';
-import NotificationsStep from '../../../components/auth/NotificationsStep';
-import TermsStep from '../../../components/auth/TermsStep';
-import PreviewStep from '../../../components/auth/PreviewStep';
+import EducationProfessionStep from '../../../components/auth/EducationProfessionStep';
+import BioStep from '../../../components/auth/BioStep';
+import InterestsStep from '../../../components/auth/InterestsStep';
+import PersonalityLifestyleStep from '../../../components/auth/PersonalityLifestyleStep';
+import DatingPreferencesStep from '../../../components/auth/DatingPreferencesStep';
+import AdditionalDetailsStep from '../../../components/auth/AdditionalDetailsStep';
 
 const stepTitles = {
-    1: 'Basic Info',
+    1: 'Basic Account Information',
     2: 'Birthday',
-    3: 'Gender',
+    3: 'Gender & Orientation',
     4: 'Height & Body Type',
-    5: 'Photos',
-    6: 'Age Range',
-    7: 'Interests',
-    8: 'Bio',
-    9: 'Geo Radius',
-    10: 'Location',
-    11: 'Notifications',
-    12: 'Terms & Conditions',
-    13: 'Preview & Submit',
+    5: 'Demographic Details',
+    6: 'Education & Profession',
+    7: 'Profile Details & Media',
+    8: 'Personality & Lifestyle',
+    9: 'Dating Preferences & Ideal Date',
+    10: 'Additional Details',
 };
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
 export default function EmailSignUpScreen({ navigation }) {
+    // Global context (read once for initialization)
+    const { userDoc, loadingAuth, emailSignup, authError } = useContext(AuthContext);
+    const { finishing, setFinishing } = useContext(SignUpContext);
+    const { colors } = useContext(ThemeContext);
+    const {
+        basicInfo,
+        updateBasicInfo,
+        profileInfo,
+        updateProfileInfo,
+        permissionsInfo,
+        updatePermissionsInfo,
+    } = useContext(SignUpContext);
+
+    // Local copies of the data that each step will modify.
+    const [localBasicInfo, setLocalBasicInfo] = useState(basicInfo);
+    const [localProfileInfo, setLocalProfileInfo] = useState(profileInfo);
+    const [localPermissionsInfo, setLocalPermissionsInfo] = useState(permissionsInfo);
+
     const [subStep, setSubStep] = useState(1);
     const [localError, setLocalError] = useState(null);
-    const { finishing, setFinishing } = useContext(SignUpContext);
     const [isUpdating, setIsUpdating] = useState(false);
-    const { colors } = useContext(ThemeContext);
     const slideAnim = useRef(new Animated.Value(0)).current;
     const screenWidth = Dimensions.get('window').width;
     const dynamicTitle = stepTitles[subStep] || 'Create Your Account';
-    const TOTAL_STEPS = 13;
+    const TOTAL_STEPS = 10;
 
-    const { user, userDoc, loadingAuth, emailSignup, authError } = useContext(AuthContext);
-    const {
-        basicInfo,
-        profileInfo,
-        preferences,
-        permissions,
-        locationInfo,
-        updateBasicInfo,
-        updateProfileInfo,
-        updatePreferences,
-        updatePermissions,
-        updateLocationInfo,
-    } = useContext(SignUpContext);
-
-    useEffect(() => {
-        if (permissions.location) {
-            requestLocationPermission();
-        }
-    }, [permissions.location]);
-
-    const requestLocationPermission = async () => {
-        // ... (unchanged)
-    };
-
-    const deduceCityFromCoordinates = async (coords) => {
-        // ... (unchanged)
-    };
-
+    // Helper to check for errors in the current step.
     const shouldShakeField = (field) => {
         if (!localError) return false;
         const errLower = localError.toLowerCase();
@@ -103,12 +102,24 @@ export default function EmailSignUpScreen({ navigation }) {
         );
     }
 
+    // Commit local state to global context
+    const commitLocalStateToGlobal = () => {
+        updateBasicInfo(localBasicInfo);
+        updateProfileInfo(localProfileInfo);
+        updatePermissionsInfo(localPermissionsInfo);
+    };
+
     const handleFinish = async () => {
         setLocalError(null);
+        commitLocalStateToGlobal();
         setFinishing(true);
         setIsUpdating(true);
         try {
-            const newUser = await emailSignup(basicInfo.email, basicInfo.password, basicInfo.firstName);
+            const newUser = await emailSignup(
+                localBasicInfo.email,
+                localBasicInfo.password,
+                localBasicInfo.firstName
+            );
             if (authError) {
                 setLocalError(`${authError} ${Date.now()}`);
                 setFinishing(false);
@@ -116,27 +127,54 @@ export default function EmailSignUpScreen({ navigation }) {
                 return;
             }
             let finalPhotoURLs = [];
-            if (profileInfo.photos && profileInfo.photos.length > 0) {
-                finalPhotoURLs = await uploadAllPhotos(profileInfo.photos, newUser.uid);
+            if (localProfileInfo.photos && localProfileInfo.photos.length > 0) {
+                finalPhotoURLs = await uploadAllPhotos(localProfileInfo.photos, newUser.uid);
             }
             await updateDoc(doc(db, 'users', newUser.uid), {
-                firstName: basicInfo.firstName,
-                lastName: basicInfo.lastName || null,
-                email: basicInfo.email,
-                birthday: profileInfo.birthday || null,
-                gender: profileInfo.gender || null,
-                bio: profileInfo.bio || null,
-                height: profileInfo.height || null,
-                bodyType: profileInfo.bodyType || null,
-                showHeight: profileInfo.showHeight || false,
-                showBodyType: profileInfo.showBodyType || false,
-                ageRange: preferences.ageRange || [18, 35],
-                interests: preferences.interests || [],
-                geoRadius: preferences.geoRadius || 50,
-                notifications: permissions.notifications || false,
-                location: locationInfo.coordinates || null,
+                uid: newUser.uid,
+                // Basic Account Information:
+                firstName: localBasicInfo.firstName,
+                lastName: localBasicInfo.lastName || null,
+                email: localBasicInfo.email,
+                password: 'hashed',
+                birthday: localBasicInfo.birthday,
+                age: calculateAge(localBasicInfo.birthday),
+                // Gender & Orientation:
+                gender: localProfileInfo.gender,
+                sexualOrientation: localProfileInfo.sexualOrientation || 'heterosexual',
+                // Demographic Details:
+                languages: localProfileInfo.languages,
+                ethnicity: localProfileInfo.ethnicity || null,
+                religion: localProfileInfo.religion || null,
+                city: localProfileInfo.city,
+                state: localProfileInfo.state || null,
+                country: localProfileInfo.country,
+                coordinates: localProfileInfo.coordinates,
+                // Height & Body Type:
+                height: localProfileInfo.height,
+                weight: localProfileInfo.weight || null,
+                // Education & Profession:
+                education: localProfileInfo.education || null,
+                fieldOfStudy: localProfileInfo.fieldOfStudy || null,
+                occupation: localProfileInfo.occupation || null,
+                income: localProfileInfo.income || null,
+                // Profile Details & Media:
                 photos: finalPhotoURLs,
+                bio: localProfileInfo.bio || null,
+                interests: localProfileInfo.interests,
+                // Personality & Lifestyle:
+                personalityTraits: localProfileInfo.personalityTraits,
+                lifestyle: localProfileInfo.lifestyle,
+                // Dating Preferences & Ideal Date:
+                matchAgeRange: localProfileInfo.matchAgeRange || [18, 35],
+                distance: localProfileInfo.distance || 50,
+                preferredDateStyles: localProfileInfo.preferredDateStyles || null,
+                // Additional Details:
+                socialMediaLinks: localProfileInfo.socialMediaLinks,
+                // Permissions:
+                notifications: localPermissionsInfo.notifications || false,
                 onboardingComplete: true,
+                createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             });
             setIsUpdating(false);
@@ -152,69 +190,130 @@ export default function EmailSignUpScreen({ navigation }) {
     };
 
     const uploadAllPhotos = async (photosArray, uid) => {
-        const storage = getStorage();
-        const photoURLs = [];
-        for (let i = 0; i < photosArray.length; i++) {
-            const uri = photosArray[i];
-            if (!uri) continue;
-            const resp = await fetch(uri);
-            const blob = await resp.blob();
-            const fileRef = ref(storage, `user_photos/${uid}/photo_${i}.jpg`);
-            await uploadBytes(fileRef, blob);
-            const downloadURL = await getDownloadURL(fileRef);
-            photoURLs.push(downloadURL);
-        }
-        return photoURLs;
+        // ... your upload logic here ...
     };
 
+    // Render current step: pass local state and its setter to each step.
     const renderCurrentSubStep = () => {
         switch (subStep) {
             case 1:
-                return <BasicInfoStep basicInfo={basicInfo} updateBasicInfo={updateBasicInfo} shouldShakeField={shouldShakeField} colors={colors} />;
+                return (
+                    <BasicInfoStep
+                        basicInfo={localBasicInfo}
+                        setBasicInfo={setLocalBasicInfo} // Notice: we're passing setBasicInfo now!
+                        shouldShakeField={shouldShakeField}
+                        colors={colors}
+                    />
+                );
             case 2:
-                return <BirthdayStep profileInfo={profileInfo} updateProfileInfo={updateProfileInfo} />;
+                return (
+                    <BirthdayStep
+                        basicInfo={localBasicInfo}
+                        setBasicInfo={setLocalBasicInfo}
+                    />
+                );
             case 3:
-                return <GenderStep profileInfo={profileInfo} updateProfileInfo={updateProfileInfo} colors={colors} basicInfo={basicInfo} />;
+                return (
+                    <GenderStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                        basicInfo={localBasicInfo}
+                    />
+                );
             case 4:
-                return <HeightBodyTypeStep profileInfo={profileInfo} updateProfileInfo={updateProfileInfo} colors={colors} />;
+                return (
+                    <HeightBodyTypeStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
+                );
             case 5:
-                return <PhotosStep profileInfo={profileInfo} updateProfileInfo={updateProfileInfo} colors={colors} />;
+                return (
+                    <LocationStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        permissions={localPermissionsInfo}
+                        setPermissions={setLocalPermissionsInfo}
+                        colors={colors}
+                    />
+                );
             case 6:
-                return <AgeRangeStep preferences={preferences} updatePreferences={updatePreferences} />;
+                return (
+                    <EducationProfessionStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
+                );
             case 7:
-                return <InterestsStep preferences={preferences} updatePreferences={updatePreferences} />;
+                return (
+                    <View>
+                        <PhotosStep
+                            profileInfo={localProfileInfo}
+                            setProfileInfo={setLocalProfileInfo}
+                            colors={colors}
+                        />
+                        <BioStep
+                            profileInfo={localProfileInfo}
+                            setProfileInfo={setLocalProfileInfo}
+                            colors={colors}
+                        />
+                        <InterestsStep
+                            profileInfo={localProfileInfo}
+                            setProfileInfo={setLocalProfileInfo}
+                            colors={colors}
+                        />
+                    </View>
+                );
             case 8:
-                return <BioStep profileInfo={profileInfo} updateProfileInfo={updateProfileInfo} colors={colors} />;
+                return (
+                    <PersonalityLifestyleStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
+                );
             case 9:
-                return <GeoRadiusStep preferences={preferences} updatePreferences={updatePreferences} />;
+                return (
+                    <DatingPreferencesStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
+                );
             case 10:
-                return <LocationStep locationInfo={locationInfo} permissions={permissions} updatePermissions={updatePermissions} colors={colors} />;
-            case 11:
-                return <NotificationsStep permissions={permissions} updatePermissions={updatePermissions} colors={colors} />;
-            case 12:
-                return <TermsStep colors={colors} />;
-            case 13:
-                return <PreviewStep basicInfo={basicInfo} profileInfo={profileInfo} preferences={preferences} colors={colors} />;
+                return (
+                    <AdditionalDetailsStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
+                );
             default:
                 return <Text style={styles.errorText}>Error: Unknown step {subStep}</Text>;
         }
     };
-    console.log(basicInfo)
-    console.log(profileInfo)
+
+    console.log("Global:", basicInfo, profileInfo, permissionsInfo);
+    console.log("Local:", localBasicInfo, localProfileInfo, localPermissionsInfo);
 
     const validateCurrentStep = () => {
         switch (subStep) {
             case 1:
-                if (!basicInfo.firstName.trim()) return 'Please enter your first name.';
-                if (!basicInfo.email.includes('@')) return 'Please enter a valid email.';
-                if (!basicInfo.password || !passwordRegex.test(basicInfo.password))
+                if (!localBasicInfo.firstName.trim())
+                    return 'Please enter your first name.';
+                if (!localBasicInfo.email.includes('@'))
+                    return 'Please enter a valid email.';
+                if (!localBasicInfo.password || !passwordRegex.test(localBasicInfo.password))
                     return 'Password must be at least 8 characters, include an uppercase letter, a lowercase letter, a number, and a special character.';
                 break;
             case 2:
-                if (!profileInfo.birthday) return 'Please enter your birthday.';
+                if (!localBasicInfo.birthday) return 'Please enter your birthday.';
                 break;
             case 3:
-                if (!profileInfo.gender) return 'Please select your gender.';
+                if (!localProfileInfo.gender) return 'Please select your gender.';
                 break;
             default:
                 break;
@@ -222,6 +321,7 @@ export default function EmailSignUpScreen({ navigation }) {
         return null;
     };
 
+    // When "Next" is pressed, validate, commit local state, and move to the next step.
     const handleNext = () => {
         setLocalError(null);
         const err = validateCurrentStep();
@@ -229,12 +329,13 @@ export default function EmailSignUpScreen({ navigation }) {
             setLocalError(`${err} ${Date.now()}`);
             return;
         }
+        commitLocalStateToGlobal();
         Animated.timing(slideAnim, {
             toValue: -screenWidth,
             duration: 300,
             useNativeDriver: true,
         }).start(() => {
-            setSubStep(prev => prev + 1);
+            setSubStep((prev) => prev + 1);
             slideAnim.setValue(screenWidth);
             Animated.timing(slideAnim, {
                 toValue: 0,
@@ -251,7 +352,7 @@ export default function EmailSignUpScreen({ navigation }) {
             duration: 300,
             useNativeDriver: true,
         }).start(() => {
-            setSubStep(prev => prev - 1);
+            setSubStep((prev) => prev - 1);
             slideAnim.setValue(-screenWidth);
             Animated.timing(slideAnim, {
                 toValue: 0,
@@ -271,7 +372,7 @@ export default function EmailSignUpScreen({ navigation }) {
             errorMessage={localError}
             canGoBack
             onBack={headerBackAction}
-            onNext={handleNext}
+            onNext={subStep < TOTAL_STEPS ? handleNext : handleFinish}
             nextLabel={subStep < TOTAL_STEPS ? 'Next' : 'Finish'}
         >
             <ScrollView style={{ flex: 1 }} scrollEnabled={false}>

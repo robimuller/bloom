@@ -1,4 +1,4 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useMemo, useCallback } from 'react';
 
 export const SignUpContext = createContext();
 
@@ -8,101 +8,78 @@ export const SignUpProvider = ({ children }) => {
         lastName: '',
         email: '',
         password: '',
-        phone: '',
+        birthday: '',
     });
 
     const [profileInfo, setProfileInfo] = useState({
-        birthday: '',
         gender: '',
-        bio: '',
-        photos: [],
-        // New fields added:
+        sexualOrientation: 'heterosexual',
         height: '',
-        bodyType: '',
-        showHeight: false,
-        showBodyType: false,
-    });
-
-    const [preferences, setPreferences] = useState({
-        ageRange: [18, 35],
+        weight: '',
+        languages: [],
+        ethnicity: '',
+        religion: '',
+        city: '',
+        state: '',
+        country: '',
+        coordinates: null,
+        education: '',
+        fieldOfStudy: '',
+        occupation: '',
+        income: '',
+        photos: [],
+        bio: '',
         interests: [],
-        eventTypes: [],
-        geoRadius: 50,
+        personalityTraits: [],
+        lifestyle: {
+            smoking: '',
+            drinking: '',
+            exercise: '',
+            dietaryPreferences: '',
+        },
+        relationshipGoals: '',
+        idealDateCategories: [],
+        matchAgeRange: [25, 35],
+        distance: '',
+        preferredDateStyles: '',
+        socialMediaLinks: { instagram: '', facebook: '' },
     });
 
-    const [permissions, setPermissions] = useState({
+    const [permissionsInfo, setPermissionsInfo] = useState({
         notifications: false,
         location: false,
         marketing: false,
         agreedToTerms: false,
     });
 
-    const [locationInfo, setLocationInfo] = useState({
-        coordinates: null,
-        city: '',
-    });
+    // Memoize updater functions with useCallback
+    const updateBasicInfo = useCallback((updates) => {
+        setBasicInfo(prev => ({ ...prev, ...updates }));
+    }, []);
 
-    const [verificationStatus, setVerificationStatus] = useState(null);
-    const [finishing, setFinishing] = useState(false);
+    const updateProfileInfo = useCallback((updates) => {
+        setProfileInfo(prev => ({ ...prev, ...updates }));
+    }, []);
 
-    const updateBasicInfo = (updates) => {
-        setBasicInfo((prev) => ({ ...prev, ...updates }));
-    };
+    const updatePermissionsInfo = useCallback((updates) => {
+        setPermissionsInfo(prev => ({ ...prev, ...updates }));
+    }, []);
 
-    const updateProfileInfo = (updates) => {
-        setProfileInfo((prev) => ({ ...prev, ...updates }));
-    };
-
-    const updatePreferences = (updates) => {
-        setPreferences((prev) => ({ ...prev, ...updates }));
-    };
-
-    const updatePermissions = (updates) => {
-        setPermissions((prev) => ({ ...prev, ...updates }));
-    };
-
-    const updateLocationInfo = (updates) => {
-        setLocationInfo((prev) => ({ ...prev, ...updates }));
-    };
-
-    const resetSignUpData = () => {
-        setBasicInfo({ firstName: '', lastName: '', email: '', password: '', phone: '' });
-        setProfileInfo({
-            birthday: '',
-            gender: '',
-            bio: '',
-            photos: [],
-            height: '',
-            bodyType: '',
-            showHeight: false,
-            showBodyType: false,
-        });
-        setPreferences({ ageRange: [18, 35], interests: [], eventTypes: [], geoRadius: 50 });
-        setPermissions({ notifications: false, location: false, marketing: false, agreedToTerms: false });
-        setLocationInfo({ coordinates: null, city: '' });
-        setVerificationStatus(null);
-    };
+    // Memoize the context value so it only changes when the actual state changes.
+    const contextValue = useMemo(
+        () => ({
+            basicInfo,
+            updateBasicInfo,
+            profileInfo,
+            updateProfileInfo,
+            permissionsInfo,
+            updatePermissionsInfo,
+        }),
+        [basicInfo, profileInfo, permissionsInfo, updateBasicInfo, updateProfileInfo, updatePermissionsInfo]
+    );
 
     return (
-        <SignUpContext.Provider
-            value={{
-                basicInfo,
-                profileInfo,
-                preferences,
-                permissions,
-                locationInfo,
-                verificationStatus,
-                finishing,
-                setFinishing,
-                updateBasicInfo,
-                updateProfileInfo,
-                updatePreferences,
-                updatePermissions,
-                updateLocationInfo,
-                setVerificationStatus,
-                resetSignUpData,
-            }}
-        >
+        <SignUpContext.Provider value={contextValue}>
             {children}
         </SignUpContext.Provider>
     );

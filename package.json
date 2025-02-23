@@ -59,7 +59,9 @@
     "react-native-tab-view": "^4.0.5",
     "react-native-toast-message": "^2.2.1",
     "react-native-vector-icons": "^10.2.0",
-    "react-navigation": "^5.0.0"
+    "react-navigation": "^5.0.0",
+    "expo-linking": "~7.0.5",
+    "expo-haptics": "~14.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

@@ -2,11 +2,13 @@ import React from 'react';
 import { View } from 'react-native';
 import BirthdayPicker from '../BirthdayPicker';
 
-const BirthdayStep = ({ profileInfo, updateProfileInfo }) => (
+const BirthdayStep = ({ basicInfo, setBasicInfo }) => (
     <View style={{ marginVertical: 8 }}>
         <BirthdayPicker
-            birthday={profileInfo.birthday}
-            updateBirthday={(val) => updateProfileInfo({ birthday: val })}
+            birthday={basicInfo.birthday}
+            updateBirthday={(val) =>
+                setBasicInfo({ ...basicInfo, birthday: val })
+            }
         />
     </View>
 );

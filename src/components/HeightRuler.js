@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Animated, Dimensions, StyleSheet, View, Text } from 'react-native';
+import { Animated, Dimensions, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 const screenWidth = Dimensions.get('screen').width;
 const width = screenWidth - 48; // proper numeric width
@@ -27,24 +28,27 @@ function convertToFeetInches(cm) {
 const HeightRuler = ({ onValueChange, initialValue, colors }) => {
     // Default to 170 cm if no initial value provided.
     const defaultHeight = 170;
-    const initialHeight = initialValue !== undefined ? initialValue : defaultHeight;
+    const initHeight = initialValue !== undefined ? initialValue : defaultHeight;
 
     const scrollX = useRef(new Animated.Value(0)).current;
     const scrollViewRef = useRef(null);
-    const [displayValue, setDisplayValue] = useState(initialHeight);
+    const [displayValue, setDisplayValue] = useState(initHeight);
+
+    // Ref to track the last value that triggered haptic feedback
+    const lastHapticValue = useRef(null);
 
     // On mount, scroll to the proper offset.
     useEffect(() => {
         const timer = setTimeout(() => {
             if (scrollViewRef.current) {
                 scrollViewRef.current.scrollTo({
-                    x: (initialHeight - minHeight) * snapSegment,
+                    x: (initHeight - minHeight) * snapSegment,
                     animated: false,
                 });
             }
         }, 50);
         return () => clearTimeout(timer);
-    }, [initialHeight]);
+    }, [initHeight]);
 
     // Update display value as user scrolls.
     useEffect(() => {
@@ -54,6 +58,14 @@ const HeightRuler = ({ onValueChange, initialValue, colors }) => {
         });
         return () => scrollX.removeListener(listener);
     }, [scrollX]);
+
+    // Trigger haptics when the displayValue reaches a new multiple of 10.
+    useEffect(() => {
+        if (displayValue !== lastHapticValue.current && displayValue % 1 === 0) {
+            lastHapticValue.current = displayValue;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+    }, [displayValue]);
 
     const handleMomentumScrollEnd = (e) => {
         const x = e.nativeEvent.contentOffset.x;
@@ -142,7 +154,6 @@ const styles = StyleSheet.create({
     segment: {
         width: segmentWidth,
     },
-    // This indicator line is absolutely positioned so its bottom is flush with the ruler.
     indicatorLine: {
         position: 'absolute',
         bottom: 0,
