@@ -14,7 +14,7 @@ import { SignUpContext } from '../../../contexts/SignUpContext';
 import { AuthContext } from '../../../contexts/AuthContext';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 
-// Import your step components (make sure they are updated to use the new setter prop)
+// Import your step components (make sure they use the new setter props)
 import BasicInfoStep from '../../../components/auth/BasicInfoStep';
 import BirthdayStep from '../../../components/auth/BirthdayStep';
 import GenderStep from '../../../components/auth/GenderStep';
@@ -36,12 +36,13 @@ const stepTitles = {
     2: 'Birthday',
     3: 'Gender & Orientation',
     4: 'Height & Body Type',
-    5: 'Demographic Details',
-    6: 'Education & Profession',
-    7: 'Profile Details & Media',
-    8: 'Personality & Lifestyle',
-    9: 'Dating Preferences & Ideal Date',
-    10: 'Additional Details',
+    5: 'Location',
+    6: 'Demographic Details', // new: languages, ethnicity, religion
+    7: 'Education & Profession',
+    8: 'Profile Details & Media',
+    9: 'Personality & Lifestyle',
+    10: 'Dating Preferences & Ideal Date',
+    11: 'Additional Details',
 };
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -71,7 +72,7 @@ export default function EmailSignUpScreen({ navigation }) {
     const slideAnim = useRef(new Animated.Value(0)).current;
     const screenWidth = Dimensions.get('window').width;
     const dynamicTitle = stepTitles[subStep] || 'Create Your Account';
-    const TOTAL_STEPS = 10;
+    const TOTAL_STEPS = 11; // updated total steps
 
     // Helper to check for errors in the current step.
     const shouldShakeField = (field) => {
@@ -136,13 +137,14 @@ export default function EmailSignUpScreen({ navigation }) {
                 firstName: localBasicInfo.firstName,
                 lastName: localBasicInfo.lastName || null,
                 email: localBasicInfo.email,
-                password: 'hashed',
+                password: 'hashed', // store a secure hash
                 birthday: localBasicInfo.birthday,
                 age: calculateAge(localBasicInfo.birthday),
                 // Gender & Orientation:
                 gender: localProfileInfo.gender,
                 sexualOrientation: localProfileInfo.sexualOrientation || 'heterosexual',
                 // Demographic Details:
+                // For languages, ethnicity, and religion, use the new step data.
                 languages: localProfileInfo.languages,
                 ethnicity: localProfileInfo.ethnicity || null,
                 religion: localProfileInfo.religion || null,
@@ -200,7 +202,7 @@ export default function EmailSignUpScreen({ navigation }) {
                 return (
                     <BasicInfoStep
                         basicInfo={localBasicInfo}
-                        setBasicInfo={setLocalBasicInfo} // Notice: we're passing setBasicInfo now!
+                        setBasicInfo={setLocalBasicInfo}
                         shouldShakeField={shouldShakeField}
                         colors={colors}
                     />
@@ -240,6 +242,27 @@ export default function EmailSignUpScreen({ navigation }) {
                     />
                 );
             case 6:
+                // New step: Spoken Languages, Ethnicity, and Religion
+                return (
+                    <View>
+                        <SpokenLanguagesStep
+                            profileInfo={localProfileInfo}
+                            setProfileInfo={setLocalProfileInfo}
+                            colors={colors}
+                        />
+                        <EthnicityStep
+                            profileInfo={localProfileInfo}
+                            setProfileInfo={setLocalProfileInfo}
+                            colors={colors}
+                        />
+                        <ReligionStep
+                            profileInfo={localProfileInfo}
+                            setProfileInfo={setLocalProfileInfo}
+                            colors={colors}
+                        />
+                    </View>
+                );
+            case 7:
                 return (
                     <EducationProfessionStep
                         profileInfo={localProfileInfo}
@@ -247,7 +270,7 @@ export default function EmailSignUpScreen({ navigation }) {
                         colors={colors}
                     />
                 );
-            case 7:
+            case 8:
                 return (
                     <View>
                         <PhotosStep
@@ -267,7 +290,7 @@ export default function EmailSignUpScreen({ navigation }) {
                         />
                     </View>
                 );
-            case 8:
+            case 9:
                 return (
                     <PersonalityLifestyleStep
                         profileInfo={localProfileInfo}
@@ -275,7 +298,7 @@ export default function EmailSignUpScreen({ navigation }) {
                         colors={colors}
                     />
                 );
-            case 9:
+            case 10:
                 return (
                     <DatingPreferencesStep
                         profileInfo={localProfileInfo}
@@ -283,7 +306,7 @@ export default function EmailSignUpScreen({ navigation }) {
                         colors={colors}
                     />
                 );
-            case 10:
+            case 11:
                 return (
                     <AdditionalDetailsStep
                         profileInfo={localProfileInfo}
@@ -314,6 +337,21 @@ export default function EmailSignUpScreen({ navigation }) {
                 break;
             case 3:
                 if (!localProfileInfo.gender) return 'Please select your gender.';
+                break;
+            case 5:
+                // Location step: Ensure location is enabled.
+                if (!localPermissionsInfo.location) {
+                    return 'Please enable your location to find matches nearby.';
+                }
+                break;
+            case 6:
+                // New step: Validate languages, ethnicity, and religion.
+                if (!localProfileInfo.languages || localProfileInfo.languages.length === 0)
+                    return 'Please select at least one spoken language.';
+                if (!localProfileInfo.ethnicity)
+                    return 'Please select your ethnicity.';
+                if (!localProfileInfo.religion)
+                    return 'Please select your religion.';
                 break;
             default:
                 break;

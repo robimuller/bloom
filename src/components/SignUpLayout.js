@@ -5,6 +5,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     TouchableOpacity,
+    ScrollView
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
@@ -95,7 +96,7 @@ export default function SignUpLayout({
             <GradientProgressBar progress={progress} barHeight={8} />
 
             {/* MIDDLE CONTENT */}
-            <View style={styles.contentArea}>{children}</View>
+            <ScrollView style={styles.contentArea} contentContainerStyle={{ justifyContent: "flex-start" }} showsVerticalScrollIndicator={false}>{children}</ScrollView>
 
             {/* BOTTOM NAVIGATION */}
             <View style={styles.bottomNav}>
@@ -139,11 +140,10 @@ const styles = StyleSheet.create({
     },
     contentArea: {
         flex: 1,
-        justifyContent: 'flex-start',
         marginTop: 16,
     },
     bottomNav: {
-        paddingVertical: 16,
+        paddingBottom: 16,
     },
     shootingLightButton: {
         width: '100%',
