@@ -6,10 +6,9 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
   View,
-  Keyboard,
   KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
-import { useTheme } from 'react-native-paper';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -17,112 +16,110 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
  * CustomDraggableBottomSheet
  *
  * Props:
- * - isVisible: boolean, whether the sheet should be visible.
- * - onClose: callback fired when the sheet is dismissed.
+ * - isVisible: boolean, whether the sheet is visible.
+ * - onClose: callback fired when the sheet should close.
  * - children: content to render inside the sheet.
- * - sheetHeight: height of the bottom sheet (default 300).
+ * - snapPoints: an array of snap point heights (in pixels) from the bottom.
+ *   For example, [SCREEN_HEIGHT * 0.25, SCREEN_HEIGHT * 0.5, SCREEN_HEIGHT * 0.75]
+ * - initialSnapIndex: index of the snapPoints array for initial height.
  */
 export default function CustomDraggableBottomSheet({
   isVisible,
   onClose,
   children,
-  sheetHeight = 300,
+  snapPoints = [SCREEN_HEIGHT * 0.25, SCREEN_HEIGHT * 0.5, SCREEN_HEIGHT * 0.75],
+  initialSnapIndex = 0,
 }) {
-  const theme = useTheme();
-  // Animated value for vertical translation.
-  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  // Calculate initial offset from bottom (i.e. the sheet is open to snapPoints[initialSnapIndex])
+  const initialHeight = snapPoints[initialSnapIndex];
+  const initialTranslateY = SCREEN_HEIGHT - initialHeight;
 
-  // Create a PanResponder to handle drag gestures.
+  // Animated value controlling vertical translation relative to initialTranslateY.
+  const translateY = useRef(new Animated.Value(initialTranslateY)).current;
+
+  // Create a PanResponder for vertical drag gestures.
   const panResponder = useRef(
     PanResponder.create({
-      // Let the child components get the touch initially.
-      onStartShouldSetPanResponderCapture: (evt, gestureState) => {
-        return false;
-      },
-      // Decide whether to start handling the gesture after movement begins.
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        // If horizontal movement is dominant, don’t capture.
-        if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
-          return false;
-        }
-        // Otherwise, if the vertical movement is significant, start capturing.
-        return Math.abs(gestureState.dy) > 5;
-      },
-      // Optionally, capture the gesture on move if conditions are met.
-      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
-        if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
-          return false;
-        }
-        return Math.abs(gestureState.dy) > 5;
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        translateY.setOffset(translateY.__getValue());
+        translateY.setValue(0);
       },
       onPanResponderMove: (_, gestureState) => {
-        // Only allow downward dragging.
-        if (gestureState.dy > 0) {
-          translateY.setValue(gestureState.dy);
-        }
+        // Allow vertical dragging only.
+        translateY.setValue(gestureState.dy);
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > sheetHeight / 2) {
-          // If dragged more than half the sheet height, dismiss.
+        translateY.flattenOffset();
+        const currentPos = translateY.__getValue() + initialTranslateY; // current absolute Y position of the sheet
+        // If user drags down beyond threshold, close the sheet.
+        if (gestureState.dy > 50) {
           Animated.timing(translateY, {
-            toValue: SCREEN_HEIGHT,
+            toValue: SCREEN_HEIGHT - initialTranslateY,
             duration: 200,
             useNativeDriver: true,
           }).start(() => onClose && onClose());
-        } else {
-          // Otherwise, spring back to the open position.
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
+          return;
         }
+        // Find the closest snap point:
+        let closestSnap = snapPoints[0];
+        let closestDiff = Math.abs(currentPos - (SCREEN_HEIGHT - snapPoints[0]));
+        snapPoints.forEach(point => {
+          const diff = Math.abs(currentPos - (SCREEN_HEIGHT - point));
+          if (diff < closestDiff) {
+            closestDiff = diff;
+            closestSnap = point;
+          }
+        });
+        const targetY = SCREEN_HEIGHT - closestSnap;
+        Animated.timing(translateY, {
+          toValue: targetY - initialTranslateY,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
       },
     })
   ).current;
 
-  // Animate the sheet in or out when isVisible changes.
   useEffect(() => {
     if (isVisible) {
+      // Animate in: set translateY to 0 (i.e. the sheet is at initialTranslateY)
       Animated.timing(translateY, {
         toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
     } else {
+      // Animate out: move the sheet off-screen.
       Animated.timing(translateY, {
-        toValue: SCREEN_HEIGHT,
+        toValue: SCREEN_HEIGHT - initialTranslateY,
         duration: 300,
         useNativeDriver: true,
       }).start();
     }
-  }, [isVisible, translateY]);
+  }, [isVisible, initialTranslateY, translateY]);
 
-  // Render nothing if not visible.
   if (!isVisible) return null;
 
   return (
-    <View style={styles.cardBackground}>
-      {/* Tapping the semi-transparent background will close the sheet */}
+    <View style={styles.overlay}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={[styles.background, { backgroundColor: theme.colors.overlay2 }]} />
+        <View style={styles.background} />
       </TouchableWithoutFeedback>
       <Animated.View
         style={[
           styles.sheet,
           {
-            height: sheetHeight,
-            transform: [{ translateY }],
-            backgroundColor: theme.colors.background,
+            // The sheet's height is set to the maximum snap point.
+            height: snapPoints[snapPoints.length - 1],
+            transform: [{ translateY: Animated.add(translateY, new Animated.Value(initialTranslateY)) }],
           },
         ]}
         {...panResponder.panHandlers}
       >
-        <KeyboardAvoidingView behavior={'padding'} style={{ flex: 1 }}>
-          {/* Wrap the content so that tapping anywhere dismisses the keyboard */}
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={{ flex: 1 }}>
-              {children}
-            </View>
+            <View style={{ flex: 1 }}>{children}</View>
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </Animated.View>
@@ -131,14 +128,16 @@ export default function CustomDraggableBottomSheet({
 }
 
 const styles = StyleSheet.create({
-  cardBackground: {
+  overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
   },
   background: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   sheet: {
+    backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,

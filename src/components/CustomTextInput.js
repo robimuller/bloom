@@ -80,9 +80,9 @@ const styles = StyleSheet.create({
     },
     input: {
         marginTop: 10,
-        padding: 20,
+        paddingHorizontal: 20,
         borderRadius: 25,
-        height: 40,
+        height: 50,
         fontSize: 16,
     },
     iconContainer: {

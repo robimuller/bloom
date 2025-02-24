@@ -162,11 +162,11 @@ const LocationStep = ({
             // Turn off location
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setPermissions({ ...permissions, location: false });
-            Toast.show({
-                type: 'info',
-                text1: 'Location Disabled',
-                text2: 'Location services have been turned off.',
-            });
+            // Toast.show({
+            //     type: 'info',
+            //     text1: 'Location Disabled',
+            //     text2: 'Location services have been turned off.',
+            // });
         } else {
             // Turn on location (request it)
             handleAllowPress();

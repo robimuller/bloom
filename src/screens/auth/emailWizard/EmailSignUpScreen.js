@@ -14,17 +14,17 @@ import { SignUpContext } from '../../../contexts/SignUpContext';
 import { AuthContext } from '../../../contexts/AuthContext';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 
-// Import your step components (make sure they use the new setter props)
+// Import your step components (using the new setter prop names)
 import BasicInfoStep from '../../../components/auth/BasicInfoStep';
 import BirthdayStep from '../../../components/auth/BirthdayStep';
 import GenderStep from '../../../components/auth/GenderStep';
-import PhotosStep from '../../../components/auth/PhotoStep';
+import HeightBodyTypeStep from '../../../components/auth/HeightBodyTypeStep';
+import LocationStep from '../../../components/auth/LocationStep';
 import SpokenLanguagesStep from '../../../components/auth/SpokenLanguagesStep';
 import EthnicityStep from '../../../components/auth/EthnicityStep';
 import ReligionStep from '../../../components/auth/ReligionStep';
-import HeightBodyTypeStep from '../../../components/auth/HeightBodyTypeStep';
-import LocationStep from '../../../components/auth/LocationStep';
 import EducationProfessionStep from '../../../components/auth/EducationProfessionStep';
+import PhotosStep from '../../../components/auth/PhotoStep';
 import BioStep from '../../../components/auth/BioStep';
 import InterestsStep from '../../../components/auth/InterestsStep';
 import PersonalityLifestyleStep from '../../../components/auth/PersonalityLifestyleStep';
@@ -37,12 +37,14 @@ const stepTitles = {
     3: 'Gender & Orientation',
     4: 'Height & Body Type',
     5: 'Location',
-    6: 'Demographic Details', // new: languages, ethnicity, religion
+    6: 'Demographic Details', // Languages, Ethnicity, Religion (single screen)
     7: 'Education & Profession',
-    8: 'Profile Details & Media',
-    9: 'Personality & Lifestyle',
-    10: 'Dating Preferences & Ideal Date',
-    11: 'Additional Details',
+    8: 'Photos',            // New: Photos
+    9: 'Bio',               // New: Bio
+    10: 'Interests',        // New: Interests
+    11: 'Personality & Lifestyle',
+    12: 'Dating Preferences & Ideal Date',
+    13: 'Additional Details',
 };
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -72,7 +74,7 @@ export default function EmailSignUpScreen({ navigation }) {
     const slideAnim = useRef(new Animated.Value(0)).current;
     const screenWidth = Dimensions.get('window').width;
     const dynamicTitle = stepTitles[subStep] || 'Create Your Account';
-    const TOTAL_STEPS = 11; // updated total steps
+    const TOTAL_STEPS = 13; // updated total steps
 
     // Helper to check for errors in the current step.
     const shouldShakeField = (field) => {
@@ -137,7 +139,7 @@ export default function EmailSignUpScreen({ navigation }) {
                 firstName: localBasicInfo.firstName,
                 lastName: localBasicInfo.lastName || null,
                 email: localBasicInfo.email,
-                password: 'hashed', // store a secure hash
+                password: 'hashed',
                 birthday: localBasicInfo.birthday,
                 age: calculateAge(localBasicInfo.birthday),
                 // Gender & Orientation:
@@ -145,7 +147,7 @@ export default function EmailSignUpScreen({ navigation }) {
                 sexualOrientation: localProfileInfo.sexualOrientation || 'heterosexual',
                 // Demographic Details:
                 // For languages, ethnicity, and religion, use the new step data.
-                languages: localProfileInfo.languages,
+                spokenLanguages: localProfileInfo.spokenLanguages,
                 ethnicity: localProfileInfo.ethnicity || null,
                 religion: localProfileInfo.religion || null,
                 city: localProfileInfo.city,
@@ -162,6 +164,7 @@ export default function EmailSignUpScreen({ navigation }) {
                 income: localProfileInfo.income || null,
                 // Profile Details & Media:
                 photos: finalPhotoURLs,
+                profilePhoto: localProfileInfo.profilePhoto,
                 bio: localProfileInfo.bio || null,
                 interests: localProfileInfo.interests,
                 // Personality & Lifestyle:
@@ -242,7 +245,6 @@ export default function EmailSignUpScreen({ navigation }) {
                     />
                 );
             case 6:
-                // New step: Spoken Languages, Ethnicity, and Religion
                 return (
                     <View>
                         <SpokenLanguagesStep
@@ -272,27 +274,15 @@ export default function EmailSignUpScreen({ navigation }) {
                 );
             case 8:
                 return (
-                    <View>
-                        <PhotosStep
-                            profileInfo={localProfileInfo}
-                            setProfileInfo={setLocalProfileInfo}
-                            colors={colors}
-                        />
-                        <BioStep
-                            profileInfo={localProfileInfo}
-                            setProfileInfo={setLocalProfileInfo}
-                            colors={colors}
-                        />
-                        <InterestsStep
-                            profileInfo={localProfileInfo}
-                            setProfileInfo={setLocalProfileInfo}
-                            colors={colors}
-                        />
-                    </View>
+                    <PhotosStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
                 );
             case 9:
                 return (
-                    <PersonalityLifestyleStep
+                    <BioStep
                         profileInfo={localProfileInfo}
                         setProfileInfo={setLocalProfileInfo}
                         colors={colors}
@@ -300,13 +290,29 @@ export default function EmailSignUpScreen({ navigation }) {
                 );
             case 10:
                 return (
-                    <DatingPreferencesStep
+                    <InterestsStep
                         profileInfo={localProfileInfo}
                         setProfileInfo={setLocalProfileInfo}
                         colors={colors}
                     />
                 );
             case 11:
+                return (
+                    <PersonalityLifestyleStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
+                );
+            case 12:
+                return (
+                    <DatingPreferencesStep
+                        profileInfo={localProfileInfo}
+                        setProfileInfo={setLocalProfileInfo}
+                        colors={colors}
+                    />
+                );
+            case 13:
                 return (
                     <AdditionalDetailsStep
                         profileInfo={localProfileInfo}

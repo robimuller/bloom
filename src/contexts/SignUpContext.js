@@ -28,6 +28,7 @@ export const SignUpProvider = ({ children }) => {
         occupation: '',
         income: '',
         photos: [],
+        profilePhoto: '',
         bio: '',
         interests: [],
         personalityTraits: [],

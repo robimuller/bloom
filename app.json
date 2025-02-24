@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "dev.expo.bloomapp",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "We need access to your photos to let you upload profile pictures."
+        "NSPhotoLibraryUsageDescription": "We need access to your photos to let you upload profile pictures.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby matches."
+
       }
     },
     "android": {
@@ -25,6 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "dev.expo.bloomapp",
+      "permissions": ["ACCESS_FINE_LOCATION"],
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "windowSoftInputMode": "adjustResize"
