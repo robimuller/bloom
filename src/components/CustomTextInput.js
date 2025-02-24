@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         padding: 20,
         borderRadius: 25,
-        height: 60,
+        height: 40,
         fontSize: 16,
     },
     iconContainer: {

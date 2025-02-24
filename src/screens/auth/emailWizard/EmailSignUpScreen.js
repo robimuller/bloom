@@ -345,8 +345,7 @@ export default function EmailSignUpScreen({ navigation }) {
                 }
                 break;
             case 6:
-                // New step: Validate languages, ethnicity, and religion.
-                if (!localProfileInfo.languages || localProfileInfo.languages.length === 0)
+                if (!localProfileInfo.spokenLanguages || localProfileInfo.spokenLanguages.length === 0)
                     return 'Please select at least one spoken language.';
                 if (!localProfileInfo.ethnicity)
                     return 'Please select your ethnicity.';
