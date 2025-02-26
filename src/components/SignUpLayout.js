@@ -96,7 +96,9 @@ export default function SignUpLayout({
             <GradientProgressBar progress={progress} barHeight={8} />
 
             {/* MIDDLE CONTENT */}
-            <ScrollView style={styles.contentArea} contentContainerStyle={{ justifyContent: "flex-start" }} showsVerticalScrollIndicator={false}>{children}</ScrollView>
+            <ScrollView style={styles.contentArea} contentContainerStyle={{
+                justifyContent: "flex-start", height: "100%"
+            }} showsVerticalScrollIndicator={false}>{children}</ScrollView>
 
             {/* BOTTOM NAVIGATION */}
             <View style={styles.bottomNav}>

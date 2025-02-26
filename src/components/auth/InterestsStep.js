@@ -5,9 +5,10 @@ import {
     TouchableOpacity,
     StyleSheet,
     ImageBackground,
-    Animated
+    Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const InterestCard = ({ item, selected, onPress, colors }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -32,14 +33,35 @@ const InterestCard = ({ item, selected, onPress, colors }) => {
     };
 
     return (
-        <TouchableOpacity activeOpacity={0.9} onPress={handlePress} style={styles.cardContainer}>
-            <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }], borderColor: selected ? colors.primary : 'transparent' }]}>
+        <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={handlePress}
+            style={styles.cardContainer}
+        >
+            <Animated.View
+                style={[
+                    styles.card,
+                    {
+                        transform: [{ scale: scaleAnim }],
+                    },
+                ]}
+            >
                 <ImageBackground
                     source={item.asset}
                     style={styles.image}
                     imageStyle={{ borderRadius: 12 }}
                 >
-                    <View style={[styles.overlay, selected && { backgroundColor: `${colors.primary}60` }]} />
+                    <View
+                        style={[
+                            styles.overlay,
+                            selected && { backgroundColor: `${colors.background}60` },
+                        ]}
+                    />
+                    {selected && (
+                        <View style={[styles.checkIconContainer, { backgroundColor: colors.background }]}>
+                            <Ionicons name="checkmark" size={20} color={colors.primary} />
+                        </View>
+                    )}
                     <Text style={[styles.label, { color: selected ? colors.background : colors.text }]}>
                         {item.label}
                     </Text>
@@ -69,11 +91,17 @@ export default function InterestsStep({ profileInfo, setProfileInfo, colors }) {
         }
     };
 
+    // Custom paragraph text based on gender
+    const interestDescription =
+        profileInfo.gender === 'female'
+            ? 'Discover dates tailored for you. Pick your interests and start exploring!'
+            : 'Craft unforgettable dates. Select your interests to inspire your next outing!';
+
     return (
         <View style={styles.container}>
             <Text style={[styles.title, { color: colors.text }]}>Select your interests</Text>
-            <Text style={[styles.paragraph, { color: colors.text }]}>
-                Imagine a creative date where you visit an art exhibit followed by a gourmet dinner, or perhaps a lively concert followed by a night out dancing. Pick as many interests as you like so we can suggest date ideas that fit your style.
+            <Text style={[styles.paragraph, { color: colors.secondary }]}>
+                {interestDescription}
             </Text>
             <View style={styles.gridContainer}>
                 {interestsData.map(item => {
@@ -95,17 +123,17 @@ export default function InterestsStep({ profileInfo, setProfileInfo, colors }) {
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
+        paddingVertical: 20,
     },
     title: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: 10,
+        marginBottom: 12,
     },
     paragraph: {
         fontSize: 16,
         marginBottom: 20,
-        lineHeight: 22,
+        lineHeight: 24,
     },
     gridContainer: {
         flexDirection: 'row',
@@ -113,27 +141,38 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     cardContainer: {
-        width: '48%', // Two columns in a row
+        width: '48%',
         marginBottom: 15,
     },
     card: {
         borderRadius: 12,
-        borderWidth: 2,
         overflow: 'hidden',
     },
     image: {
         width: '100%',
-        height: 120,
+        height: 150,
         justifyContent: 'flex-end',
         alignItems: 'center',
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'transparent',
+        borderRadius: 12,
     },
     label: {
         fontSize: 16,
         fontWeight: 'bold',
         margin: 8,
+        textAlign: 'center',
+    },
+    checkIconContainer: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
