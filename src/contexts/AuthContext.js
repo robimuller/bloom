@@ -119,8 +119,11 @@ export const AuthProvider = ({ children }) => {
     // -- Email-based sign up
     const emailSignup = async (email, password, displayName) => {
         try {
+            console.log("Starting email signup for:", email);
             setAuthError(null);
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            console.log("User credential obtained:", userCredential.user.uid);
+
             const { uid } = userCredential.user;
 
             await setDoc(doc(db, 'users', uid), {
@@ -131,9 +134,11 @@ export const AuthProvider = ({ children }) => {
                 onboardingComplete: false,
                 createdAt: new Date().toISOString(),
             });
+            console.log("Initial user document created");
 
             return userCredential.user;
         } catch (error) {
+            console.error("Error in emailSignup:", error);
             setAuthError(error.message);
             throw error;
         }

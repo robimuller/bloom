@@ -1,3 +1,8 @@
+import {
+    createUserWithEmailAndPassword,
+} from 'firebase/auth';
+import { auth, db } from '../../../../config/firebase';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
     Animated,
@@ -30,6 +35,8 @@ import InterestsStep from '../../../components/auth/InterestsStep';
 import PersonalityLifestyleStep from '../../../components/auth/PersonalityLifestyleStep';
 import DatingPreferencesStep from '../../../components/auth/DatingPreferencesStep';
 import AdditionalDetailsStep from '../../../components/auth/AdditionalDetailsStep';
+import FinalizingScreen from '../../../components/FinalizingScreen';
+import uploadImageAsync from '../../../utils/uploadImage';
 
 const stepTitles = {
     1: 'Basic Account Information',
@@ -51,7 +58,7 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}
 
 export default function EmailSignUpScreen({ navigation }) {
     // Global context (read once for initialization)
-    const { userDoc, loadingAuth, emailSignup, authError } = useContext(AuthContext);
+    const { userDoc, loadingAuth } = useContext(AuthContext);
     const { finishing, setFinishing } = useContext(SignUpContext);
     const { colors } = useContext(ThemeContext);
     const {
@@ -105,6 +112,11 @@ export default function EmailSignUpScreen({ navigation }) {
         );
     }
 
+    // If finishing flag is true, display the loading screen.
+    if (finishing) {
+        return <FinalizingScreen colors={colors} />;
+    }
+
     // Commit local state to global context
     const commitLocalStateToGlobal = () => {
         updateBasicInfo(localBasicInfo);
@@ -112,41 +124,65 @@ export default function EmailSignUpScreen({ navigation }) {
         updatePermissionsInfo(localPermissionsInfo);
     };
 
+    const uploadAllPhotos = async (photosArray, uid) => {
+        const uploadedUrls = [];
+        for (const photoUri of photosArray) {
+            try {
+                const downloadUrl = await uploadImageAsync(photoUri);
+                uploadedUrls.push(downloadUrl);
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                // Optionally, handle the error (e.g., show a message or retry)
+            }
+        }
+        return uploadedUrls;
+    };
+
     const handleFinish = async () => {
+        console.log("Finish button pressed");
         setLocalError(null);
         commitLocalStateToGlobal();
         setFinishing(true);
         setIsUpdating(true);
+
         try {
-            const newUser = await emailSignup(
+            console.log("Creating user account...");
+            console.log("Email:", localBasicInfo.email);
+            console.log("Password length:", localBasicInfo.password?.length || 0);
+            console.log("Name:", localBasicInfo.firstName);
+
+            // Create the user directly with Firebase
+            const userCredential = await createUserWithEmailAndPassword(
+                auth,
                 localBasicInfo.email,
-                localBasicInfo.password,
-                localBasicInfo.firstName
+                localBasicInfo.password
             );
-            if (authError) {
-                setLocalError(`${authError} ${Date.now()}`);
-                setFinishing(false);
-                setIsUpdating(false);
-                return;
-            }
+
+            const user = userCredential.user;
+            console.log("User created successfully:", user.uid);
+
+            // Upload photos if any
             let finalPhotoURLs = [];
             if (localProfileInfo.photos && localProfileInfo.photos.length > 0) {
-                finalPhotoURLs = await uploadAllPhotos(localProfileInfo.photos, newUser.uid);
+                console.log("Uploading photos...");
+                finalPhotoURLs = await uploadAllPhotos(localProfileInfo.photos, user.uid);
+                console.log("Photos uploaded:", finalPhotoURLs.length);
             }
-            await updateDoc(doc(db, 'users', newUser.uid), {
-                uid: newUser.uid,
+
+            // Create/update user document in Firestore
+            console.log("Creating user document...");
+            await setDoc(doc(db, 'users', user.uid), {
+                uid: user.uid,
                 // Basic Account Information:
                 firstName: localBasicInfo.firstName,
                 lastName: localBasicInfo.lastName || null,
                 email: localBasicInfo.email,
-                password: 'hashed',
+                password: 'hashed', // Don't store actual password
                 birthday: localBasicInfo.birthday,
-                age: calculateAge(localBasicInfo.birthday),
                 // Gender & Orientation:
                 gender: localProfileInfo.gender,
                 sexualOrientation: localProfileInfo.sexualOrientation || 'heterosexual',
                 // Demographic Details:
-                // For languages, ethnicity, and religion, use the new step data.
                 spokenLanguages: localProfileInfo.spokenLanguages,
                 ethnicity: localProfileInfo.ethnicity || null,
                 religion: localProfileInfo.religion || null,
@@ -179,23 +215,38 @@ export default function EmailSignUpScreen({ navigation }) {
                 // Permissions:
                 notifications: localPermissionsInfo.notifications || false,
                 onboardingComplete: true,
+                signUpMethod: 'email',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             });
+
+            console.log("User document created successfully");
             setIsUpdating(false);
-            Alert.alert('Success!', 'Your account has been created!', [
-                { text: 'OK', onPress: () => { } },
-            ]);
-        } catch (err) {
-            setLocalError(`${err.message} ${Date.now()}`);
+            Alert.alert(
+                'Success!',
+                'Your account has been created!',
+                [{ text: 'OK', onPress: () => navigation.navigate('Main') }]
+            );
+
+        } catch (error) {
+            console.error("Error creating account:", error.code, error.message);
+            let errorMessage = error.message;
+
+            // Provide more user-friendly error messages
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = 'This email is already registered. Please use a different email or log in.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Please enter a valid email address.';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = 'Password is too weak. Please use a stronger password.';
+            } else if (error.code === 'auth/network-request-failed') {
+                errorMessage = 'Network error. Please check your connection and try again.';
+            }
+
+            setLocalError(errorMessage);
             setFinishing(false);
             setIsUpdating(false);
-            console.error('Error finalizing sign up:', err);
         }
-    };
-
-    const uploadAllPhotos = async (photosArray, uid) => {
-        // ... your upload logic here ...
     };
 
     // Render current step: pass local state and its setter to each step.

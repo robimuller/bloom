@@ -16,7 +16,7 @@ export const SignUpProvider = ({ children }) => {
         sexualOrientation: 'heterosexual',
         height: '',
         weight: '',
-        languages: [],
+        spokenLanguages: [], // <-- add this line
         ethnicity: '',
         religion: '',
         city: '',
@@ -66,6 +66,9 @@ export const SignUpProvider = ({ children }) => {
         setPermissionsInfo(prev => ({ ...prev, ...updates }));
     }, []);
 
+    const [finishing, setFinishing] = useState(false);
+
+
     // Memoize the context value so it only changes when the actual state changes.
     const contextValue = useMemo(
         () => ({
@@ -75,8 +78,10 @@ export const SignUpProvider = ({ children }) => {
             updateProfileInfo,
             permissionsInfo,
             updatePermissionsInfo,
+            finishing,
+            setFinishing,
         }),
-        [basicInfo, profileInfo, permissionsInfo, updateBasicInfo, updateProfileInfo, updatePermissionsInfo]
+        [basicInfo, profileInfo, permissionsInfo, finishing, updateBasicInfo, updateProfileInfo, updatePermissionsInfo]
     );
 
     return (
