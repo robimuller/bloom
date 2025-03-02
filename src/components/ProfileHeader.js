@@ -6,25 +6,26 @@ import { calculateAge } from '../utils/deduceAge';
 import { useUserStatus } from '../hooks/useUserStatus';
 import { useTheme } from '../contexts/ThemeContext';
 
-const ProfileHeader = React.memo(({ item, onFlagPress, colors }) => {
+const ProfileHeader = React.memo(({ item, onPress, onFlagPress, colors }) => {
     const userStatus = useUserStatus(item.id);
     const age = calculateAge(item.birthday);
 
     return (
         <View style={styles.header}>
-            <View style={{ position: 'relative' }}>
-                <Image
-                    source={
-                        item.photos && item.photos[0]
-                            ? { uri: item.photos[0] }
-                            : require('../../assets/avatar-placeholder.png')
-                    }
-                    style={styles.profilePic}
-                    cachePolicy="memory-disk" // Enable both memory and disk caching
-                    transition={0} // No fade transition to reduce flashing
-                />
-                {userStatus === 'online' && <View style={styles.onlineIndicator} />}
-            </View>
+            {/* Only the image is pressable */}
+            <TouchableOpacity onPress={() => onPress(item)}>
+                <View style={{ position: 'relative' }}>
+                    <Image
+                        source={
+                            item.photos && item.photos[0]
+                                ? { uri: item.photos[0] }
+                                : require('../../assets/avatar-placeholder.png')
+                        }
+                        style={styles.profilePic}
+                    />
+                    {userStatus === 'online' && <View style={styles.onlineIndicator} />}
+                </View>
+            </TouchableOpacity>
             <View style={{ flex: 1 }}>
                 <Text style={[styles.hostName, { color: colors.text }]}>
                     {item.firstName || 'Unknown'}{age ? `, ${age}` : ''}

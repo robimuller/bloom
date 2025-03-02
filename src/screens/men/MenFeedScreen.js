@@ -1,4 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, {
+    useState,
+    useContext,
+    useCallback,
+    useRef,
+    useEffect,
+} from 'react';
 import {
     View,
     FlatList,
@@ -12,15 +18,23 @@ import {
 import { useTheme, Button, Checkbox } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import Animated, { useSharedValue } from 'react-native-reanimated';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withTiming,
+    Easing,
+    interpolate,
+    Extrapolate,
+    runOnJS,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { calculateAge } from '../../utils/deduceAge';
 import { ProfilesContext } from '../../contexts/ProfilesContext';
 import ProfileHeader from '../../components/ProfileHeader';
 import { useNavigation } from '@react-navigation/native';
-import MenFeedLayout from '../../components/MenFeedLayout'; // Adjust the path as needed
+import MenFeedLayout from '../../components/MenFeedLayout';
+import ProfileDetailsBottomSheet from '../../components/ProfileDetailsBottomSheet';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 const REPORT_OPTIONS = [
@@ -37,10 +51,40 @@ export default function MenFeedScreen({ onScroll }) {
     const { colors } = useTheme();
     const navigation = useNavigation();
 
+    const [selectedProfile, setSelectedProfile] = useState(null);
+    const [sheetKey, setSheetKey] = useState(0);
+    const [modalVisible, setModalVisible] = useState(false);
     const [requestedIds, setRequestedIds] = useState([]);
     const [reportModalVisible, setReportModalVisible] = useState(false);
     const [reportTargetUser, setReportTargetUser] = useState(null);
     const [reportReasons, setReportReasons] = useState([]);
+
+    // A ref that tracks whether the modal is currently visible.
+    const modalVisibleRef = useRef(modalVisible);
+    useEffect(() => {
+        modalVisibleRef.current = modalVisible;
+    }, [modalVisible]);
+
+    // When the profile header is pressed, open the bottom sheet.
+    const handleProfilePress = (profile) => {
+        setSheetKey((prev) => prev + 1);
+        setSelectedProfile(profile);
+        setModalVisible(true);
+    };
+
+    // The callback always runs, but it only updates the profile if the modal is open.
+    const onViewableItemsChanged = useCallback(
+        ({ viewableItems }) => {
+            if (!modalVisibleRef.current) return; // do nothing if the modal is dismissed
+            if (viewableItems.length > 0) {
+                const newProfile = viewableItems[0].item;
+                if (!selectedProfile || newProfile.id !== selectedProfile.id) {
+                    setSelectedProfile(newProfile);
+                }
+            }
+        },
+        [selectedProfile]
+    );
 
     const handleInvitePress = async (userId) => {
         setRequestedIds((prev) => [...prev, userId]);
@@ -75,6 +119,12 @@ export default function MenFeedScreen({ onScroll }) {
         });
     };
 
+    // When the bottom sheet is dismissed, clear the modal state.
+    const handleCloseBottomSheet = () => {
+        setModalVisible(false);
+        setSelectedProfile(null);
+    };
+
     return (
         <>
             <MenFeedLayout
@@ -96,9 +146,22 @@ export default function MenFeedScreen({ onScroll }) {
                                 data={womenProfiles}
                                 keyExtractor={(profile) => profile.id}
                                 renderItem={({ item }) => (
-                                    // Pass contentHeight to the card container so that each card fills the content area.
-                                    <View style={[styles.cardContainer, { height: contentHeight, backgroundColor: colors.background, borderBottomColor: colors.cardBackground }]}>
-                                        <ProfileHeader item={item} onFlagPress={handleFlagPress} colors={colors} />
+                                    <View
+                                        style={[
+                                            styles.cardContainer,
+                                            {
+                                                height: contentHeight,
+                                                backgroundColor: colors.background,
+                                                borderBottomColor: colors.cardBackground,
+                                            },
+                                        ]}
+                                    >
+                                        <ProfileHeader
+                                            item={item}
+                                            onFlagPress={handleFlagPress}
+                                            onPress={handleProfilePress}
+                                            colors={colors}
+                                        />
                                         <Carousel
                                             photos={
                                                 item.photos && item.photos.length
@@ -113,12 +176,16 @@ export default function MenFeedScreen({ onScroll }) {
                                         <View style={styles.footer}>
                                             {item.city && (
                                                 <View style={styles.footerRow}>
-                                                    <Text style={[styles.location, { color: colors.secondary }]}>{item.city}</Text>
+                                                    <Text style={[styles.location, { color: colors.secondary }]}>
+                                                        {item.city}
+                                                    </Text>
                                                 </View>
                                             )}
                                         </View>
                                     </View>
                                 )}
+                                onViewableItemsChanged={onViewableItemsChanged}
+                                viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
                                 pagingEnabled
                                 decelerationRate="fast"
                                 snapToAlignment="start"
@@ -132,7 +199,7 @@ export default function MenFeedScreen({ onScroll }) {
                 )}
             </MenFeedLayout>
 
-            {/* Render the Modal outside MenFeedLayout */}
+            {/* Report Modal */}
             <Modal
                 animationType="fade"
                 transparent
@@ -177,19 +244,36 @@ export default function MenFeedScreen({ onScroll }) {
                             </Button>
                         </View>
                         <TouchableOpacity onPress={() => setReportModalVisible(false)}>
-                            <Text style={[styles.cancelText, { color: colors.primary }]}>Cancel</Text>
+                            <Text style={[styles.cancelText, { color: colors.primary }]}>
+                                Cancel
+                            </Text>
                         </TouchableOpacity>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
+
+            {/* Render the bottom sheet only if a profile is selected */}
+            {selectedProfile && (
+                <ProfileDetailsBottomSheet
+                    key={sheetKey}
+                    selectedProfile={selectedProfile}
+                    onClose={handleCloseBottomSheet}
+                />
+            )}
         </>
     );
 }
 
 /** Inline Carousel component **/
-function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }) {
+function Carousel({
+    photos,
+    userId,
+    isRequested,
+    onInvitePress,
+    onCancelInvite,
+}) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const flatListRef = React.useRef(null);
+    const flatListRef = useRef(null);
     const { colors } = useTheme();
 
     const onScroll = (event) => {
@@ -203,7 +287,11 @@ function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }
     return (
         <View style={styles.carouselWrapper}>
             <FlatList
-                data={validPhotos.length > 0 ? validPhotos : [require('../../../assets/avatar-placeholder.png')]}
+                data={
+                    validPhotos.length > 0
+                        ? validPhotos
+                        : [require('../../../assets/avatar-placeholder.png')]
+                }
                 keyExtractor={(uri, idx) => `${uri}-${idx}`}
                 ref={flatListRef}
                 horizontal
@@ -244,7 +332,12 @@ function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }
 }
 
 /** Heart button with explosion animation **/
-function HeartCircleButton({ userId, isRequested, onInvitePress, onCancelInvite }) {
+function HeartCircleButton({
+    userId,
+    isRequested,
+    onInvitePress,
+    onCancelInvite,
+}) {
     const { colors } = useTheme();
     const [exploding, setExploding] = useState(false);
     const progress = useSharedValue(0);
@@ -340,12 +433,11 @@ function FloatingHeart({ progress, angle, distance, scale }) {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    loadingContainer: {
         flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    //----------------------------------
-    // Card Container
-    //----------------------------------
     cardContainer: {
         flex: 1,
         overflow: 'hidden',
@@ -353,9 +445,6 @@ const styles = StyleSheet.create({
         paddingBottom: 12,
         borderBottomWidth: 3,
     },
-    //----------------------------------
-    // Footer
-    //----------------------------------
     footer: {
         marginTop: 8,
     },
@@ -366,9 +455,6 @@ const styles = StyleSheet.create({
     location: {
         fontSize: 14,
     },
-    //----------------------------------
-    // Carousel
-    //----------------------------------
     carouselWrapper: {
         position: 'relative',
         width: SCREEN_WIDTH * 0.9,
@@ -410,9 +496,6 @@ const styles = StyleSheet.create({
         right: 10,
         zIndex: 2,
     },
-    //----------------------------------
-    // Heart Button and Explosion
-    //----------------------------------
     heartButton: {
         width: 44,
         height: 44,
@@ -427,9 +510,6 @@ const styles = StyleSheet.create({
         width: 0,
         height: 0,
     },
-    //----------------------------------
-    // Modal Styles
-    //----------------------------------
     modalBackdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.8)',
@@ -466,5 +546,8 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 14,
         textDecorationLine: 'underline',
+    },
+    floatingHeart: {
+        position: 'absolute',
     },
 });

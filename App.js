@@ -18,6 +18,8 @@ import { PromotionsProvider } from './src/contexts/PromotionsContext';
 import OfflineNotice from './src/components/OfflineNotice'; // import your offline component
 import 'react-native-reanimated';
 import { UserProfileProvider } from './src/contexts/UserProfileContext';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+
 
 export default function App() {
   return (
@@ -33,34 +35,38 @@ function AppWithPaper() {
   const barStyle = themeMode === 'light' ? 'dark-content' : 'light-content';
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <PaperProvider theme={paperTheme}>
-        <StatusBar barStyle={barStyle} backgroundColor={theme.background} />
-        <OfflineNotice />
-        <AuthProvider>
-          <SignUpProvider>
-            <SettingsProvider>
-              <UserProfileProvider>
-                <ProfilesProvider>
-                  <DatesProvider>
-                    <PromotionsProvider>
-                      <RequestsProvider>
-                        <ChatProvider>
-                          <NotificationsProvider>
-                            <NavigationContainer>
-                              <AppNavigator />
-                            </NavigationContainer>
-                          </NotificationsProvider>
-                        </ChatProvider>
-                      </RequestsProvider>
-                    </PromotionsProvider>
-                  </DatesProvider>
-                </ProfilesProvider>
-              </UserProfileProvider>
-            </SettingsProvider>
-          </SignUpProvider>
-        </AuthProvider>
-      </PaperProvider>
-    </GestureHandlerRootView>
+    <BottomSheetModalProvider>
+
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <PaperProvider theme={paperTheme}>
+          <StatusBar barStyle={barStyle} backgroundColor={theme.background} />
+          <OfflineNotice />
+          <AuthProvider>
+            <SignUpProvider>
+              <SettingsProvider>
+                <UserProfileProvider>
+                  <ProfilesProvider>
+                    <DatesProvider>
+                      <PromotionsProvider>
+                        <RequestsProvider>
+                          <ChatProvider>
+                            <NotificationsProvider>
+                              <NavigationContainer>
+                                <AppNavigator />
+                              </NavigationContainer>
+                            </NotificationsProvider>
+                          </ChatProvider>
+                        </RequestsProvider>
+                      </PromotionsProvider>
+                    </DatesProvider>
+                  </ProfilesProvider>
+                </UserProfileProvider>
+              </SettingsProvider>
+            </SignUpProvider>
+          </AuthProvider>
+        </PaperProvider>
+      </GestureHandlerRootView>
+    </BottomSheetModalProvider>
+
   );
 }

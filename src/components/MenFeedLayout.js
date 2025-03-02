@@ -12,7 +12,6 @@ import {
 } from 'react-native-paper';
 
 const HEADER_HEIGHT = 60;
-const FOOTER_HEIGHT = 60;
 const TAB_BAR_HEIGHT = 60; // Adjust based on your tab navigator
 
 const MenFeedLayout = ({
@@ -76,12 +75,6 @@ const styles = StyleSheet.create({
     },
     contentArea: {
         justifyContent: 'center',
-        alignItems: 'center',
-    },
-    interactionArea: {
-        height: FOOTER_HEIGHT,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
         alignItems: 'center',
     },
     button: {
