@@ -15,10 +15,11 @@ import { ProfilesContext } from '../../contexts/ProfilesContext';
 import { UserProfileContext } from '../../contexts/UserProfileContext';
 import CategoryFilter from '../../components/CategoryFilter';
 import LocationSelector from '../../components/LocationSelector';
-import CreateDateScreen from './CreateDateScreen';
 import PromotionsCard from '../../components/PromotionsCard';
 import { getFeaturedDateConcepts } from '../../utils/recommendDateConcepts';
 import { getRecommendedProfiles } from '../../utils/recommendProfiles';
+import { calculateAge } from '../../utils/deduceAge'; // Import the age util
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -33,9 +34,6 @@ export default function MenHomeScreen() {
 
     // Count pending requests for the badge.
     const pendingCount = requests.filter((r) => r.status === 'pending').length;
-
-    // State for Create Date modal (if needed)
-    const [isCreateDateModalVisible, setIsCreateDateModalVisible] = useState(false);
 
     // State for Featured Date Concepts
     const [featuredDateConcepts, setFeaturedDateConcepts] = useState([]);
@@ -56,8 +54,23 @@ export default function MenHomeScreen() {
         navigation.navigate('MenFeed', { selectedCategory: categoryId });
     };
 
+    useEffect(() => {
+        if (womenProfiles && womenProfiles.length > 0) {
+            womenProfiles.forEach(profile => {
+                profile.photos?.forEach(photo => {
+                    if (typeof photo === 'string') {
+                        Image.prefetch(photo);
+                    }
+                });
+            });
+        }
+    }, [womenProfiles]);
+
     // A simple preview card reusing data from MenFeedScreen.
     const MenFeedCardPreview = ({ item }) => {
+        // Calculate age from the birthday field (assumed to be in 'yyyy-mm-dd' format)
+        const age = calculateAge(item.birthday);
+
         return (
             <TouchableOpacity
                 style={[styles.previewCard]}
@@ -69,7 +82,7 @@ export default function MenHomeScreen() {
                     style={styles.previewImage}
                 />
                 <Text style={[styles.previewName, { color: colors.text }]} numberOfLines={1}>
-                    {item.displayName}
+                    {item.firstName}{age ? `, ${age}` : ''}
                 </Text>
                 {item.location && (
                     <Text style={[styles.previewLocation, { color: colors.secondary }]} numberOfLines={1}>
@@ -86,7 +99,7 @@ export default function MenHomeScreen() {
             <Text style={[styles.sectionHeaderText, { color: colors.text }]}>{title}</Text>
             <TouchableOpacity onPress={onPress} style={styles.viewMoreContainer}>
                 <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.secondary} style={styles.chevronIcon} />
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} style={styles.chevronIcon} />
             </TouchableOpacity>
         </View>
     );
@@ -96,12 +109,12 @@ export default function MenHomeScreen() {
         ? getRecommendedProfiles(womenProfiles, currentUser)
         : [];
 
-    // Log each recommended profile's display name and score when recommendedProfiles updates.
+    // Log each recommended profile's first name and score when recommendedProfiles updates.
     useEffect(() => {
         if (recommendedProfiles.length) {
             console.log("Recommended Profiles and their scores:");
             recommendedProfiles.forEach(profile => {
-                console.log(`${profile.displayName}: ${profile.recommendationScore}`);
+                console.log(`${profile.firstName}: ${profile.recommendationScore}`);
             });
         }
     }, [recommendedProfiles]);
@@ -110,7 +123,7 @@ export default function MenHomeScreen() {
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-                <View style={styles.topRow}>
+                {/* <View style={styles.topRow}>
                     <TouchableOpacity
                         style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.cardBackground }]}
                         onPress={() => navigation.navigate('Settings')}
@@ -131,10 +144,8 @@ export default function MenHomeScreen() {
                             )}
                         </View>
                     </TouchableOpacity>
-                </View>
-                <View style={styles.filterContainer}>
-                    <CategoryFilter onSelect={handleCategorySelect} />
-                </View>
+                </View> */}
+
             </View>
 
             {/* Sections Container */}
@@ -184,19 +195,19 @@ export default function MenHomeScreen() {
                             {featuredDateConcepts.map((idea, index) => (
                                 <TouchableOpacity
                                     key={index}
-                                    style={[styles.featuredCard, { backgroundColor: colors.primary }]}
+                                    style={[styles.featuredCard, { backgroundColor: colors.cardBackground }]}
                                     onPress={() => {
                                         console.log('Selected date concept:', idea);
                                     }}
                                 >
                                     <LinearGradient
-                                        colors={[colors.cardBackground, colors.background]}
+                                        colors={[colors.background, colors.background]}
                                         style={styles.magicIconContainer}
                                     >
                                         <FontAwesome5 name="magic" size={16} color={colors.primary} />
                                     </LinearGradient>
-                                    <Text style={[styles.featuredTitle, { color: colors.black }]}>{idea.title}</Text>
-                                    <Text style={[styles.featuredDescription, { color: colors.secondary }]} numberOfLines={3}>
+                                    <Text style={[styles.featuredTitle, { color: colors.text }]}>{idea.title}</Text>
+                                    <Text style={[styles.featuredDescription, { color: colors.secondary }]}>
                                         {idea.description}
                                     </Text>
                                 </TouchableOpacity>
@@ -207,7 +218,7 @@ export default function MenHomeScreen() {
 
                 {/* Recommended Section */}
                 <View style={styles.section}>
-                    <ViewMoreHeader title="Recommended" onPress={() => navigation.navigate('MenFeed')} />
+                    <ViewMoreHeader title="Recommended For You" onPress={() => navigation.navigate('MenFeed')} />
                     {loadingWomen ? (
                         <Text style={{ color: colors.text }}>Loading profiles...</Text>
                     ) : (

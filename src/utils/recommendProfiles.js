@@ -7,14 +7,29 @@
  * @returns {number} - Count of common interests.
  */
 export const computeMutualInterests = (userInterests = '', profileInterests = '') => {
-    const userSet = new Set(userInterests.split(',').map(i => i.trim().toLowerCase()));
-    const profileSet = new Set(profileInterests.split(',').map(i => i.trim().toLowerCase()));
+    // Helper function to convert input into an array of trimmed, lowercased strings.
+    const processInterests = (interests) => {
+        if (Array.isArray(interests)) {
+            return interests.map(i => i.trim().toLowerCase());
+        } else if (typeof interests === 'string') {
+            return interests.split(',').map(i => i.trim().toLowerCase());
+        }
+        return [];
+    };
+
+    const userArray = processInterests(userInterests);
+    const profileArray = processInterests(profileInterests);
+
+    const userSet = new Set(userArray);
+    const profileSet = new Set(profileArray);
     let mutualCount = 0;
+
     userSet.forEach(interest => {
         if (interest && profileSet.has(interest)) {
             mutualCount++;
         }
     });
+
     return mutualCount;
 };
 

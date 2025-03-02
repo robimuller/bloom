@@ -9,6 +9,8 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 // Import Realtime Database functions for presence tracking.
 import {
@@ -183,6 +185,8 @@ export const AuthProvider = ({ children }) => {
         try {
             setAuthError(null);
             await signOut(auth);
+            // Clear any local cached user data
+            await AsyncStorage.clear();
         } catch (error) {
             setAuthError(error.message);
         }

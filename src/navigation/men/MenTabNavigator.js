@@ -1,4 +1,3 @@
-// src/navigation/MenTabNavigator.js
 import React from 'react';
 import { View, Dimensions, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,12 +6,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 
-// Import your screens
-import MenHomeScreen from '../../screens/men/MenHomeScreen';
-import CreateDateScreen from '../../screens/men/CreateDateScreen';
+// Import your screens and navigators
+import MenHomeStack from './MenHomeStack';
 import MenNotificationsScreen from '../../screens/men/MenNotificationsScreen';
 import MenSettingsScreen from '../../screens/shared/SettingsScreen';
 import MyPerksScreen from '../../screens/shared/MyPerksScreen';
+import CreateDateScreen from '../../screens/men/CreateDateScreen';
 
 const Tab = createBottomTabNavigator();
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -20,7 +19,6 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
     const theme = useTheme();
 
-    // Animate the icon scaling with a smoother timing function
     const iconAnimatedStyle = useAnimatedStyle(() => ({
         transform: [
             {
@@ -32,7 +30,6 @@ const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
         ],
     }));
 
-    // Animate the top border indicator (height & opacity)
     const indicatorStyle = useAnimatedStyle(() => ({
         height: withTiming(focused ? 4 : 0, {
             duration: 300,
@@ -46,7 +43,6 @@ const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
 
     return (
         <Animated.View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            {/* Top border indicator */}
             <Animated.View
                 style={[
                     {
@@ -93,15 +89,14 @@ export default function MenTabNavigator() {
                     backgroundColor: theme.colors.cardBackground || theme.colors.background,
                     borderTopColor: theme.colors.cardBackground || theme.colors.background,
                     borderTopWidth: 0,
-                    elevation: 5, // Android shadow
-                    shadowColor: '#000', // iOS shadow
+                    elevation: 5,
+                    shadowColor: '#000',
                     shadowOffset: { width: 0, height: -2 },
                     shadowOpacity: 0.1,
                     shadowRadius: 3,
                 },
                 tabBarIcon: ({ focused, color, size }) => {
                     if (route.name === 'Create Date') {
-                        // Return our custom circle button.
                         return <CreateDateButton size={size} focused={focused} />;
                     }
                     let iconName;
@@ -123,7 +118,7 @@ export default function MenTabNavigator() {
                 tabBarShowLabel: false,
             })}
         >
-            <Tab.Screen name="Home" component={MenHomeScreen} />
+            <Tab.Screen name="Home" component={MenHomeStack} />
             <Tab.Screen name="My Deals" component={MyPerksScreen} />
             <Tab.Screen name="Create Date" component={CreateDateScreen} />
             <Tab.Screen name="Notifications" component={MenNotificationsScreen} />
@@ -134,7 +129,6 @@ export default function MenTabNavigator() {
 
 const styles = StyleSheet.create({
     createDateButtonContainer: {
-        // This container centers the button and allows it to overlap the tab bar.
         marginBottom: 10,
         alignItems: 'center',
         justifyContent: 'center',

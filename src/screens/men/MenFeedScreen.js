@@ -1,5 +1,4 @@
-// src/screens/men/MenFeedScreen.js
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import {
     View,
     FlatList,
@@ -13,31 +12,17 @@ import {
 import { useTheme, Button, Checkbox } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import Animated, {
-    useSharedValue,
-    withTiming,
-    Easing,
-    useAnimatedStyle,
-    interpolate,
-    Extrapolate,
-    runOnJS,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { calculateAge } from '../../utils/deduceAge';
 import { ProfilesContext } from '../../contexts/ProfilesContext';
-import CarouselItem from '../../components/CarouselItem';
-import { useUserStatus } from '../../hooks/useUserStatus'; // Import your hook
-import ProfileHeader from '../../components/ProfileHeader'
+import ProfileHeader from '../../components/ProfileHeader';
+import { useNavigation } from '@react-navigation/native';
+import MenFeedLayout from '../../components/MenFeedLayout'; // Adjust the path as needed
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// Define fixed dimensions for each card to match the women feed.
-const CARD_HEIGHT = 550;
-const CARD_SPACING = 16;
-
-// Create an animated version of FlatList for vertical scrolling
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
-// Report options (if you want to allow men to report profiles)
 const REPORT_OPTIONS = [
     'Harassment',
     'Fake Profile',
@@ -45,23 +30,19 @@ const REPORT_OPTIONS = [
     'Inappropriate content',
 ];
 
-// Number of hearts to show when a heart explosion is triggered
 const HEART_COUNT = 6;
 
 export default function MenFeedScreen({ onScroll }) {
     const { womenProfiles, loadingWomen } = useContext(ProfilesContext);
     const { colors } = useTheme();
+    const navigation = useNavigation();
 
-    // For demonstration purposes we track “requested” profiles by ID.
     const [requestedIds, setRequestedIds] = useState([]);
-
-    // State for report modal
     const [reportModalVisible, setReportModalVisible] = useState(false);
     const [reportTargetUser, setReportTargetUser] = useState(null);
     const [reportReasons, setReportReasons] = useState([]);
 
     const handleInvitePress = async (userId) => {
-        // Example: add the userId to the requested list.
         setRequestedIds((prev) => [...prev, userId]);
     };
 
@@ -69,7 +50,6 @@ export default function MenFeedScreen({ onScroll }) {
         setRequestedIds((prev) => prev.filter((id) => id !== userId));
     };
 
-    // When the flag icon is pressed, open the report modal.
     const handleFlagPress = (profile) => {
         setReportTargetUser(profile);
         setReportReasons([]);
@@ -82,7 +62,6 @@ export default function MenFeedScreen({ onScroll }) {
             Alert.alert('Select a reason', 'Please choose at least one reason.');
             return;
         }
-        // Submit the report (for demo, simply show an alert)
         Alert.alert('Report Submitted', 'Thank you for your feedback.');
         setReportModalVisible(false);
     };
@@ -96,77 +75,64 @@ export default function MenFeedScreen({ onScroll }) {
         });
     };
 
-    // If still loading or no profiles are available, show a message.
-    if (loadingWomen) {
-        return (
-            <View style={{ height: CARD_HEIGHT + CARD_SPACING, justifyContent: 'center' }}>
-                <Text style={{ textAlign: 'center', color: colors.text }}>Loading profiles...</Text>
-            </View>
-        );
-    }
-
-    if (!womenProfiles || womenProfiles.length === 0) {
-        return (
-            <View style={{ height: CARD_HEIGHT + CARD_SPACING, justifyContent: 'center' }}>
-                <Text style={{ textAlign: 'center', color: colors.text }}>
-                    No profiles available at the moment.
-                </Text>
-            </View>
-        );
-    }
-
-    // Each card is rendered with a fixed height and similar structure to the women feed.
-    const renderItem = ({ item }) => {
-        const isRequested = requestedIds.includes(item.id);
-
-        return (
-            <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
-                {/* Header with online indicator */}
-                <ProfileHeader item={item} onFlagPress={handleFlagPress} colors={colors} />
-                {/* Carousel of user photos */}
-                <Carousel
-                    photos={item.photos || []}
-                    userId={item.id}
-                    isRequested={isRequested}
-                    onInvitePress={handleInvitePress}
-                    onCancelInvite={handleCancelInvite}
-                />
-
-                {/* Bio */}
-                {item.bio && (
-                    <Text style={{ color: colors.text, fontSize: 13, opacity: 0.7, marginTop: 8 }}>
-                        {item.bio}
-                    </Text>
-                )}
-
-                {/* Footer (e.g. location) */}
-                <View style={styles.footer}>
-                    {item.location && (
-                        <View style={styles.footerRow}>
-                            <Text style={[styles.location, { color: colors.secondary }]}>{item.location}</Text>
-                        </View>
-                    )}
-                </View>
-            </View>
-        );
-    };
-
     return (
-        <View style={{ height: CARD_HEIGHT + CARD_SPACING }}>
-            <AnimatedFlatList
-                data={womenProfiles}
-                keyExtractor={(profile) => profile.id}
-                renderItem={renderItem}
-                pagingEnabled
-                decelerationRate="fast"
-                snapToAlignment="start"
-                contentContainerStyle={{ paddingBottom: 20 }}
-                onScroll={onScroll}
-                scrollEventThrottle={16}
-                showsVerticalScrollIndicator={false}
-            />
+        <>
+            <MenFeedLayout
+                headerTitle="Explore"
+                onInvitePress={() => Alert.alert('Invite pressed')}
+                onRequestPress={() => Alert.alert('Request pressed')}
+                onXPress={() => Alert.alert('X pressed')}
+                colors={colors}
+            >
+                {(contentHeight) => (
+                    <>
+                        {loadingWomen ? (
+                            <View style={styles.loadingContainer}>
+                                <Text style={{ color: colors.text }}>Loading profiles...</Text>
+                            </View>
+                        ) : (
+                            <AnimatedFlatList
+                                style={{ height: contentHeight }}
+                                data={womenProfiles}
+                                keyExtractor={(profile) => profile.id}
+                                renderItem={({ item }) => (
+                                    // Pass contentHeight to the card container so that each card fills the content area.
+                                    <View style={[styles.cardContainer, { height: contentHeight, backgroundColor: colors.background, borderBottomColor: colors.cardBackground }]}>
+                                        <ProfileHeader item={item} onFlagPress={handleFlagPress} colors={colors} />
+                                        <Carousel
+                                            photos={
+                                                item.photos && item.photos.length
+                                                    ? item.photos
+                                                    : [require('../../../assets/avatar-placeholder.png')]
+                                            }
+                                            userId={item.uid}
+                                            isRequested={requestedIds.includes(item.uid)}
+                                            onInvitePress={handleInvitePress}
+                                            onCancelInvite={handleCancelInvite}
+                                        />
+                                        <View style={styles.footer}>
+                                            {item.city && (
+                                                <View style={styles.footerRow}>
+                                                    <Text style={[styles.location, { color: colors.secondary }]}>{item.city}</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                )}
+                                pagingEnabled
+                                decelerationRate="fast"
+                                snapToAlignment="start"
+                                contentContainerStyle={{ paddingBottom: 0 }}
+                                onScroll={onScroll}
+                                scrollEventThrottle={16}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        )}
+                    </>
+                )}
+            </MenFeedLayout>
 
-            {/* Report Modal */}
+            {/* Render the Modal outside MenFeedLayout */}
             <Modal
                 animationType="fade"
                 transparent
@@ -184,7 +150,7 @@ export default function MenFeedScreen({ onScroll }) {
                         onPress={() => { }}
                     >
                         <Text style={[styles.modalTitle, { color: colors.text }]}>
-                            {`Report ${reportTargetUser?.displayName || 'User'}?`}
+                            {`Report ${reportTargetUser?.firstName || 'User'}?`}
                         </Text>
                         <Text style={[styles.modalSubtitle, { color: colors.secondary }]}>
                             Choose the reason(s) for your report:
@@ -216,24 +182,23 @@ export default function MenFeedScreen({ onScroll }) {
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
-        </View>
+        </>
     );
 }
 
-/** Carousel component (for user photos) **/
+/** Inline Carousel component **/
 function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const flatListRef = useRef(null);
+    const flatListRef = React.useRef(null);
     const { colors } = useTheme();
 
     const onScroll = (event) => {
         const offsetX = event.nativeEvent.contentOffset.x;
-        const index = Math.round(offsetX / (SCREEN_WIDTH * 0.85));
+        const index = Math.round(offsetX / (SCREEN_WIDTH * 0.9));
         setCurrentIndex(index);
     };
 
-    // Ensure you only pass valid photo URLs to the carousel.
-    const validPhotos = (photos || []).filter(photo => !!photo);
+    const validPhotos = (photos || []).filter((photo) => !!photo);
 
     return (
         <View style={styles.carouselWrapper}>
@@ -247,10 +212,13 @@ function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }
                 onScroll={onScroll}
                 scrollEnabled={photos.length > 1}
                 renderItem={({ item }) => (
-                    <Image source={typeof item === 'string' ? { uri: item } : item} style={styles.carouselImage} />
+                    <Image
+                        source={typeof item === 'string' ? { uri: item } : item}
+                        style={styles.carouselImage}
+                        transition={0}
+                    />
                 )}
             />
-            {/* Gradient on the right */}
             <LinearGradient
                 colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0)']}
                 start={{ x: 1, y: 0.5 }}
@@ -275,7 +243,7 @@ function Carousel({ photos, userId, isRequested, onInvitePress, onCancelInvite }
     );
 }
 
-/** Heart button with an explosion animation **/
+/** Heart button with explosion animation **/
 function HeartCircleButton({ userId, isRequested, onInvitePress, onCancelInvite }) {
     const { colors } = useTheme();
     const [exploding, setExploding] = useState(false);
@@ -284,7 +252,6 @@ function HeartCircleButton({ userId, isRequested, onInvitePress, onCancelInvite 
     const handlePress = async () => {
         try {
             if (!isRequested) {
-                // Invite the user and trigger the explosion
                 onInvitePress(userId);
                 setExploding(true);
                 progress.value = withTiming(
@@ -298,7 +265,6 @@ function HeartCircleButton({ userId, isRequested, onInvitePress, onCancelInvite 
                     }
                 );
             } else {
-                // Cancel the invite
                 onCancelInvite(userId);
             }
         } catch (error) {
@@ -374,54 +340,39 @@ function FloatingHeart({ progress, angle, distance, scale }) {
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
     //----------------------------------
     // Card Container
     //----------------------------------
     cardContainer: {
-        height: CARD_HEIGHT,
-        marginHorizontal: 2,
-        borderRadius: 20,
+        flex: 1,
         overflow: 'hidden',
-        paddingHorizontal: 25,
+        paddingHorizontal: 15,
         paddingBottom: 12,
-        marginTop: CARD_SPACING,
+        borderBottomWidth: 3,
     },
     //----------------------------------
-    // Header
+    // Footer
     //----------------------------------
-    header: {
+    footer: {
+        marginTop: 8,
+    },
+    footerRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 15,
+        justifyContent: 'space-between',
     },
-    profilePic: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 10,
-    },
-    hostName: {
-        fontWeight: '600',
-        fontSize: 16,
-    },
-    onlineIndicator: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: 'green',
-        borderWidth: 2,
-        borderColor: '#fff',
+    location: {
+        fontSize: 14,
     },
     //----------------------------------
     // Carousel
     //----------------------------------
     carouselWrapper: {
         position: 'relative',
-        width: SCREEN_WIDTH * 0.85,
-        height: SCREEN_WIDTH * 0.85,
+        width: SCREEN_WIDTH * 0.9,
+        height: 500,
         borderRadius: 16,
         alignSelf: 'center',
         overflow: 'hidden',
@@ -430,14 +381,14 @@ const styles = StyleSheet.create({
     gradientBar: {
         position: 'absolute',
         top: 0,
-        right: 0,
+        right: -1,
         height: '100%',
         width: 65,
         zIndex: 1,
     },
     carouselImage: {
-        width: SCREEN_WIDTH * 0.85,
-        height: SCREEN_WIDTH * 0.85,
+        width: SCREEN_WIDTH * 0.9,
+        height: 500,
         resizeMode: 'cover',
     },
     overlayTopRight: {
@@ -475,19 +426,6 @@ const styles = StyleSheet.create({
         right: 22,
         width: 0,
         height: 0,
-    },
-    //----------------------------------
-    // Footer
-    //----------------------------------
-    footer: {
-        marginTop: 8,
-    },
-    footerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    location: {
-        fontSize: 14,
     },
     //----------------------------------
     // Modal Styles

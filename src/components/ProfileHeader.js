@@ -1,4 +1,3 @@
-// src/components/ProfileHeader.js
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
@@ -21,12 +20,14 @@ const ProfileHeader = React.memo(({ item, onFlagPress, colors }) => {
                             : require('../../assets/avatar-placeholder.png')
                     }
                     style={styles.profilePic}
+                    cachePolicy="memory-disk" // Enable both memory and disk caching
+                    transition={0} // No fade transition to reduce flashing
                 />
                 {userStatus === 'online' && <View style={styles.onlineIndicator} />}
             </View>
             <View style={{ flex: 1 }}>
                 <Text style={[styles.hostName, { color: colors.text }]}>
-                    {item.displayName || 'Unknown'}{age ? `, ${age}` : ''}
+                    {item.firstName || 'Unknown'}{age ? `, ${age}` : ''}
                 </Text>
             </View>
             <TouchableOpacity onPress={() => onFlagPress(item)}>
