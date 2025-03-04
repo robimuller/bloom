@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';  // Import useNavigation
+import { useNavigation } from '@react-navigation/native';
 import {
     Text as PaperText,
     Button as PaperButton,
@@ -12,22 +12,23 @@ import {
 } from 'react-native-paper';
 
 const HEADER_HEIGHT = 60;
-const TAB_BAR_HEIGHT = 60;
 
 const MenFeedLayout = ({
     headerTitle = 'Explore',
     children,
     colors = { background: '#fff', text: '#000', primary: '#007AFF' },
 }) => {
-    const navigation = useNavigation();  // Get navigation object
+    const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-    const contentHeight =
-        SCREEN_HEIGHT -
-        HEADER_HEIGHT -
-        TAB_BAR_HEIGHT -
-        insets.bottom -
-        40;
+
+    // Compute dynamic tab bar height:
+    // Use 8% of the screen height as the base value and add the bottom safe area inset.
+    const BASE_TAB_BAR_HEIGHT = SCREEN_HEIGHT * 0.08;
+    const TAB_BAR_HEIGHT = BASE_TAB_BAR_HEIGHT + insets.bottom;
+
+    // Compute content height by subtracting header and dynamic tab bar heights.
+    const contentHeight = SCREEN_HEIGHT - HEADER_HEIGHT - TAB_BAR_HEIGHT - 42;
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -57,7 +58,6 @@ const styles = StyleSheet.create({
         position: 'relative',
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
         height: HEADER_HEIGHT,
         paddingHorizontal: 16,
     },

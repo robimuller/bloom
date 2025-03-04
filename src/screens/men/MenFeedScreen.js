@@ -31,12 +31,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ProfilesContext } from '../../contexts/ProfilesContext';
 import { AuthContext } from '../../contexts/AuthContext';
 import ProfileHeader from '../../components/ProfileHeader';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import MenFeedLayout from '../../components/MenFeedLayout';
 import ProfileDetailsBottomSheet from '../../components/ProfileDetailsBottomSheet';
 import { calculateDistance } from '../../utils/distance';
+import { TapGestureHandler, State } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
+
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 const REPORT_OPTIONS = [
@@ -49,11 +55,11 @@ const REPORT_OPTIONS = [
 const HEART_COUNT = 6;
 
 export default function MenFeedScreen({ onScroll }) {
+    const route = useRoute();
+    const navigation = useNavigation();
     const { womenProfiles, loadingWomen } = useContext(ProfilesContext);
     const { userDoc } = useContext(AuthContext); // current logged in user's doc with coordinates
     const { colors } = useTheme();
-    const navigation = useNavigation();
-
     const [selectedProfile, setSelectedProfile] = useState(null);
     const [sheetKey, setSheetKey] = useState(0);
     const [modalVisible, setModalVisible] = useState(false);
@@ -61,6 +67,33 @@ export default function MenFeedScreen({ onScroll }) {
     const [reportModalVisible, setReportModalVisible] = useState(false);
     const [reportTargetUser, setReportTargetUser] = useState(null);
     const [reportReasons, setReportReasons] = useState([]);
+
+    // Create a ref for the FlatList
+    const flatListRef = useRef(null);
+
+    // Determine the initial index based on the passed initialItemId
+    const initialIndex =
+        route.params?.initialItemId && womenProfiles.length
+            ? womenProfiles.findIndex(profile => profile.id === route.params.initialItemId)
+            : 0;
+
+
+    // When profiles load, scroll to the specified index
+    useEffect(() => {
+        if (route.params?.initialItemId && womenProfiles.length && flatListRef.current) {
+            // Use a timeout to ensure the list has rendered
+            setTimeout(() => {
+                flatListRef.current.scrollToIndex({ index: initialIndex, animated: true });
+            }, 500);
+        }
+    }, [route.params, womenProfiles, initialIndex]);
+
+    // Fallback in case scrollToIndex fails
+    const onScrollToIndexFailed = (info) => {
+        setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+        }, 500);
+    };
 
     // A ref that tracks whether the modal is currently visible.
     const modalVisibleRef = useRef(modalVisible);
@@ -145,17 +178,18 @@ export default function MenFeedScreen({ onScroll }) {
                             </View>
                         ) : (
                             <AnimatedFlatList
+                                ref={flatListRef}
+                                initialScrollIndex={initialIndex} // Renders directly at the target index
                                 style={{ height: contentHeight }}
                                 data={womenProfiles}
                                 keyExtractor={(profile) => profile.id}
+                                getItemLayout={(data, index) => ({
+                                    length: contentHeight,
+                                    offset: contentHeight * index,
+                                    index,
+                                })}
                                 renderItem={({ item }) => {
-                                    // Ensure both the current user and profile have coordinates
-                                    const distance =
-                                        userDoc?.coordinates && item.coordinates
-                                            ? calculateDistance(userDoc.coordinates, item.coordinates)
-                                            : 0;
-                                    const formattedDistance = `${distance.toFixed(2)} km away`;
-
+                                    // Your renderItem code here
                                     return (
                                         <View
                                             style={[
@@ -164,6 +198,7 @@ export default function MenFeedScreen({ onScroll }) {
                                                     height: contentHeight,
                                                     backgroundColor: colors.background,
                                                     borderBottomColor: colors.cardBackground,
+                                                    borderBottomWidth: 1,
                                                 },
                                             ]}
                                         >
@@ -174,6 +209,7 @@ export default function MenFeedScreen({ onScroll }) {
                                                 colors={colors}
                                             />
                                             <Carousel
+                                                contentHeight={contentHeight - 80}
                                                 photos={
                                                     item.photos && item.photos.length
                                                         ? item.photos
@@ -183,46 +219,8 @@ export default function MenFeedScreen({ onScroll }) {
                                                 isRequested={requestedIds.includes(item.uid)}
                                                 onInvitePress={handleInvitePress}
                                                 onCancelInvite={handleCancelInvite}
+                                                onPress={() => handleProfilePress(item)}
                                             />
-                                            <View
-                                                style={[
-                                                    styles.footer,
-                                                    { backgroundColor: colors.cardBackground },
-                                                ]}
-                                            >
-                                                {item.city && (
-                                                    <View style={styles.footerRow}>
-                                                        <Text
-                                                            style={[
-                                                                styles.location,
-                                                                { color: colors.secondary },
-                                                            ]}
-                                                        >
-                                                            {item.city}, {item.country}
-                                                        </Text>
-                                                        <Text
-                                                            style={[
-                                                                styles.location,
-                                                                { color: colors.secondary },
-                                                            ]}
-                                                        >
-                                                            {formattedDistance}
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                                {item.bio && (
-                                                    <View style={styles.footerRow}>
-                                                        <Text
-                                                            style={[
-                                                                styles.location,
-                                                                { color: colors.text },
-                                                            ]}
-                                                        >
-                                                            {item.bio}
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                            </View>
                                         </View>
                                     );
                                 }}
@@ -312,17 +310,21 @@ export default function MenFeedScreen({ onScroll }) {
     );
 }
 
-/** Inline Carousel component **/
 function Carousel({
     photos,
+    contentHeight, // Passed in as (cardHeight - some offset)
     userId,
     isRequested,
     onInvitePress,
     onCancelInvite,
+    onPress, // New onPress prop for tap
 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef(null);
     const { colors } = useTheme();
+
+    // Calculate carousel height (contentHeight minus 40)
+    const carouselHeight = contentHeight - 40;
 
     const onScroll = (event) => {
         const offsetX = event.nativeEvent.contentOffset.x;
@@ -332,60 +334,72 @@ function Carousel({
 
     const validPhotos = (photos || []).filter((photo) => !!photo);
 
+    // Handler for tap gesture
+    const onTapHandler = (event) => {
+        if (event.nativeEvent.state === State.ACTIVE) {
+            // Trigger a light haptic feedback
+            Haptics.selectionAsync();
+            if (onPress) {
+                onPress();
+            }
+        }
+    };
+
     return (
-        <View style={styles.carouselWrapper}>
-            <FlatList
-                data={
-                    validPhotos.length > 0
-                        ? validPhotos
-                        : [require('../../../assets/avatar-placeholder.png')]
-                }
-                keyExtractor={(uri, idx) => `${uri}-${idx}`}
-                ref={flatListRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onScroll={onScroll}
-                scrollEnabled={photos.length > 1}
-                renderItem={({ item }) => (
-                    <Image
-                        source={typeof item === 'string' ? { uri: item } : item}
-                        style={styles.carouselImage}
-                        transition={0}
-                    />
-                )}
-            />
-            <LinearGradient
-                colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0)']}
-                start={{ x: 1, y: 0.5 }}
-                end={{ x: 0, y: 0.5 }}
-                style={styles.gradientBar}
-                pointerEvents="none"
-            />
-            <View style={[styles.overlayTopRight, { backgroundColor: colors.overlay }]}>
-                <Text style={[styles.indexText, { color: colors.onBackground }]}>
-                    {currentIndex + 1}/{validPhotos.length}
-                </Text>
-            </View>
-            <View style={styles.overlayBottomRight}>
-                <HeartCircleButton
-                    userId={userId}
-                    isRequested={isRequested}
-                    onInvitePress={onInvitePress}
-                    onCancelInvite={onCancelInvite}
+        <TapGestureHandler
+            onHandlerStateChange={onTapHandler}
+            maxDeltaX={10}
+            maxDeltaY={10}
+        >
+            <View style={[styles.carouselWrapper, { height: carouselHeight }]}>
+                <FlatList
+                    data={
+                        validPhotos.length > 0
+                            ? validPhotos
+                            : [require('../../../assets/avatar-placeholder.png')]
+                    }
+                    keyExtractor={(uri, idx) => `${uri}-${idx}`}
+                    ref={flatListRef}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onScroll={onScroll}
+                    scrollEnabled={photos.length > 1}
+                    renderItem={({ item }) => (
+                        <Image
+                            source={typeof item === 'string' ? { uri: item } : item}
+                            style={[styles.carouselImage, { height: carouselHeight }]}
+                            transition={0}
+                        />
+                    )}
                 />
+                <LinearGradient
+                    colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0)']}
+                    start={{ x: 1, y: 0.5 }}
+                    end={{ x: 0, y: 0.5 }}
+                    style={styles.gradientBar}
+                    pointerEvents="none"
+                />
+                <View style={[styles.overlayTopRight, { backgroundColor: colors.overlay }]}>
+                    <Text style={[styles.indexText, { color: colors.onBackground }]}>
+                        {currentIndex + 1}/{validPhotos.length}
+                    </Text>
+                </View>
+                <View style={styles.overlayBottomRight}>
+                    <HeartCircleButton
+                        userId={userId}
+                        isRequested={isRequested}
+                        onInvitePress={onInvitePress}
+                        onCancelInvite={onCancelInvite}
+                    />
+                </View>
             </View>
-        </View>
+        </TapGestureHandler>
     );
 }
 
 /** Heart button with explosion animation **/
-function HeartCircleButton({
-    userId,
-    isRequested,
-    onInvitePress,
-    onCancelInvite,
-}) {
+function HeartCircleButton({ userId, isRequested, onInvitePress, onCancelInvite }) {
     const { colors } = useTheme();
     const [exploding, setExploding] = useState(false);
     const progress = useSharedValue(0);
@@ -417,16 +431,24 @@ function HeartCircleButton({
     const iconName = isRequested ? 'mail-open' : 'mail';
 
     return (
-        <View>
-            <TouchableOpacity
-                style={[styles.heartButton, { backgroundColor: colors.background }]}
-                onPress={handlePress}
-                activeOpacity={0.8}
-            >
-                <Ionicons name={iconName} size={24} color={colors.primary} />
-            </TouchableOpacity>
-            {exploding && <HeartsExplosion progress={progress} />}
-        </View>
+        <TapGestureHandler
+            onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.ACTIVE) {
+                    // This inner handler will prevent the outer tap from firing.
+                    handlePress();
+                }
+            }}
+        >
+            <View>
+                <TouchableOpacity
+                    style={[styles.heartButton, { backgroundColor: colors.background }]}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name={iconName} size={24} color={colors.primary} />
+                </TouchableOpacity>
+                {exploding && <HeartsExplosion progress={progress} />}
+            </View>
+        </TapGestureHandler>
     );
 }
 
@@ -499,33 +521,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardContainer: {
-        flex: 1,
         overflow: 'hidden',
         paddingHorizontal: 15,
-        paddingBottom: 12,
-        borderBottomWidth: 3,
     },
-    footer: {
-        marginTop: 8,
-        height: 125,
-        padding: 20,
-        borderRadius: 16,
-    },
-    footerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
+    // footer: {
+    //     height: SCREEN_HEIGHT * 0.2,
+    //     padding: 20,
+    //     borderRadius: 16,
+    // },
+    // footerRow: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    // },
     location: {
         fontSize: 14,
     },
     carouselWrapper: {
         position: 'relative',
         width: SCREEN_WIDTH * 0.9,
-        height: 500,
         borderRadius: 16,
         alignSelf: 'center',
         overflow: 'hidden',
-        marginBottom: 12,
     },
     gradientBar: {
         position: 'absolute',
@@ -537,7 +553,6 @@ const styles = StyleSheet.create({
     },
     carouselImage: {
         width: SCREEN_WIDTH * 0.9,
-        height: 500,
         resizeMode: 'cover',
     },
     overlayTopRight: {

@@ -31,13 +31,13 @@ const ProfileDetailBottomSheet = ({ selectedProfile, onClose }) => {
             snapPoints={snapPoints}
             onClose={onClose}
             enablePanDownToClose={true}
-            backgroundStyle={{ backgroundColor: colors.background }}
+            backgroundStyle={{ backgroundColor: colors.tertiary }}
             handleIndicatorStyle={styles.handleIndicator}
         >
             <BottomSheetScrollView
                 contentContainerStyle={[
                     styles.scrollContent,
-                    { minHeight: SCREEN_HEIGHT - HEADER_HEIGHT - 60, backgroundColor: colors.background }
+                    { minHeight: SCREEN_HEIGHT - HEADER_HEIGHT - 60, backgroundColor: colors.tertiary }
                 ]}
             >
                 {/* Fixed Custom Header */}

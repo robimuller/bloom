@@ -4,7 +4,7 @@ import { View, TouchableOpacity, StyleSheet, Text, ScrollView, FlatList, Dimensi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
@@ -21,9 +21,11 @@ import { getRecommendedProfiles } from '../../utils/recommendProfiles';
 import { calculateAge } from '../../utils/deduceAge'; // Import the age util
 
 
+
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function MenHomeScreen() {
+    const route = useRoute();
     const navigation = useNavigation();
     const theme = useTheme();
     const { requests } = useContext(RequestsContext);
@@ -68,17 +70,19 @@ export default function MenHomeScreen() {
 
     // A simple preview card reusing data from MenFeedScreen.
     const MenFeedCardPreview = ({ item }) => {
-        // Calculate age from the birthday field (assumed to be in 'yyyy-mm-dd' format)
         const age = calculateAge(item.birthday);
-
         return (
             <TouchableOpacity
                 style={[styles.previewCard]}
-                onPress={() => navigation.navigate('MenFeed')}
+                onPress={() => navigation.navigate('MenFeed', { initialItemId: item.id })}
                 activeOpacity={0.8}
             >
                 <Image
-                    source={typeof item.photos[0] === 'string' ? { uri: item.photos[0] } : item.photos[0]}
+                    source={
+                        typeof item.photos[0] === 'string'
+                            ? { uri: item.photos[0] }
+                            : item.photos[0]
+                    }
                     style={styles.previewImage}
                 />
                 <Text style={[styles.previewName, { color: colors.text }]} numberOfLines={1}>
@@ -168,22 +172,33 @@ export default function MenHomeScreen() {
                 </View>
 
                 {/* Promotions Section */}
-                <View style={styles.section}>
-                    <ViewMoreHeader title="Promotions" onPress={() => navigation.navigate('MenPromotionsList')} />
-                    {loadingPromotions ? (
-                        <Text style={{ color: colors.text }}>Loading promotions...</Text>
-                    ) : (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                            {promotions.slice(0, 3).map((promo) => (
-                                <PromotionsCard
-                                    key={promo.id}
-                                    promotion={promo}
-                                    onPress={(promo) => navigation.navigate('MenPromotionDetail', { promo })}
-                                />
-                            ))}
-                        </ScrollView>
-                    )}
-                </View>
+                {promotions && promotions.length >= 40 && (
+                    <View style={styles.section}>
+                        <ViewMoreHeader
+                            title="Promotions"
+                            onPress={() => navigation.navigate('MenPromotionsList')}
+                        />
+                        {loadingPromotions ? (
+                            <Text style={{ color: colors.text }}>Loading promotions...</Text>
+                        ) : (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.horizontalScroll}
+                            >
+                                {promotions.slice(0, 3).map((promo) => (
+                                    <PromotionsCard
+                                        key={promo.id}
+                                        promotion={promo}
+                                        onPress={(promo) =>
+                                            navigation.navigate('MenPromotionDetail', { promo })
+                                        }
+                                    />
+                                ))}
+                            </ScrollView>
+                        )}
+                    </View>
+                )}
 
                 {/* Featured Date Concepts Section */}
                 <View style={styles.section}>

@@ -12,7 +12,6 @@ const ProfileHeader = React.memo(({ item, onPress, onFlagPress, colors }) => {
 
     return (
         <View style={styles.header}>
-            {/* Only the image is pressable */}
             <TouchableOpacity onPress={() => onPress(item)}>
                 <View style={{ position: 'relative' }}>
                     <Image
@@ -30,6 +29,11 @@ const ProfileHeader = React.memo(({ item, onPress, onFlagPress, colors }) => {
                 <Text style={[styles.hostName, { color: colors.text }]}>
                     {item.firstName || 'Unknown'}{age ? `, ${age}` : ''}
                 </Text>
+                {(item.city || item.country) && (
+                    <Text style={[styles.location, { color: colors.secondary }]}>
+                        {item.city}{item.city && item.country ? ', ' : ''}{item.country}
+                    </Text>
+                )}
             </View>
             <TouchableOpacity onPress={() => onFlagPress(item)}>
                 <Ionicons
@@ -45,9 +49,9 @@ const ProfileHeader = React.memo(({ item, onPress, onFlagPress, colors }) => {
 
 const styles = StyleSheet.create({
     header: {
+        paddingVertical: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 15,
     },
     profilePic: {
         width: 40,
@@ -58,6 +62,10 @@ const styles = StyleSheet.create({
     hostName: {
         fontWeight: '600',
         fontSize: 16,
+    },
+    location: {
+        fontSize: 14,
+        marginTop: 4,
     },
     onlineIndicator: {
         position: 'absolute',
