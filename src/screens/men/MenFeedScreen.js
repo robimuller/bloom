@@ -37,6 +37,7 @@ import ProfileDetailsBottomSheet from '../../components/ProfileDetailsBottomShee
 import { calculateDistance } from '../../utils/distance';
 import { TapGestureHandler, State } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
+import ZoomableImage from '../../components/ZoomableImage';
 
 
 
@@ -366,10 +367,10 @@ function Carousel({
                     onScroll={onScroll}
                     scrollEnabled={photos.length > 1}
                     renderItem={({ item }) => (
-                        <Image
+                        <ZoomableImage
                             source={typeof item === 'string' ? { uri: item } : item}
                             style={[styles.carouselImage, { height: carouselHeight }]}
-                            transition={0}
+                            transition={0} // if needed
                         />
                     )}
                 />
