@@ -239,12 +239,13 @@ export default function SettingsScreen() {
                             )}
                         </TouchableOpacity>
                         <GradientText
-                            text={`Hello, ${userDoc?.displayName || 'user_name'}`}
+                            text={`Hello, ${userDoc?.firstName || 'user_name'}`}
                             gradientColors={gradientColors}
                             style={styles.headerText}
                         />
                         <Text style={[styles.subText, { color: paperTheme.colors.text }]}>
-                            {userDoc?.location || 'San Francisco, US'}
+                            {userDoc?.city || 'San Francisco, US'}, {userDoc?.country || 'San Francisco, US'}
+
                         </Text>
                     </View>
 

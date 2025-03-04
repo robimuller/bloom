@@ -12,7 +12,7 @@ import {
 } from 'react-native-paper';
 
 const HEADER_HEIGHT = 60;
-const TAB_BAR_HEIGHT = 60; // Adjust based on your tab navigator
+const TAB_BAR_HEIGHT = 60;
 
 const MenFeedLayout = ({
     headerTitle = 'Explore',
@@ -26,7 +26,8 @@ const MenFeedLayout = ({
         SCREEN_HEIGHT -
         HEADER_HEIGHT -
         TAB_BAR_HEIGHT -
-        insets.bottom;
+        insets.bottom -
+        40;
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

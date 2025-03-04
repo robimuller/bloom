@@ -1,3 +1,4 @@
+// App.js
 import React, { useContext } from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -15,11 +16,11 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { ProfilesProvider } from './src/contexts/ProfilesContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PromotionsProvider } from './src/contexts/PromotionsContext';
-import OfflineNotice from './src/components/OfflineNotice'; // import your offline component
+import OfflineNotice from './src/components/OfflineNotice';
 import 'react-native-reanimated';
 import { UserProfileProvider } from './src/contexts/UserProfileContext';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-
+import { LocationProvider } from './src/contexts/LocationContext';
 
 export default function App() {
   return (
@@ -36,7 +37,6 @@ function AppWithPaper() {
 
   return (
     <BottomSheetModalProvider>
-
       <GestureHandlerRootView style={{ flex: 1 }}>
         <PaperProvider theme={paperTheme}>
           <StatusBar barStyle={barStyle} backgroundColor={theme.background} />
@@ -47,17 +47,20 @@ function AppWithPaper() {
                 <UserProfileProvider>
                   <ProfilesProvider>
                     <DatesProvider>
-                      <PromotionsProvider>
-                        <RequestsProvider>
-                          <ChatProvider>
-                            <NotificationsProvider>
-                              <NavigationContainer>
-                                <AppNavigator />
-                              </NavigationContainer>
-                            </NotificationsProvider>
-                          </ChatProvider>
-                        </RequestsProvider>
-                      </PromotionsProvider>
+                      {/* Place the LocationProvider here so that when the user is logged in, the location updates will occur */}
+                      <LocationProvider>
+                        <PromotionsProvider>
+                          <RequestsProvider>
+                            <ChatProvider>
+                              <NotificationsProvider>
+                                <NavigationContainer>
+                                  <AppNavigator />
+                                </NavigationContainer>
+                              </NotificationsProvider>
+                            </ChatProvider>
+                          </RequestsProvider>
+                        </PromotionsProvider>
+                      </LocationProvider>
                     </DatesProvider>
                   </ProfilesProvider>
                 </UserProfileProvider>
@@ -67,6 +70,5 @@ function AppWithPaper() {
         </PaperProvider>
       </GestureHandlerRootView>
     </BottomSheetModalProvider>
-
   );
 }

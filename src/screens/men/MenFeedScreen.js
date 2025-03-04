@@ -29,10 +29,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfilesContext } from '../../contexts/ProfilesContext';
+import { AuthContext } from '../../contexts/AuthContext';
 import ProfileHeader from '../../components/ProfileHeader';
 import { useNavigation } from '@react-navigation/native';
 import MenFeedLayout from '../../components/MenFeedLayout';
 import ProfileDetailsBottomSheet from '../../components/ProfileDetailsBottomSheet';
+import { calculateDistance } from '../../utils/distance';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
@@ -48,6 +50,7 @@ const HEART_COUNT = 6;
 
 export default function MenFeedScreen({ onScroll }) {
     const { womenProfiles, loadingWomen } = useContext(ProfilesContext);
+    const { userDoc } = useContext(AuthContext); // current logged in user's doc with coordinates
     const { colors } = useTheme();
     const navigation = useNavigation();
 
@@ -65,17 +68,15 @@ export default function MenFeedScreen({ onScroll }) {
         modalVisibleRef.current = modalVisible;
     }, [modalVisible]);
 
-    // When the profile header is pressed, open the bottom sheet.
     const handleProfilePress = (profile) => {
         setSheetKey((prev) => prev + 1);
         setSelectedProfile(profile);
         setModalVisible(true);
     };
 
-    // The callback always runs, but it only updates the profile if the modal is open.
     const onViewableItemsChanged = useCallback(
         ({ viewableItems }) => {
-            if (!modalVisibleRef.current) return; // do nothing if the modal is dismissed
+            if (!modalVisibleRef.current) return;
             if (viewableItems.length > 0) {
                 const newProfile = viewableItems[0].item;
                 if (!selectedProfile || newProfile.id !== selectedProfile.id) {
@@ -119,11 +120,13 @@ export default function MenFeedScreen({ onScroll }) {
         });
     };
 
-    // When the bottom sheet is dismissed, clear the modal state.
     const handleCloseBottomSheet = () => {
         setModalVisible(false);
         setSelectedProfile(null);
     };
+
+    console.log(userDoc.firstName, userDoc.city);
+
 
     return (
         <>
@@ -145,45 +148,84 @@ export default function MenFeedScreen({ onScroll }) {
                                 style={{ height: contentHeight }}
                                 data={womenProfiles}
                                 keyExtractor={(profile) => profile.id}
-                                renderItem={({ item }) => (
-                                    <View
-                                        style={[
-                                            styles.cardContainer,
-                                            {
-                                                height: contentHeight,
-                                                backgroundColor: colors.background,
-                                                borderBottomColor: colors.cardBackground,
-                                            },
-                                        ]}
-                                    >
-                                        <ProfileHeader
-                                            item={item}
-                                            onFlagPress={handleFlagPress}
-                                            onPress={handleProfilePress}
-                                            colors={colors}
-                                        />
-                                        <Carousel
-                                            photos={
-                                                item.photos && item.photos.length
-                                                    ? item.photos
-                                                    : [require('../../../assets/avatar-placeholder.png')]
-                                            }
-                                            userId={item.uid}
-                                            isRequested={requestedIds.includes(item.uid)}
-                                            onInvitePress={handleInvitePress}
-                                            onCancelInvite={handleCancelInvite}
-                                        />
-                                        <View style={styles.footer}>
-                                            {item.city && (
-                                                <View style={styles.footerRow}>
-                                                    <Text style={[styles.location, { color: colors.secondary }]}>
-                                                        {item.city}
-                                                    </Text>
-                                                </View>
-                                            )}
+                                renderItem={({ item }) => {
+                                    // Ensure both the current user and profile have coordinates
+                                    const distance =
+                                        userDoc?.coordinates && item.coordinates
+                                            ? calculateDistance(userDoc.coordinates, item.coordinates)
+                                            : 0;
+                                    const formattedDistance = `${distance.toFixed(2)} km away`;
+
+                                    return (
+                                        <View
+                                            style={[
+                                                styles.cardContainer,
+                                                {
+                                                    height: contentHeight,
+                                                    backgroundColor: colors.background,
+                                                    borderBottomColor: colors.cardBackground,
+                                                },
+                                            ]}
+                                        >
+                                            <ProfileHeader
+                                                item={item}
+                                                onFlagPress={handleFlagPress}
+                                                onPress={handleProfilePress}
+                                                colors={colors}
+                                            />
+                                            <Carousel
+                                                photos={
+                                                    item.photos && item.photos.length
+                                                        ? item.photos
+                                                        : [require('../../../assets/avatar-placeholder.png')]
+                                                }
+                                                userId={item.uid}
+                                                isRequested={requestedIds.includes(item.uid)}
+                                                onInvitePress={handleInvitePress}
+                                                onCancelInvite={handleCancelInvite}
+                                            />
+                                            <View
+                                                style={[
+                                                    styles.footer,
+                                                    { backgroundColor: colors.cardBackground },
+                                                ]}
+                                            >
+                                                {item.city && (
+                                                    <View style={styles.footerRow}>
+                                                        <Text
+                                                            style={[
+                                                                styles.location,
+                                                                { color: colors.secondary },
+                                                            ]}
+                                                        >
+                                                            {item.city}, {item.country}
+                                                        </Text>
+                                                        <Text
+                                                            style={[
+                                                                styles.location,
+                                                                { color: colors.secondary },
+                                                            ]}
+                                                        >
+                                                            {formattedDistance}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                                {item.bio && (
+                                                    <View style={styles.footerRow}>
+                                                        <Text
+                                                            style={[
+                                                                styles.location,
+                                                                { color: colors.text },
+                                                            ]}
+                                                        >
+                                                            {item.bio}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                         </View>
-                                    </View>
-                                )}
+                                    );
+                                }}
                                 onViewableItemsChanged={onViewableItemsChanged}
                                 viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
                                 pagingEnabled
@@ -212,7 +254,10 @@ export default function MenFeedScreen({ onScroll }) {
                     onPressOut={() => setReportModalVisible(false)}
                 >
                     <TouchableOpacity
-                        style={[styles.modalContainer, { backgroundColor: colors.background }]}
+                        style={[
+                            styles.modalContainer,
+                            { backgroundColor: colors.background },
+                        ]}
                         activeOpacity={1}
                         onPress={() => { }}
                     >
@@ -225,7 +270,11 @@ export default function MenFeedScreen({ onScroll }) {
                         {REPORT_OPTIONS.map((reason) => (
                             <View key={reason} style={styles.checkboxRow}>
                                 <Checkbox.Android
-                                    status={reportReasons.includes(reason) ? 'checked' : 'unchecked'}
+                                    status={
+                                        reportReasons.includes(reason)
+                                            ? 'checked'
+                                            : 'unchecked'
+                                    }
                                     onPress={() => toggleReason(reason)}
                                     color={colors.primary}
                                     uncheckedColor={colors.outline}
@@ -252,7 +301,6 @@ export default function MenFeedScreen({ onScroll }) {
                 </TouchableOpacity>
             </Modal>
 
-            {/* Render the bottom sheet only if a profile is selected */}
             {selectedProfile && (
                 <ProfileDetailsBottomSheet
                     key={sheetKey}
@@ -415,9 +463,21 @@ function FloatingHeart({ progress, angle, distance, scale }) {
             [0, 1, 0],
             Extrapolate.CLAMP
         );
-        const x = interpolate(progress.value, [0, 1], [0, distance * Math.cos(angle)]);
-        const y = interpolate(progress.value, [0, 1], [0, -distance * Math.sin(angle)]);
-        const _scale = interpolate(progress.value, [0, 1], [scale, scale * 0.8]);
+        const x = interpolate(
+            progress.value,
+            [0, 1],
+            [0, distance * Math.cos(angle)]
+        );
+        const y = interpolate(
+            progress.value,
+            [0, 1],
+            [0, -distance * Math.sin(angle)]
+        );
+        const _scale = interpolate(
+            progress.value,
+            [0, 1],
+            [scale, scale * 0.8]
+        );
 
         return {
             transform: [{ translateX: x }, { translateY: y }, { scale: _scale }],
@@ -447,6 +507,9 @@ const styles = StyleSheet.create({
     },
     footer: {
         marginTop: 8,
+        height: 125,
+        padding: 20,
+        borderRadius: 16,
     },
     footerRow: {
         flexDirection: 'row',
