@@ -1,7 +1,7 @@
 // App.js
-import React, { useContext } from 'react';
+import React, { useEffect, useContext } from 'react';
 import { StatusBar } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { DatesProvider } from './src/contexts/DatesContext';
 import { RequestsProvider } from './src/contexts/RequestsContext';
@@ -21,8 +21,14 @@ import 'react-native-reanimated';
 import { UserProfileProvider } from './src/contexts/UserProfileContext';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { LocationProvider } from './src/contexts/LocationContext';
+import * as SplashScreen from 'expo-splash-screen';
 
+// Prevent the splash screen from auto-hiding on app load
 export default function App() {
+  useEffect(() => {
+    SplashScreen.preventAutoHideAsync().catch(() => { });
+  }, []);
+
   return (
     <ThemeProvider>
       <AppWithPaper />
@@ -30,16 +36,40 @@ export default function App() {
   );
 }
 
+// App.js (updated snippet)
 function AppWithPaper() {
-  const { theme, themeMode } = useContext(ThemeContext);
+  const { theme, themeMode, colors } = useContext(ThemeContext);
   const paperTheme = createPaperTheme(theme, themeMode);
   const barStyle = themeMode === 'light' ? 'dark-content' : 'light-content';
 
+  // Create a navigation theme that uses your dark background
+  // and includes the fonts from paperTheme
+  const navigationTheme = {
+    dark: themeMode === 'dark',
+    fonts: paperTheme.fonts, // add fonts here
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.background, // use your dark theme background
+      card: colors.background,       // card background during transitions
+      text: colors.text,
+      border: colors.background,
+      primary: colors.primary,
+      notification: colors.primary,
+    },
+  };
+
+  useEffect(() => {
+    async function prepare() {
+      await SplashScreen.hideAsync();
+    }
+    prepare();
+  }, []);
+
   return (
     <BottomSheetModalProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
         <PaperProvider theme={paperTheme}>
-          <StatusBar barStyle={barStyle} backgroundColor={theme.background} />
+          <StatusBar barStyle={barStyle} backgroundColor={colors.background} />
           <OfflineNotice />
           <AuthProvider>
             <SignUpProvider>
@@ -47,13 +77,12 @@ function AppWithPaper() {
                 <UserProfileProvider>
                   <ProfilesProvider>
                     <DatesProvider>
-                      {/* Place the LocationProvider here so that when the user is logged in, the location updates will occur */}
                       <LocationProvider>
                         <PromotionsProvider>
                           <RequestsProvider>
                             <ChatProvider>
                               <NotificationsProvider>
-                                <NavigationContainer>
+                                <NavigationContainer theme={navigationTheme}>
                                   <AppNavigator />
                                 </NavigationContainer>
                               </NotificationsProvider>

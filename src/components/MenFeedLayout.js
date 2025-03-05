@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useThemeContext } from '../contexts/ThemeContext';
+
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -16,8 +18,9 @@ const HEADER_HEIGHT = 60;
 const MenFeedLayout = ({
     headerTitle = 'Explore',
     children,
-    colors = { background: '#fff', text: '#000', primary: '#007AFF' },
 }) => {
+    const { colors } = useThemeContext();
+
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -43,7 +46,7 @@ const MenFeedLayout = ({
             </View>
 
             {/* Content Area */}
-            <View style={[styles.contentArea, { height: contentHeight }]}>
+            <View style={[styles.contentArea, { flex: 1, backgroundColor: colors.background }]}>
                 {typeof children === 'function' ? children(contentHeight) : children}
             </View>
         </SafeAreaView>

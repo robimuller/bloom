@@ -12,7 +12,6 @@ export const lightTheme = {
     overlay: 'rgba(255, 255, 255, 0.2)',
     overlay2: 'rgba(109, 109, 109, 0.23)',
 
-    // NEW: gradient colors for the main background
     mainBackground: ['#C559CE', '#94bbe9'],
 };
 
@@ -31,6 +30,5 @@ export const darkTheme = {
     outline: '#AAAAAA',
 
 
-    // NEW: gradient colors for the main background
     mainBackground: ['#23292f', '#171d24'],
 };

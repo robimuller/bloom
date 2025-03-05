@@ -172,7 +172,7 @@ export default function MenHomeScreen() {
                 </View>
 
                 {/* Promotions Section */}
-                {promotions && promotions.length >= 40 && (
+                {promotions && promotions.length >= 2 && (
                     <View style={styles.section}>
                         <ViewMoreHeader
                             title="Promotions"

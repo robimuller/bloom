@@ -1,6 +1,32 @@
 // src/themes/paper.js
 import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 
+const extendedFonts = {
+    regular: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+    },
+    medium: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+    },
+    light: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+    },
+    thin: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+    },
+    headlineMedium: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        fontSize: 28, // Example values; adjust as needed
+        letterSpacing: 0,
+    },
+    // Add other MD3 typography variants as needed...
+};
+
 export function createPaperTheme(baseTheme, mode = 'light') {
     const paperBase = mode === 'light' ? MD3LightTheme : MD3DarkTheme;
 
@@ -24,10 +50,9 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             outline: baseTheme.outline,
             accent: baseTheme.accent,
             tertiary: baseTheme.tertiary,
-
-            // NEW: carry over the gradient array
             mainBackground: baseTheme.mainBackground,
         },
         roundness: 5,
+        fonts: extendedFonts, // Provide a complete fonts mapping including headlineMedium, etc.
     };
 }

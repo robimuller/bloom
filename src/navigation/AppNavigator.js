@@ -4,8 +4,8 @@ import { useTheme } from 'react-native-paper';
 
 // Stacks
 import AuthStack from './AuthStack';
-import MenMainNavigator from './men/MenMainNavigator';
 import WomenMainNavigator from './women/WomenMainNavigator';
+import MenTabNavigator from './men/MenTabNavigator';
 
 // Wizard Stacks
 import EmailSignUpStack from './EmailSignUpStack';
@@ -41,7 +41,7 @@ export default function AppNavigator() {
 
     // Otherwise, user has finished onboarding, so route by gender
     if (userDoc?.gender === 'male') {
-        return <MenMainNavigator />;
+        return <MenTabNavigator />;
     } else if (userDoc?.gender === 'female') {
         return <WomenMainNavigator />;
     } else {

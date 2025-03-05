@@ -163,7 +163,7 @@ export default function MenFeedScreen({ onScroll }) {
 
 
     return (
-        <>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
             <MenFeedLayout
                 headerTitle="Explore"
                 onInvitePress={() => Alert.alert('Invite pressed')}
@@ -174,14 +174,14 @@ export default function MenFeedScreen({ onScroll }) {
                 {(contentHeight) => (
                     <>
                         {loadingWomen ? (
-                            <View style={styles.loadingContainer}>
+                            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
                                 <Text style={{ color: colors.text }}>Loading profiles...</Text>
                             </View>
                         ) : (
                             <AnimatedFlatList
                                 ref={flatListRef}
                                 initialScrollIndex={initialIndex} // Renders directly at the target index
-                                style={{ height: contentHeight }}
+                                style={{ flex: 1, backgroundColor: colors.background }}  // Use flex: 1 and add backgroundColor
                                 data={womenProfiles}
                                 keyExtractor={(profile) => profile.id}
                                 getItemLayout={(data, index) => ({
@@ -307,7 +307,7 @@ export default function MenFeedScreen({ onScroll }) {
                     onClose={handleCloseBottomSheet}
                 />
             )}
-        </>
+        </View>
     );
 }
 
