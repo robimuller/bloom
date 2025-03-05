@@ -21,10 +21,16 @@ const extendedFonts = {
     headlineMedium: {
         fontFamily: 'System',
         fontWeight: 'normal',
-        fontSize: 28, // Example values; adjust as needed
+        fontSize: 28, // Example value; adjust as needed
         letterSpacing: 0,
     },
-    // Add other MD3 typography variants as needed...
+    bodySmall: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        fontSize: 12, // Example value; adjust as needed
+        letterSpacing: 0,
+    },
+    // Add additional variants if needed.
 };
 
 export function createPaperTheme(baseTheme, mode = 'light') {
@@ -53,6 +59,6 @@ export function createPaperTheme(baseTheme, mode = 'light') {
             mainBackground: baseTheme.mainBackground,
         },
         roundness: 5,
-        fonts: extendedFonts, // Provide a complete fonts mapping including headlineMedium, etc.
+        fonts: extendedFonts,
     };
 }

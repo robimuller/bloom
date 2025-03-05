@@ -46,7 +46,7 @@ const MenFeedLayout = ({
             </View>
 
             {/* Content Area */}
-            <View style={[styles.contentArea, { flex: 1, backgroundColor: colors.background }]}>
+            <View style={[styles.contentArea, { height: contentHeight }]}>
                 {typeof children === 'function' ? children(contentHeight) : children}
             </View>
         </SafeAreaView>

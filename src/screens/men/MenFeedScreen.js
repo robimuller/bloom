@@ -181,7 +181,7 @@ export default function MenFeedScreen({ onScroll }) {
                             <AnimatedFlatList
                                 ref={flatListRef}
                                 initialScrollIndex={initialIndex} // Renders directly at the target index
-                                style={{ flex: 1, backgroundColor: colors.background }}  // Use flex: 1 and add backgroundColor
+                                style={{ height: contentHeight, backgroundColor: colors.background }}  // Use flex: 1 and add backgroundColor
                                 data={womenProfiles}
                                 keyExtractor={(profile) => profile.id}
                                 getItemLayout={(data, index) => ({

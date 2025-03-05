@@ -1,4 +1,4 @@
-// src/screens/men/MenHomeScreen.js
+// MenHomeScreen.js
 import React, { useContext, useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, ScrollView, FlatList, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,9 +18,11 @@ import LocationSelector from '../../components/LocationSelector';
 import PromotionsCard from '../../components/PromotionsCard';
 import { getFeaturedDateConcepts } from '../../utils/recommendDateConcepts';
 import { getRecommendedProfiles } from '../../utils/recommendProfiles';
-import { calculateAge } from '../../utils/deduceAge'; // Import the age util
-
-
+import { getNewcomers } from '../../utils/getNewcomers'; // <-- import your new helper
+import { calculateAge } from '../../utils/deduceAge';
+import LazyImageReanimated from '../../components/LazyImageReanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import NewcomerPreview from '../../components/NewcomerPreview';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -56,6 +58,7 @@ export default function MenHomeScreen() {
         navigation.navigate('MenFeed', { selectedCategory: categoryId });
     };
 
+    // Prefetch images for performance
     useEffect(() => {
         if (womenProfiles && womenProfiles.length > 0) {
             womenProfiles.forEach(profile => {
@@ -68,12 +71,12 @@ export default function MenHomeScreen() {
         }
     }, [womenProfiles]);
 
-    // A simple preview card reusing data from MenFeedScreen.
+    // Simple preview card
     const MenFeedCardPreview = ({ item }) => {
         const age = calculateAge(item.birthday);
         return (
             <TouchableOpacity
-                style={[styles.previewCard]}
+                style={styles.previewCard}
                 onPress={() => navigation.navigate('MenFeed', { initialItemId: item.id })}
                 activeOpacity={0.8}
             >
@@ -97,7 +100,7 @@ export default function MenHomeScreen() {
         );
     };
 
-    // A reusable component for "View More" header with chevron icon.
+    // "View More" header
     const ViewMoreHeader = ({ title, onPress }) => (
         <View style={styles.sectionHeader}>
             <Text style={[styles.sectionHeaderText, { color: colors.text }]}>{title}</Text>
@@ -108,146 +111,215 @@ export default function MenHomeScreen() {
         </View>
     );
 
-    // Compute recommended profiles based on mutual interests.
+    // Recommended profiles
     const recommendedProfiles = currentUser && womenProfiles.length
         ? getRecommendedProfiles(womenProfiles, currentUser)
         : [];
 
-    // Log each recommended profile's first name and score when recommendedProfiles updates.
+    // Newcomers (joined within last 7 days)
+    const newcomers = getNewcomers(womenProfiles, 7);
+
+    // Reanimated fade in
+    const containerOpacity = useSharedValue(0);
+    const containerStyle = useAnimatedStyle(() => ({
+        opacity: containerOpacity.value,
+    }));
+
     useEffect(() => {
-        if (recommendedProfiles.length) {
-            console.log("Recommended Profiles and their scores:");
-            recommendedProfiles.forEach(profile => {
-                console.log(`${profile.firstName}: ${profile.recommendationScore}`);
-            });
+        containerOpacity.value = withTiming(1, { duration: 500 });
+    }, []);
+
+    // More customized subtext logic based on gender + time of day
+    // Time-based greeting with a "Hello Nighownl" case
+    function getTimeBasedGreeting() {
+        const hour = new Date().getHours();
+
+        if (hour < 6) {
+            return 'Hello, Night Owl';
+        } else if (hour < 12) {
+            return 'Good Morning';
+        } else if (hour < 18) {
+            return 'Good Afternoon';
+        } else {
+            return 'Good Evening';
         }
-    }, [recommendedProfiles]);
+    }
+    function getSubText(gender) {
+        const hour = new Date().getHours();
+
+        if (hour < 6) {
+            // Hello Night Owl
+            if (gender === 'male') {
+                return "Still awake? Let’s see who's around this late.";
+            } else if (gender === 'female') {
+                return "Burning the midnight oil? Check out men’s late-night dates.";
+            }
+            return "Up late? Explore what’s new.";
+        } else if (hour < 12) {
+            // Morning
+            if (gender === 'male') {
+                return "Rise and shine! Let's discover new profiles.";
+            } else if (gender === 'female') {
+                return "Morning vibes. Check out the latest dates men have posted.";
+            }
+            return "Explore what's new this morning.";
+        } else if (hour < 18) {
+            // Afternoon
+            if (gender === 'male') {
+                return "Afternoon calls for exploring who's around.";
+            } else if (gender === 'female') {
+                return "Afternoon is perfect for browsing upcoming date ideas.";
+            }
+            return "Explore what's new this afternoon.";
+        } else {
+            // Evening
+            if (gender === 'male') {
+                return "Night owl? See who's out there tonight.";
+            } else if (gender === 'female') {
+                return "Evening chill. Discover fresh date invitations.";
+            }
+            return "Explore what's new tonight.";
+        }
+    }
+    console.log(currentUser.gender)
+
+    const greeting = getTimeBasedGreeting();
+    const subText = getSubText(currentUser?.gender);
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-            {/* Header */}
-            <View style={styles.header}>
-                {/* <View style={styles.topRow}>
-                    <TouchableOpacity
-                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.cardBackground }]}
-                        onPress={() => navigation.navigate('Settings')}
-                    >
-                        <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
-                    </TouchableOpacity>
-                    <LocationSelector />
-                    <TouchableOpacity
-                        style={[styles.iconCircle, { backgroundColor: colors.cardBackground }]}
-                        onPress={() => navigation.navigate('MenNotifications')}
-                    >
-                        <View style={{ position: 'relative' }}>
-                            <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
-                            {pendingCount > 0 && (
-                                <View style={styles.badgeContainer}>
-                                    <Text style={styles.badgeText}>{pendingCount}</Text>
-                                </View>
+            {/* Optional header */}
+            <View style={styles.header} />
+
+            <Animated.View style={containerStyle}>
+                <ScrollView contentContainerStyle={styles.sectionsContainer}>
+                    {/* Greeting Section */}
+                    <View style={styles.greetingSection}>
+                        <Text style={[styles.greetingTitle, { color: colors.text }]} numberOfLines={1}>
+                            {greeting}
+                            <Text style={[styles.greetingDots, { fontSize: 32, color: colors.primary }]}> ...</Text>
+                        </Text>
+                        <Text style={[styles.greetingSubtitle, { color: colors.secondary }]}>
+                            {subText}
+                        </Text>
+                    </View>
+                    {/* Explore Section */}
+                    <View style={styles.section}>
+                        <ViewMoreHeader title="Explore" onPress={() => navigation.navigate('MenFeed')} />
+                        {loadingWomen ? (
+                            <Text style={{ color: colors.text }}>Loading profiles...</Text>
+                        ) : (
+                            <FlatList
+                                data={womenProfiles.slice(0, 3)}
+                                horizontal
+                                keyExtractor={(item) => item.id}
+                                showsHorizontalScrollIndicator={false}
+                                renderItem={({ item }) => <MenFeedCardPreview item={item} />}
+                                contentContainerStyle={styles.horizontalScroll}
+                            />
+                        )}
+                    </View>
+
+                    {/* Newcomers Section */}
+                    {newcomers && newcomers.length > 0 && (
+                        <View style={styles.section}>
+                            <ViewMoreHeader
+                                title="Newcomers"
+                                onPress={() => {
+                                    // Optionally navigate to a dedicated screen for all newcomers
+                                }}
+                            />
+                            <FlatList
+                                data={newcomers.slice(0, 4)} // Show top 3 newcomers
+                                horizontal
+                                keyExtractor={(item) => item.id}
+                                showsHorizontalScrollIndicator={false}
+                                renderItem={({ item }) => (
+                                    <NewcomerPreview
+                                        item={item}
+                                        onPress={() => navigation.navigate('MenFeed', { initialItemId: item.id })}
+                                    />
+                                )}
+                                contentContainerStyle={styles.horizontalScroll}
+                            />
+                        </View>
+                    )}
+
+                    {/* Promotions Section */}
+                    {promotions && promotions.length >= 2 && (
+                        <View style={styles.section}>
+                            <ViewMoreHeader
+                                title="Promotions"
+                                onPress={() => navigation.navigate('MenPromotionsList')}
+                            />
+                            {loadingPromotions ? (
+                                <Text style={{ color: colors.text }}>Loading promotions...</Text>
+                            ) : (
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                    {promotions.slice(0, 3).map((promo) => (
+                                        <PromotionsCard
+                                            key={promo.id}
+                                            promotion={promo}
+                                            onPress={(promo) =>
+                                                navigation.navigate('MenPromotionDetail', { promo })
+                                            }
+                                        />
+                                    ))}
+                                </ScrollView>
                             )}
                         </View>
-                    </TouchableOpacity>
-                </View> */}
-
-            </View>
-
-            {/* Sections Container */}
-            <ScrollView contentContainerStyle={styles.sectionsContainer}>
-                {/* Explore Section */}
-                <View style={styles.section}>
-                    <ViewMoreHeader title="Explore" onPress={() => navigation.navigate('MenFeed')} />
-                    {loadingWomen ? (
-                        <Text style={{ color: colors.text }}>Loading profiles...</Text>
-                    ) : (
-                        <FlatList
-                            data={womenProfiles.slice(0, 3)}
-                            horizontal
-                            keyExtractor={(item) => item.id}
-                            showsHorizontalScrollIndicator={false}
-                            renderItem={({ item }) => <MenFeedCardPreview item={item} />}
-                            contentContainerStyle={styles.horizontalScroll}
-                        />
                     )}
-                </View>
 
-                {/* Promotions Section */}
-                {promotions && promotions.length >= 2 && (
+                    {/* Featured Date Concepts Section */}
                     <View style={styles.section}>
                         <ViewMoreHeader
-                            title="Promotions"
-                            onPress={() => navigation.navigate('MenPromotionsList')}
+                            title="Daily Ideas"
+                            onPress={() => navigation.navigate('FeaturedDateConceptsScreen')}
                         />
-                        {loadingPromotions ? (
-                            <Text style={{ color: colors.text }}>Loading promotions...</Text>
+                        {loadingDateConcepts ? (
+                            <Text style={{ color: colors.text }}>Loading date ideas...</Text>
                         ) : (
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.horizontalScroll}
-                            >
-                                {promotions.slice(0, 3).map((promo) => (
-                                    <PromotionsCard
-                                        key={promo.id}
-                                        promotion={promo}
-                                        onPress={(promo) =>
-                                            navigation.navigate('MenPromotionDetail', { promo })
-                                        }
-                                    />
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                {featuredDateConcepts.map((idea, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={[styles.featuredCard, { backgroundColor: colors.cardBackground }]}
+                                        onPress={() => {
+                                            console.log('Selected date concept:', idea);
+                                        }}
+                                    >
+                                        <LinearGradient
+                                            colors={[colors.background, colors.background]}
+                                            style={styles.magicIconContainer}
+                                        >
+                                            <FontAwesome5 name="magic" size={16} color={colors.primary} />
+                                        </LinearGradient>
+                                        <Text style={[styles.featuredTitle, { color: colors.text }]}>{idea.title}</Text>
+                                        <Text style={[styles.featuredDescription, { color: colors.secondary }]}>{idea.description}</Text>
+                                    </TouchableOpacity>
                                 ))}
                             </ScrollView>
                         )}
                     </View>
-                )}
 
-                {/* Featured Date Concepts Section */}
-                <View style={styles.section}>
-                    <ViewMoreHeader title="Daily Ideas" onPress={() => navigation.navigate('FeaturedDateConceptsScreen')} />
-                    {loadingDateConcepts ? (
-                        <Text style={{ color: colors.text }}>Loading date ideas...</Text>
-                    ) : (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-                            {featuredDateConcepts.map((idea, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    style={[styles.featuredCard, { backgroundColor: colors.cardBackground }]}
-                                    onPress={() => {
-                                        console.log('Selected date concept:', idea);
-                                    }}
-                                >
-                                    <LinearGradient
-                                        colors={[colors.background, colors.background]}
-                                        style={styles.magicIconContainer}
-                                    >
-                                        <FontAwesome5 name="magic" size={16} color={colors.primary} />
-                                    </LinearGradient>
-                                    <Text style={[styles.featuredTitle, { color: colors.text }]}>{idea.title}</Text>
-                                    <Text style={[styles.featuredDescription, { color: colors.secondary }]}>
-                                        {idea.description}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    )}
-                </View>
-
-                {/* Recommended Section */}
-                <View style={styles.section}>
-                    <ViewMoreHeader title="Recommended For You" onPress={() => navigation.navigate('MenFeed')} />
-                    {loadingWomen ? (
-                        <Text style={{ color: colors.text }}>Loading profiles...</Text>
-                    ) : (
-                        <FlatList
-                            data={recommendedProfiles.slice(0, 3)} // Show top three recommended profiles
-                            horizontal
-                            keyExtractor={(item) => item.id}
-                            showsHorizontalScrollIndicator={false}
-                            renderItem={({ item }) => <MenFeedCardPreview item={item} />}
-                            contentContainerStyle={styles.horizontalScroll}
-                        />
-                    )}
-                </View>
-            </ScrollView>
+                    {/* Recommended Section */}
+                    <View style={styles.section}>
+                        <ViewMoreHeader title="Recommended For You" onPress={() => navigation.navigate('MenFeed')} />
+                        {loadingWomen ? (
+                            <Text style={{ color: colors.text }}>Loading profiles...</Text>
+                        ) : (
+                            <FlatList
+                                data={recommendedProfiles.slice(0, 3)}
+                                horizontal
+                                keyExtractor={(item) => item.id}
+                                showsHorizontalScrollIndicator={false}
+                                renderItem={({ item }) => <MenFeedCardPreview item={item} />}
+                                contentContainerStyle={styles.horizontalScroll}
+                            />
+                        )}
+                    </View>
+                </ScrollView>
+            </Animated.View>
         </SafeAreaView>
     );
 }
@@ -261,26 +333,27 @@ const styles = StyleSheet.create({
         width: '100%',
         marginBottom: 16,
     },
-    topRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingTop: 16,
-        height: 90,
-    },
-    filterContainer: {},
-    iconCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     sectionsContainer: {
         paddingBottom: 80,
     },
     section: {
         marginBottom: 20,
+    },
+    greetingSection: {
+        marginBottom: 20,
+    },
+    greetingTitle: {
+        fontSize: 25,
+        fontWeight: '500',
+        marginBottom: 4,
+    },
+    greetingDots: {
+        fontSize: 32,
+        fontWeight: '700',
+    },
+    greetingSubtitle: {
+        fontSize: 14,
+        fontWeight: '500',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -289,8 +362,8 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     sectionHeaderText: {
-        fontSize: 25,
-        fontWeight: '600',
+        fontSize: 20,
+        fontWeight: '800',
     },
     viewMoreContainer: {
         flexDirection: 'row',
@@ -303,41 +376,6 @@ const styles = StyleSheet.create({
     chevronIcon: {
         marginLeft: 4,
         marginRight: 16,
-    },
-    horizontalScroll: {},
-    fabContainer: {
-        position: 'absolute',
-        bottom: 16,
-        alignSelf: 'center',
-    },
-    fabGradient: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-        elevation: 5,
-    },
-    badgeContainer: {
-        position: 'absolute',
-        right: -6,
-        top: -4,
-        backgroundColor: 'red',
-        borderRadius: 10,
-        paddingHorizontal: 5,
-        paddingVertical: 1,
-        minWidth: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    badgeText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: 'bold',
     },
     previewCard: {
         width: 200,
