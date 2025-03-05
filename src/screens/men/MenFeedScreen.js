@@ -370,7 +370,7 @@ function Carousel({
                         <ZoomableImage
                             source={typeof item === 'string' ? { uri: item } : item}
                             style={[styles.carouselImage, { height: carouselHeight }]}
-                            transition={0} // if needed
+                            transition={0} // if you still need the transition prop from expo-image
                         />
                     )}
                 />

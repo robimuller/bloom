@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Dimensions, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 // Import your screens and navigators
 import MenHomeStack from './MenHomeStack';
@@ -15,6 +16,38 @@ import CreateDateScreen from '../../screens/men/CreateDateScreen';
 
 const Tab = createBottomTabNavigator();
 const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// Generic custom tab bar button with haptics
+const CustomTabBarButton = ({ onPress, children, ...props }) => {
+    return (
+        <TouchableOpacity
+            {...props}
+            onPress={() => {
+                Haptics.selectionAsync();
+                if (onPress) onPress();
+            }}
+        >
+            {children}
+        </TouchableOpacity>
+    );
+};
+
+// Special Create Date button component
+const CreateDateButton = ({ size, focused }) => {
+    const theme = useTheme();
+    return (
+        <View style={styles.createDateButtonContainer}>
+            <LinearGradient
+                colors={[theme.colors.primary, "#7C49C6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.createDateButton, { width: size * 2, height: size * 2, borderRadius: size }]}
+            >
+                <Ionicons name="add" size={size} color={theme.colors.background} />
+            </LinearGradient>
+        </View>
+    );
+};
 
 const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
     const theme = useTheme();
@@ -62,22 +95,6 @@ const AnimatedTabIcon = ({ iconName, focused, size, color }) => {
     );
 };
 
-const CreateDateButton = ({ size, focused }) => {
-    const theme = useTheme();
-    return (
-        <View style={styles.createDateButtonContainer}>
-            <LinearGradient
-                colors={[theme.colors.primary, "#7C49C6"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[styles.createDateButton, { width: size * 2, height: size * 2, borderRadius: size }]}
-            >
-                <Ionicons name="add" size={size} color={theme.colors.background} />
-            </LinearGradient>
-        </View>
-    );
-};
-
 export default function MenTabNavigator() {
     const theme = useTheme();
 
@@ -95,6 +112,13 @@ export default function MenTabNavigator() {
                     shadowOpacity: 0.1,
                     shadowRadius: 3,
                 },
+                // Use our custom button for all tabs.
+                tabBarButton: (props) => {
+                    if (route.name === 'Create Date') {
+                        return <CustomTabBarButton {...props} />;
+                    }
+                    return <CustomTabBarButton {...props} />;
+                },
                 tabBarIcon: ({ focused, color, size }) => {
                     if (route.name === 'Create Date') {
                         return <CreateDateButton size={size} focused={focused} />;
@@ -109,9 +133,7 @@ export default function MenTabNavigator() {
                     } else if (route.name === 'Settings') {
                         iconName = focused ? 'person' : 'person-outline';
                     }
-                    return (
-                        <AnimatedTabIcon iconName={iconName} focused={focused} size={size} color={color} />
-                    );
+                    return <AnimatedTabIcon iconName={iconName} focused={focused} size={size} color={color} />;
                 },
                 tabBarActiveTintColor: theme.colors.primary,
                 tabBarInactiveTintColor: 'gray',
