@@ -197,7 +197,7 @@ export default function MenHomeScreen() {
                     <View style={styles.greetingSection}>
                         <Text style={[styles.greetingTitle, { color: colors.text }]} numberOfLines={1}>
                             {greeting}
-                            <Text style={[styles.greetingDots, { fontSize: 32, color: colors.primary }]}> ...</Text>
+                            <Text style={[styles.greetingDots, { fontSize: 32, color: colors.primary }]}> ....</Text>
                         </Text>
                         <Text style={[styles.greetingSubtitle, { color: colors.secondary }]}>
                             {subText}
@@ -343,17 +343,19 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     greetingTitle: {
-        fontSize: 25,
-        fontWeight: '500',
+        fontSize: 30,
+        fontWeight: '200',
         marginBottom: 4,
+        fontStyle: "italic"
     },
     greetingDots: {
         fontSize: 32,
         fontWeight: '700',
+        letterSpacing: -3
     },
     greetingSubtitle: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '700',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -363,7 +365,7 @@ const styles = StyleSheet.create({
     },
     sectionHeaderText: {
         fontSize: 20,
-        fontWeight: '800',
+        fontWeight: '900',
     },
     viewMoreContainer: {
         flexDirection: 'row',
@@ -380,7 +382,6 @@ const styles = StyleSheet.create({
     previewCard: {
         width: 200,
         marginRight: 16,
-        borderRadius: 12,
         overflow: 'hidden',
     },
     previewImage: {
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     previewName: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
         marginTop: 8,
     },

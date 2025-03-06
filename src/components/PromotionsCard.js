@@ -75,10 +75,9 @@ const styles = StyleSheet.create({
     },
     content: {
         marginTop: 8,
-        paddingHorizontal: 8,
     },
     previewName: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
     },
     previewLocation: {

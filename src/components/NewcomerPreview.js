@@ -2,11 +2,9 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { Image } from 'expo-image';
-import { calculateAge } from '../utils/deduceAge';
 
 function NewcomerPreview({ item, onPress }) {
     const { colors } = useTheme();
-    const age = calculateAge(item.birthday);
 
     return (
         <TouchableOpacity style={styles.newcomerPreviewCard} onPress={onPress} activeOpacity={0.8}>
@@ -28,7 +26,7 @@ function NewcomerPreview({ item, onPress }) {
                 </View>
             </View>
             <Text style={[styles.newcomerName, { color: colors.text }]} numberOfLines={1}>
-                {item.firstName}{age ? `, ${age}` : ''}
+                {item.firstName}
             </Text>
         </TouchableOpacity>
     );
@@ -72,7 +70,7 @@ const styles = StyleSheet.create({
         color: '#fff',
     },
     newcomerName: {
-        fontSize: 14,
+        fontSize: 10,
         fontWeight: '600',
         textAlign: 'center',
     },
