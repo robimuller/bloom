@@ -13,16 +13,15 @@ import { RequestsContext } from '../../contexts/RequestsContext';
 import { PromotionsContext } from '../../contexts/PromotionsContext';
 import { ProfilesContext } from '../../contexts/ProfilesContext';
 import { UserProfileContext } from '../../contexts/UserProfileContext';
-import CategoryFilter from '../../components/CategoryFilter';
-import LocationSelector from '../../components/LocationSelector';
 import PromotionsCard from '../../components/PromotionsCard';
 import { getFeaturedDateConcepts } from '../../utils/recommendDateConcepts';
 import { getRecommendedProfiles } from '../../utils/recommendProfiles';
 import { getNewcomers } from '../../utils/getNewcomers'; // <-- import your new helper
 import { calculateAge } from '../../utils/deduceAge';
-import LazyImageReanimated from '../../components/LazyImageReanimated';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import NewcomerPreview from '../../components/NewcomerPreview';
+import RecommendProfilePreview from '../../components/RecommendProfilePreview';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -116,8 +115,8 @@ export default function MenHomeScreen() {
         ? getRecommendedProfiles(womenProfiles, currentUser)
         : [];
 
-    // Newcomers (joined within last 7 days)
-    const newcomers = getNewcomers(womenProfiles, 7);
+    // Newcomers (joined within last 2 days)
+    const newcomers = getNewcomers(womenProfiles, 2);
 
     // Reanimated fade in
     const containerOpacity = useSharedValue(0);
@@ -225,19 +224,18 @@ export default function MenHomeScreen() {
                         <View style={styles.section}>
                             <ViewMoreHeader
                                 title="Newcomers"
-                                onPress={() => {
-                                    // Optionally navigate to a dedicated screen for all newcomers
-                                }}
+                                onPress={() => navigation.navigate('MenFeed', { section: 'newcomers' })}
+
                             />
                             <FlatList
-                                data={newcomers.slice(0, 4)} // Show top 3 newcomers
+                                data={newcomers.slice(0, 4)} // Show top 4 newcomers
                                 horizontal
                                 keyExtractor={(item) => item.id}
                                 showsHorizontalScrollIndicator={false}
                                 renderItem={({ item }) => (
                                     <NewcomerPreview
                                         item={item}
-                                        onPress={() => navigation.navigate('MenFeed', { initialItemId: item.id })}
+                                        onPress={() => navigation.navigate('MenFeed', { section: 'newcomers', initialItemId: item.id })}
                                     />
                                 )}
                                 contentContainerStyle={styles.horizontalScroll}
@@ -304,7 +302,10 @@ export default function MenHomeScreen() {
 
                     {/* Recommended Section */}
                     <View style={styles.section}>
-                        <ViewMoreHeader title="Recommended For You" onPress={() => navigation.navigate('MenFeed')} />
+                        <ViewMoreHeader
+                            title="Recommended For You"
+                            onPress={() => navigation.navigate('MenFeed', { section: 'recommended' })}
+                        />
                         {loadingWomen ? (
                             <Text style={{ color: colors.text }}>Loading profiles...</Text>
                         ) : (
@@ -313,7 +314,9 @@ export default function MenHomeScreen() {
                                 horizontal
                                 keyExtractor={(item) => item.id}
                                 showsHorizontalScrollIndicator={false}
-                                renderItem={({ item }) => <MenFeedCardPreview item={item} />}
+                                renderItem={({ item }) => (
+                                    <RecommendProfilePreview item={item} navigation={navigation} />
+                                )}
                                 contentContainerStyle={styles.horizontalScroll}
                             />
                         )}
@@ -334,7 +337,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionsContainer: {
-        paddingBottom: 80,
+        paddingBottom: 20,
     },
     section: {
         marginBottom: 20,

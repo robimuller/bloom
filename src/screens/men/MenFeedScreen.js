@@ -38,6 +38,8 @@ import { calculateDistance } from '../../utils/distance';
 import { TapGestureHandler, State } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import ZoomableImage from '../../components/ZoomableImage';
+import { getNewcomers } from '../../utils/getNewcomers';
+import { getRecommendedProfiles } from '../../utils/recommendProfiles';
 
 
 
@@ -69,13 +71,27 @@ export default function MenFeedScreen({ onScroll }) {
     const [reportTargetUser, setReportTargetUser] = useState(null);
     const [reportReasons, setReportReasons] = useState([]);
 
+    const { selectedCategory, section, initialItemId } = route.params || {};
+
+    // Adjust the filtering logic as needed (e.g., matching a profile property to selectedCategory).
+    let filteredProfiles = womenProfiles;
+    if (selectedCategory) {
+        filteredProfiles = womenProfiles.filter(
+            profile => profile.category === selectedCategory
+        );
+    } else if (section === 'newcomers') {
+        filteredProfiles = getNewcomers(womenProfiles, 2);
+    } else if (section === 'recommended') {
+        filteredProfiles = getRecommendedProfiles(womenProfiles, userDoc);
+    }
+
     // Create a ref for the FlatList
     const flatListRef = useRef(null);
 
     // Determine the initial index based on the passed initialItemId
     const initialIndex =
-        route.params?.initialItemId && womenProfiles.length
-            ? womenProfiles.findIndex(profile => profile.id === route.params.initialItemId)
+        initialItemId && filteredProfiles.length
+            ? filteredProfiles.findIndex(profile => profile.id === initialItemId)
             : 0;
 
 
@@ -182,7 +198,7 @@ export default function MenFeedScreen({ onScroll }) {
                                 ref={flatListRef}
                                 initialScrollIndex={initialIndex} // Renders directly at the target index
                                 style={{ height: contentHeight, backgroundColor: colors.background }}  // Use flex: 1 and add backgroundColor
-                                data={womenProfiles}
+                                data={filteredProfiles} // use the filtered list here
                                 keyExtractor={(profile) => profile.id}
                                 getItemLayout={(data, index) => ({
                                     length: contentHeight,

@@ -6,7 +6,7 @@
  * @param {number} days - Number of days to consider someone a "newcomer."
  * @returns {Array} - Filtered list of newcomer profiles.
  */
-export function getNewcomers(profiles, days = 7) {
+export function getNewcomers(profiles, days = 2) {
     const now = new Date();
     const cutoffDate = new Date(now);
     cutoffDate.setDate(now.getDate() - days); // e.g., 7 days ago
