@@ -1,78 +1,318 @@
-// src/screens/WomenHomeScreen.js
-import React, { useContext, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+// WomenHomeScreen.js
+import React, { useContext, useState, useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text, ScrollView, FlatList, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 
 import { RequestsContext } from '../../contexts/RequestsContext';
-import WomenFeedScreen from './WomenFeedScreen';
-import CategoryFilter from '../../components/CategoryFilter';
-import LocationSelector from '../../components/LocationSelector';
+import { PromotionsContext } from '../../contexts/PromotionsContext';
+import { ProfilesContext } from '../../contexts/ProfilesContext';
+import { UserProfileContext } from '../../contexts/UserProfileContext';
+import PromotionsCard from '../../components/PromotionsCard';
+import { getFeaturedDateConcepts } from '../../utils/recommendDateConcepts';
+import { getRecommendedProfiles } from '../../utils/recommendProfiles';
+import { getNewcomers } from '../../utils/getNewcomers'; // <-- import your new helper
+import { calculateAge } from '../../utils/deduceAge';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import NewcomerPreview from '../../components/NewcomerPreview';
+import RecommendProfilePreview from '../../components/RecommendProfilePreview';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function WomenHomeScreen() {
+    const route = useRoute();
     const navigation = useNavigation();
     const theme = useTheme();
     const { requests } = useContext(RequestsContext);
+    const { promotions, loading: loadingPromotions } = useContext(PromotionsContext);
+    // Note: Use menProfiles instead of womenProfiles for a female user.
+    const { menProfiles, loadingMen } = useContext(ProfilesContext);
+    const { profile: currentUser } = useContext(UserProfileContext);
     const { colors } = useTheme();
 
-    // Count accepted requests.
-    const acceptedCount = requests.filter((r) => r.status === 'accepted').length;
+    // Count pending requests for the badge.
+    const pendingCount = requests.filter((r) => r.status === 'pending').length;
 
-    // Store the currently selected category.
-    const [selectedCategory, setSelectedCategory] = useState('all');
+    // State for Featured Date Concepts
+    const [featuredDateConcepts, setFeaturedDateConcepts] = useState([]);
+    const [loadingDateConcepts, setLoadingDateConcepts] = useState(false);
 
-    // Handler for when a category is selected.
-    const handleCategorySelect = (categoryId) => {
-        console.log('Selected category:', categoryId);
-        setSelectedCategory(categoryId);
+    useEffect(() => {
+        async function fetchDateConcepts() {
+            setLoadingDateConcepts(true);
+            const location = currentUser?.location || "New York";
+            const ideas = await getFeaturedDateConcepts(location);
+            setFeaturedDateConcepts(ideas);
+            setLoadingDateConcepts(false);
+        }
+        fetchDateConcepts();
+    }, [currentUser]);
+
+    // Prefetch images for performance
+    useEffect(() => {
+        if (menProfiles && menProfiles.length > 0) {
+            menProfiles.forEach(profile => {
+                profile.photos?.forEach(photo => {
+                    if (typeof photo === 'string') {
+                        Image.prefetch(photo);
+                    }
+                });
+            });
+        }
+    }, [menProfiles]);
+
+    // Simple preview card for men's profiles
+    const WomenFeedCardPreview = ({ item }) => {
+        const age = calculateAge(item.birthday);
+        return (
+            <TouchableOpacity
+                style={styles.previewCard}
+                onPress={() => navigation.navigate('WomenFeed', { initialItemId: item.id })}
+                activeOpacity={0.8}
+            >
+                <Image
+                    source={
+                        typeof item.photos[0] === 'string'
+                            ? { uri: item.photos[0] }
+                            : item.photos[0]
+                    }
+                    style={styles.previewImage}
+                />
+                <Text style={[styles.previewName, { color: colors.text }]} numberOfLines={1}>
+                    {item.firstName}{age ? `, ${age}` : ''}
+                </Text>
+                {item.location && (
+                    <Text style={[styles.previewLocation, { color: colors.secondary }]} numberOfLines={1}>
+                        {item.location}
+                    </Text>
+                )}
+            </TouchableOpacity>
+        );
     };
+
+    // "View More" header component
+    const ViewMoreHeader = ({ title, onPress }) => (
+        <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionHeaderText, { color: colors.text }]}>{title}</Text>
+            <TouchableOpacity onPress={onPress} style={styles.viewMoreContainer}>
+                <Text style={[styles.viewMoreText, { color: theme.colors.secondary }]}>View More</Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} style={styles.chevronIcon} />
+            </TouchableOpacity>
+        </View>
+    );
+
+    // Recommended profiles
+    const recommendedProfiles = currentUser && menProfiles.length
+        ? getRecommendedProfiles(menProfiles, currentUser)
+        : [];
+
+    // Newcomers (joined within last 30 days)
+    const newcomers = getNewcomers(menProfiles, 30);
+
+    // Reanimated fade in
+    const containerOpacity = useSharedValue(0);
+    const containerStyle = useAnimatedStyle(() => ({
+        opacity: containerOpacity.value,
+    }));
+
+    useEffect(() => {
+        containerOpacity.value = withTiming(1, { duration: 500 });
+    }, []);
+
+    // Time-based greeting and subtext logic
+    function getTimeBasedGreeting() {
+        const hour = new Date().getHours();
+
+        if (hour < 6) {
+            return 'Hello, Night Owl';
+        } else if (hour < 12) {
+            return 'Good Morning';
+        } else if (hour < 18) {
+            return 'Good Afternoon';
+        } else {
+            return 'Good Evening';
+        }
+    }
+    function getSubText(gender) {
+        const hour = new Date().getHours();
+
+        if (hour < 6) {
+            // For early hours, female users see men's profiles
+            if (gender === 'female') {
+                return "Still up? Let’s see which men are out this late.";
+            } else if (gender === 'male') {
+                return "Burning the midnight oil? Check out women’s late-night dates.";
+            }
+            return "Up late? Explore what’s new.";
+        } else if (hour < 12) {
+            if (gender === 'female') {
+                return "Morning vibes. Check out the latest men who have joined.";
+            } else if (gender === 'male') {
+                return "Rise and shine! Let's discover new profiles.";
+            }
+            return "Explore what's new this morning.";
+        } else if (hour < 18) {
+            if (gender === 'female') {
+                return "Afternoon is perfect for browsing exciting men's profiles.";
+            } else if (gender === 'male') {
+                return "Afternoon calls for exploring who's around.";
+            }
+            return "Explore what's new this afternoon.";
+        } else {
+            if (gender === 'female') {
+                return "Evening chill. Discover fresh men invitations.";
+            } else if (gender === 'male') {
+                return "Night owl? See who's out there tonight.";
+            }
+            return "Explore what's new tonight.";
+        }
+    }
+
+    const greeting = getTimeBasedGreeting();
+    const subText = getSubText(currentUser?.gender);
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-            {/* Header */}
-            <View style={styles.header}>
-                {/* Top row */}
-                <View style={styles.topRow}>
-                    {/* Settings */}
-                    <TouchableOpacity
-                        style={[styles.iconCircle, { marginRight: 16, backgroundColor: colors.cardBackground }]}
-                        onPress={() => navigation.navigate('WomenSettings')}
-                    >
-                        <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
-                    </TouchableOpacity>
+            {/* Optional header */}
+            <View style={styles.header} />
 
-                    {/* Location (uses the new LocationSelector component) */}
-                    <LocationSelector />
+            <Animated.View style={containerStyle}>
+                <ScrollView contentContainerStyle={styles.sectionsContainer}>
+                    {/* Greeting Section */}
+                    <View style={styles.greetingSection}>
+                        <Text style={[styles.greetingTitle, { color: colors.text }]} numberOfLines={1}>
+                            {greeting}
+                            <Text style={[styles.greetingDots, { fontSize: 32, color: colors.primary }]}> ....</Text>
+                        </Text>
+                        <Text style={[styles.greetingSubtitle, { color: colors.secondary }]}>
+                            {subText}
+                        </Text>
+                    </View>
+                    {/* Explore Section */}
+                    <View style={styles.section}>
+                        <ViewMoreHeader title="Explore" onPress={() => navigation.navigate('WomenFeed')} />
+                        {loadingMen ? (
+                            <Text style={{ color: colors.text }}>Loading profiles...</Text>
+                        ) : (
+                            <FlatList
+                                data={menProfiles.slice(0, 3)}
+                                horizontal
+                                keyExtractor={(item) => item.id}
+                                showsHorizontalScrollIndicator={false}
+                                renderItem={({ item }) => <WomenFeedCardPreview item={item} />}
+                                contentContainerStyle={styles.horizontalScroll}
+                            />
+                        )}
+                    </View>
 
-                    {/* Notifications */}
-                    <TouchableOpacity
-                        style={[styles.iconCircle, { backgroundColor: colors.cardBackground }]}
-                        onPress={() => navigation.navigate('WomenNotifications')}
-                    >
-                        <View style={{ position: 'relative' }}>
-                            <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
-                            {acceptedCount > 0 && (
-                                <View style={styles.badgeContainer}>
-                                    <Text style={styles.badgeText}>{acceptedCount}</Text>
-                                </View>
+                    {/* Newcomers Section */}
+                    {newcomers && newcomers.length > 0 && (
+                        <View style={styles.section}>
+                            <ViewMoreHeader
+                                title="Newcomers"
+                                onPress={() => navigation.navigate('WomenFeed', { section: 'newcomers' })}
+                            />
+                            <FlatList
+                                data={newcomers.slice(0, 4)}
+                                horizontal
+                                keyExtractor={(item) => item.id}
+                                showsHorizontalScrollIndicator={false}
+                                renderItem={({ item }) => (
+                                    <NewcomerPreview
+                                        item={item}
+                                        onPress={() => navigation.navigate('WomenFeed', { section: 'newcomers', initialItemId: item.id })}
+                                    />
+                                )}
+                                contentContainerStyle={styles.horizontalScroll}
+                            />
+                        </View>
+                    )}
+
+                    {/* Promotions Section */}
+                    {promotions && promotions.length >= 2 && (
+                        <View style={styles.section}>
+                            <ViewMoreHeader
+                                title="Promotions"
+                                onPress={() => navigation.navigate('WomenPromotionsList')}
+                            />
+                            {loadingPromotions ? (
+                                <Text style={{ color: colors.text }}>Loading promotions...</Text>
+                            ) : (
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                    {promotions.slice(0, 3).map((promo) => (
+                                        <PromotionsCard
+                                            key={promo.id}
+                                            promotion={promo}
+                                            onPress={(promo) =>
+                                                navigation.navigate('WomenPromotionDetail', { promo })
+                                            }
+                                        />
+                                    ))}
+                                </ScrollView>
                             )}
                         </View>
-                    </TouchableOpacity>
-                </View>
+                    )}
 
-                {/* Category Filter */}
-                <View style={styles.filterContainer}>
-                    <CategoryFilter onSelect={handleCategorySelect} />
-                </View>
-            </View>
+                    {/* Featured Date Concepts Section */}
+                    <View style={styles.section}>
+                        <ViewMoreHeader
+                            title="Daily Ideas"
+                            onPress={() => navigation.navigate('FeaturedDateConceptsScreen')}
+                        />
+                        {loadingDateConcepts ? (
+                            <Text style={{ color: colors.text }}>Loading date ideas...</Text>
+                        ) : (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                                {featuredDateConcepts.map((idea, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={[styles.featuredCard, { backgroundColor: colors.cardBackground }]}
+                                        onPress={() => {
+                                            console.log('Selected date concept:', idea);
+                                        }}
+                                    >
+                                        <LinearGradient
+                                            colors={[colors.background, colors.background]}
+                                            style={styles.magicIconContainer}
+                                        >
+                                            <FontAwesome5 name="magic" size={16} color={colors.primary} />
+                                        </LinearGradient>
+                                        <Text style={[styles.featuredTitle, { color: colors.text }]}>{idea.title}</Text>
+                                        <Text style={[styles.featuredDescription, { color: colors.secondary }]}>{idea.description}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
+                    </View>
 
-            {/* Main content */}
-            <View style={styles.mainContent}>
-                {/* Pass selectedCategory down to WomenFeedScreen */}
-                <WomenFeedScreen selectedCategory={selectedCategory} />
-            </View>
+                    {/* Recommended Section */}
+                    <View style={styles.section}>
+                        <ViewMoreHeader
+                            title="Recommended For You"
+                            onPress={() => navigation.navigate('WomenFeed', { section: 'recommended' })}
+                        />
+                        {loadingMen ? (
+                            <Text style={{ color: colors.text }}>Loading profiles...</Text>
+                        ) : (
+                            <FlatList
+                                data={recommendedProfiles.slice(0, 3)}
+                                horizontal
+                                keyExtractor={(item) => item.id}
+                                showsHorizontalScrollIndicator={false}
+                                renderItem={({ item }) => (
+                                    <RecommendProfilePreview item={item} navigation={navigation} />
+                                )}
+                                contentContainerStyle={styles.horizontalScroll}
+                            />
+                        )}
+                    </View>
+                </ScrollView>
+            </Animated.View>
         </SafeAreaView>
     );
 }
@@ -80,46 +320,105 @@ export default function WomenHomeScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
+        paddingLeft: 16,
     },
     header: {
         width: '100%',
+        marginBottom: 16,
     },
-    topRow: {
+    sectionsContainer: {
+        paddingBottom: 20,
+    },
+    section: {
+        marginBottom: 20,
+    },
+    greetingSection: {
+        marginBottom: 20,
+    },
+    greetingTitle: {
+        fontSize: 30,
+        fontWeight: '200',
+        marginBottom: 4,
+        fontStyle: "italic"
+    },
+    greetingDots: {
+        fontSize: 32,
+        fontWeight: '700',
+        letterSpacing: -3
+    },
+    greetingSubtitle: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    sectionHeaderText: {
+        fontSize: 20,
+        fontWeight: '900',
+    },
+    viewMoreContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        height: 90,
     },
-    filterContainer: {
-        paddingHorizontal: 10,
-    },
-    iconCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    mainContent: {
-        flex: 1,
-    },
-    badgeContainer: {
-        position: 'absolute',
-        right: -6,
-        top: -4,
-        backgroundColor: 'red',
-        borderRadius: 10,
-        paddingHorizontal: 5,
-        paddingVertical: 1,
-        minWidth: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    badgeText: {
-        color: 'white',
+    viewMoreText: {
         fontSize: 12,
-        fontWeight: 'bold',
+        fontWeight: '500',
+    },
+    chevronIcon: {
+        marginLeft: 4,
+        marginRight: 16,
+    },
+    previewCard: {
+        width: 200,
+        marginRight: 16,
+        overflow: 'hidden',
+    },
+    previewImage: {
+        width: '100%',
+        height: 225,
+        resizeMode: 'cover',
+        borderRadius: 8,
+    },
+    previewName: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginTop: 8,
+    },
+    previewLocation: {
+        fontSize: 14,
+        marginTop: 4,
+    },
+    featuredCard: {
+        width: SCREEN_WIDTH - 32,
+        marginRight: 16,
+        borderRadius: 12,
+        padding: 10,
+        paddingTop: 40,
+        justifyContent: 'flex-start',
+        height: 200,
+        position: 'relative',
+    },
+    featuredTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 4,
+        marginTop: 8,
+    },
+    featuredDescription: {
+        fontSize: 14,
+    },
+    magicIconContainer: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

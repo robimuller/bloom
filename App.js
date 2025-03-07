@@ -22,6 +22,7 @@ import { UserProfileProvider } from './src/contexts/UserProfileContext';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { LocationProvider } from './src/contexts/LocationContext';
 import * as SplashScreen from 'expo-splash-screen';
+import 'react-native-get-random-values';
 
 // Prevent the splash screen from auto-hiding on app load
 export default function App() {
@@ -57,6 +58,7 @@ function AppWithPaper() {
       notification: colors.primary,
     },
   };
+
 
   useEffect(() => {
     async function prepare() {

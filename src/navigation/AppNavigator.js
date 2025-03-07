@@ -4,8 +4,8 @@ import { useTheme } from 'react-native-paper';
 
 // Stacks
 import AuthStack from './AuthStack';
-import WomenMainNavigator from './women/WomenMainNavigator';
 import MenTabNavigator from './men/MenTabNavigator';
+import WomenTabNavigator from './women/WomenTabNavigator';
 
 // Wizard Stacks
 import EmailSignUpStack from './EmailSignUpStack';
@@ -43,7 +43,7 @@ export default function AppNavigator() {
     if (userDoc?.gender === 'male') {
         return <MenTabNavigator />;
     } else if (userDoc?.gender === 'female') {
-        return <WomenMainNavigator />;
+        return <WomenTabNavigator />;
     } else {
         return (
             <View style={[styles.center, { backgroundColor: paperTheme.colors.background }]}>

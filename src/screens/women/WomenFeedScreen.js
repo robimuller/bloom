@@ -1,5 +1,11 @@
-// src/screens/WomenFeedScreen.jsx
-import React, { useContext, useState, useRef, useEffect } from 'react';
+// WomenFeedScreen.js
+import React, {
+    useState,
+    useContext,
+    useCallback,
+    useRef,
+    useEffect,
+} from 'react';
 import {
     View,
     FlatList,
@@ -10,272 +16,276 @@ import {
     TouchableOpacity,
     Modal,
 } from 'react-native';
-import { useTheme, Checkbox, Button } from 'react-native-paper';
+import { useTheme, Button, Checkbox } from 'react-native-paper';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import Animated, {
     useSharedValue,
     withTiming,
     Easing,
-    useAnimatedStyle,
     interpolate,
     Extrapolate,
     runOnJS,
 } from 'react-native-reanimated';
-import { AuthContext } from '../../contexts/AuthContext';
-import { DatesContext } from '../../contexts/DatesContext';
-import { RequestsContext } from '../../contexts/RequestsContext';
-import { getDateCategory } from '../../utils/dateCategory';
-import { calculateAge } from '../../utils/deduceAge';
-import LoadingDates from '../../components/LoadingDates';
-import RevealAnimation from '../../components/RevealAnimation';
-import ExtraActionButtons from '../../components/ExtraActionButtons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ProfilesContext } from '../../contexts/ProfilesContext';
+import { AuthContext } from '../../contexts/AuthContext';
+import ProfileHeader from '../../components/ProfileHeader';
+import { useNavigation, useRoute } from '@react-navigation/native';
+// Replace with your dedicated WomenFeedLayout if available
+import WomenFeedLayout from '../../components/WomenFeedLayout';
+import ProfileDetailsBottomSheet from '../../components/ProfileDetailsBottomSheet';
+import { calculateDistance } from '../../utils/distance';
+import { TapGestureHandler, State } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
+import ZoomableImage from '../../components/ZoomableImage';
+import { getNewcomers } from '../../utils/getNewcomers';
+import { getRecommendedProfiles } from '../../utils/recommendProfiles';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-// Possible reasons for reporting:
 const REPORT_OPTIONS = [
     'Harassment',
     'Fake Profile',
     'Spam',
-    'Sexually explicit content',
-    'Inappropriate date content',
+    'Inappropriate content',
 ];
 
-// Number of tiny hearts to explode
 const HEART_COUNT = 6;
 
-const CARD_HEIGHT = 550; // Adjust as needed.
-const CARD_SPACING = 16;
-
-// Create an Animated version of FlatList
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
-
-export default function WomenFeedScreen({ selectedCategory, onScroll }) {
-    const { user } = useContext(AuthContext);
-    const { dates, loadingDates, fetchDiscoverDates, fetchTrendingDates, fetchLatestDates } = useContext(DatesContext);
-    const { sendRequest, cancelRequest, requests } = useContext(RequestsContext);
+export default function WomenFeedScreen({ onScroll }) {
+    const route = useRoute();
+    const navigation = useNavigation();
+    // Note: Using menProfiles and loadingMen for women users viewing men's profiles.
+    const { menProfiles, loadingMen } = useContext(ProfilesContext);
+    const { userDoc } = useContext(AuthContext);
     const { colors } = useTheme();
-
-    // State for the report modal
+    const [selectedProfile, setSelectedProfile] = useState(null);
+    const [sheetKey, setSheetKey] = useState(0);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [requestedIds, setRequestedIds] = useState([]);
     const [reportModalVisible, setReportModalVisible] = useState(false);
-    const [reportTargetItem, setReportTargetItem] = useState(null);
+    const [reportTargetUser, setReportTargetUser] = useState(null);
     const [reportReasons, setReportReasons] = useState([]);
 
-    // When the selected category changes, re-run the appropriate query.
+    const { selectedCategory, section, initialItemId } = route.params || {};
+
+    // Filter the menProfiles according to the selected criteria.
+    let filteredProfiles = menProfiles;
+    if (selectedCategory) {
+        filteredProfiles = menProfiles.filter(
+            profile => profile.category === selectedCategory
+        );
+    } else if (section === 'newcomers') {
+        filteredProfiles = getNewcomers(menProfiles, 30);
+    } else if (section === 'recommended') {
+        filteredProfiles = getRecommendedProfiles(menProfiles, userDoc);
+    }
+
+    const flatListRef = useRef(null);
+
+    // Determine the initial index based on the passed initialItemId
+    const initialIndex =
+        initialItemId && filteredProfiles.length
+            ? filteredProfiles.findIndex(profile => profile.id === initialItemId)
+            : 0;
+
     useEffect(() => {
-        let unsubscribe;
-        if (selectedCategory === 'trending') {
-            unsubscribe = fetchTrendingDates();
-        } else if (selectedCategory === 'latest') {
-            unsubscribe = fetchLatestDates();
-        } else {
-            unsubscribe = fetchDiscoverDates();
+        if (route.params?.initialItemId && menProfiles.length && flatListRef.current) {
+            setTimeout(() => {
+                flatListRef.current.scrollToIndex({ index: initialIndex, animated: true });
+            }, 500);
         }
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, [selectedCategory]);
+    }, [route.params, menProfiles, initialIndex]);
 
-    // Fired when user taps the heart to create a request
-    const handleSendRequest = async (dateId, hostId) => {
-        try {
-            await sendRequest({ dateId, hostId });
-        } catch (error) {
-            console.error('Error requesting date:', error);
-            Alert.alert('Error', 'Could not send request. Please try again.');
-        }
+    const onScrollToIndexFailed = (info) => {
+        setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+        }, 500);
     };
 
-    // Fired when user taps the heart-dislike to cancel an existing request
-    const handleCancelRequest = async (requestId) => {
-        try {
-            await cancelRequest(requestId);
-            Alert.alert('Request Canceled', 'Your request has been canceled.');
-        } catch (error) {
-            console.error('Error canceling request:', error);
-            Alert.alert('Error', 'Could not cancel request. Please try again.');
-        }
+    const modalVisibleRef = useRef(modalVisible);
+    useEffect(() => {
+        modalVisibleRef.current = modalVisible;
+    }, [modalVisible]);
+
+    const handleProfilePress = (profile) => {
+        setSheetKey(prev => prev + 1);
+        setSelectedProfile(profile);
+        setModalVisible(true);
     };
 
-    // Called when the user taps the flag icon
-    const handleFlagPress = (item) => {
-        setReportTargetItem(item);
-        setReportReasons([]); // reset any previously selected reasons
+    const onViewableItemsChanged = useCallback(
+        ({ viewableItems }) => {
+            if (!modalVisibleRef.current) return;
+            if (viewableItems.length > 0) {
+                const newProfile = viewableItems[0].item;
+                if (!selectedProfile || newProfile.id !== selectedProfile.id) {
+                    setSelectedProfile(newProfile);
+                }
+            }
+        },
+        [selectedProfile]
+    );
+
+    const handleInvitePress = async (userId) => {
+        setRequestedIds(prev => [...prev, userId]);
+    };
+
+    const handleCancelInvite = async (userId) => {
+        setRequestedIds(prev => prev.filter(id => id !== userId));
+    };
+
+    const handleFlagPress = (profile) => {
+        setReportTargetUser(profile);
+        setReportReasons([]);
         setReportModalVisible(true);
     };
 
-    // Submits the report to Firestore
-    const handleSubmitReport = async () => {
-        if (!reportTargetItem) return;
+    const handleSubmitReport = () => {
+        if (!reportTargetUser) return;
         if (reportReasons.length === 0) {
             Alert.alert('Select a reason', 'Please choose at least one reason.');
             return;
         }
-
-        const { id: dateId, hostId } = reportTargetItem;
-        const reporterId = user?.uid; // Use the currently logged-in user’s ID
-
-        if (!reporterId) {
-            Alert.alert('Not Logged In', 'You must be logged in to report a date.');
-            return;
-        }
-
-        try {
-            await reportDate({
-                dateId,
-                hostId,
-                reporterId,
-                reasons: reportReasons,
-            });
-            Alert.alert('Report Submitted', 'Thank you for your feedback.');
-        } catch (error) {
-            Alert.alert('Error', 'Could not submit report. Please try again.');
-            console.error('Report error:', error);
-        } finally {
-            setReportModalVisible(false);
-        }
+        Alert.alert('Report Submitted', 'Thank you for your feedback.');
+        setReportModalVisible(false);
     };
 
-    // Toggles a reason on/off from the selected array
     const toggleReason = (reason) => {
-        setReportReasons((prev) => {
+        setReportReasons(prev => {
             if (prev.includes(reason)) {
-                // remove it
-                return prev.filter((r) => r !== reason);
-            } else {
-                // add it
-                return [...prev, reason];
+                return prev.filter(r => r !== reason);
             }
+            return [...prev, reason];
         });
     };
 
-    const renderItem = ({ item, index }) => {
-        const dateId = item.id;
-        const hostId = item.hostId;
-        const dateCategory = getDateCategory(item.date || '');
-        // Check if there's already a request for this date (and still 'pending')
-        const existingRequest = requests.find(
-            (r) =>
-                r.dateId === dateId &&
-                r.hostId === hostId &&
-                r.status === 'pending'
-        );
-
-        // Calculate the host's age based on the birthday field
-        const age = calculateAge(item.host?.birthday);
-
-        return (
-            <RevealAnimation index={index}>
-                <View style={[styles.cardContainer, { backgroundColor: colors.cardBackground }]}>
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <Image
-                            source={
-                                item.host?.photos?.[0]
-                                    ? { uri: item.host.photos[0] }
-                                    : require('../../../assets/avatar-placeholder.png')
-                            }
-                            style={styles.profilePic}
-                        />
-                        <View style={{ flex: 1 }}>
-                            <Text style={[styles.hostName, { color: colors.text }]}>
-                                {item.host?.displayName || 'Unknown'}
-                                {age !== null ? `, ${age}` : ''}
-                            </Text>
-                        </View>
-                        <TouchableOpacity onPress={() => handleFlagPress(item)}>
-                            <Ionicons
-                                name="flag-outline"
-                                size={20}
-                                color={colors.onSurface ?? '#666'}
-                                style={{ marginRight: 8 }}
-                            />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Carousel */}
-                    <Carousel
-                        photos={item.photos || []}
-                        dateId={dateId}
-                        hostId={hostId}
-                        onSendRequest={handleSendRequest}
-                        onCancelRequest={handleCancelRequest}
-                        existingRequest={existingRequest}
-                    />
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <Text style={[styles.dateTitle, { color: colors.text }]}>{item.title}</Text>
-                        <View style={styles.footerRow}>
-                            <Text style={[styles.location, { color: colors.secondary }]}>{item.location}</Text>
-                            <Text style={[styles.dateCategory, { color: colors.onSurface }]}>{dateCategory}</Text>
-                        </View>
-                    </View>
-                </View>
-            </RevealAnimation>
-        );
+    const handleCloseBottomSheet = () => {
+        setModalVisible(false);
+        setSelectedProfile(null);
     };
 
+    console.log(userDoc.firstName, userDoc.city);
+
     return (
-        <View style={{ height: CARD_HEIGHT + CARD_SPACING }}>
-            {loadingDates ? (
-                <LoadingDates />
-            ) : (
-                <AnimatedFlatList
-                    data={dates}
-                    keyExtractor={(date) => date.id}
-                    renderItem={renderItem}
-                    pagingEnabled               // This makes sure one page (card) is shown at a time
-                    decelerationRate="fast"
-                    snapToAlignment="start"
-                    contentContainerStyle={{ paddingBottom: 20 }}
-                    onScroll={onScroll}
-                    scrollEventThrottle={16}
-                    showsVerticalScrollIndicator={false}
-                />
-            )}
-            {/* REPORT MODAL */}
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <WomenFeedLayout
+                headerTitle="Explore Men"
+                onInvitePress={() => Alert.alert('Invite pressed')}
+                onRequestPress={() => Alert.alert('Request pressed')}
+                onXPress={() => Alert.alert('X pressed')}
+                colors={colors}
+            >
+                {(contentHeight) => (
+                    <>
+                        {loadingMen ? (
+                            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                                <Text style={{ color: colors.text }}>Loading profiles...</Text>
+                            </View>
+                        ) : (
+                            <AnimatedFlatList
+                                ref={flatListRef}
+                                initialScrollIndex={initialIndex}
+                                style={{ height: contentHeight, backgroundColor: colors.background }}
+                                data={filteredProfiles}
+                                keyExtractor={(profile) => profile.id}
+                                getItemLayout={(data, index) => ({
+                                    length: contentHeight,
+                                    offset: contentHeight * index,
+                                    index,
+                                })}
+                                renderItem={({ item }) => (
+                                    <View
+                                        style={[
+                                            styles.cardContainer,
+                                            {
+                                                height: contentHeight,
+                                                backgroundColor: colors.background,
+                                                borderBottomColor: colors.cardBackground,
+                                                borderBottomWidth: 1,
+                                            },
+                                        ]}
+                                    >
+                                        <ProfileHeader
+                                            item={item}
+                                            onFlagPress={handleFlagPress}
+                                            onPress={handleProfilePress}
+                                            colors={colors}
+                                        />
+                                        <Carousel
+                                            contentHeight={contentHeight - 80}
+                                            photos={
+                                                item.photos && item.photos.length
+                                                    ? item.photos
+                                                    : [require('../../../assets/avatar-placeholder.png')]
+                                            }
+                                            userId={item.uid}
+                                            isRequested={requestedIds.includes(item.uid)}
+                                            onInvitePress={handleInvitePress}
+                                            onCancelInvite={handleCancelInvite}
+                                            onPress={() => handleProfilePress(item)}
+                                        />
+                                    </View>
+                                )}
+                                onViewableItemsChanged={onViewableItemsChanged}
+                                viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+                                pagingEnabled
+                                decelerationRate="fast"
+                                snapToAlignment="start"
+                                contentContainerStyle={{ paddingBottom: 0 }}
+                                onScroll={onScroll}
+                                scrollEventThrottle={16}
+                                showsVerticalScrollIndicator={false}
+                                onScrollToIndexFailed={onScrollToIndexFailed}
+                            />
+                        )}
+                    </>
+                )}
+            </WomenFeedLayout>
+
+            {/* Report Modal */}
             <Modal
                 animationType="fade"
                 transparent
                 visible={reportModalVisible}
                 onRequestClose={() => setReportModalVisible(false)}
             >
-                {/* Outer touchable: if the user taps here, close the modal */}
                 <TouchableOpacity
                     style={styles.modalBackdrop}
                     activeOpacity={1}
                     onPressOut={() => setReportModalVisible(false)}
                 >
-                    {/* Inner touchable: tapping inside the modal content does nothing */}
                     <TouchableOpacity
                         style={[styles.modalContainer, { backgroundColor: colors.background }]}
                         activeOpacity={1}
                         onPress={() => { }}
                     >
                         <Text style={[styles.modalTitle, { color: colors.text }]}>
-                            {`Report ${reportTargetItem?.host?.displayName || 'User'}?`}
+                            {`Report ${reportTargetUser?.firstName || 'User'}?`}
                         </Text>
                         <Text style={[styles.modalSubtitle, { color: colors.secondary }]}>
-                            Choose the reason(s) for your report from the list of options provided:
+                            Choose the reason(s) for your report:
                         </Text>
-
                         {REPORT_OPTIONS.map((reason) => (
                             <View key={reason} style={styles.checkboxRow}>
                                 <Checkbox.Android
-                                    status={reportReasons.includes(reason) ? 'checked' : 'unchecked'}
+                                    status={
+                                        reportReasons.includes(reason)
+                                            ? 'checked'
+                                            : 'unchecked'
+                                    }
                                     onPress={() => toggleReason(reason)}
                                     color={colors.primary}
                                     uncheckedColor={colors.outline}
                                 />
-                                <Text style={[styles.checkboxLabel, { color: colors.text }]}>{reason}</Text>
+                                <Text style={{ color: colors.text }}>{reason}</Text>
                             </View>
                         ))}
-
-                        <View style={styles.buttonRow}>
+                        <View style={{ alignItems: 'center', marginVertical: 16 }}>
                             <Button
                                 mode="contained"
                                 onPress={handleSubmitReport}
@@ -285,183 +295,164 @@ export default function WomenFeedScreen({ selectedCategory, onScroll }) {
                                 Report
                             </Button>
                         </View>
-
                         <TouchableOpacity onPress={() => setReportModalVisible(false)}>
                             <Text style={[styles.cancelText, { color: colors.primary }]}>
-                                No, back to profile
+                                Cancel
                             </Text>
                         </TouchableOpacity>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
+
+            {selectedProfile && (
+                <ProfileDetailsBottomSheet
+                    key={sheetKey}
+                    selectedProfile={selectedProfile}
+                    onClose={handleCloseBottomSheet}
+                />
+            )}
         </View>
     );
 }
 
 function Carousel({
     photos,
-    dateId,
-    hostId,
-    onSendRequest,
-    onCancelRequest,
-    existingRequest,
+    contentHeight,
+    userId,
+    isRequested,
+    onInvitePress,
+    onCancelInvite,
+    onPress,
 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef(null);
     const { colors } = useTheme();
 
-    // Filter out any falsy (invalid) photo entries.
-    const validPhotos = (photos || []).filter(photo => !!photo);
-    // Optionally, if no valid photos exist, fallback to a placeholder.
-    const dataToRender =
-        validPhotos.length > 0 ? validPhotos : [require('../../../assets/avatar-placeholder.png')];
+    const carouselHeight = contentHeight - 40;
 
     const onScroll = (event) => {
         const offsetX = event.nativeEvent.contentOffset.x;
-        const index = Math.round(offsetX / (SCREEN_WIDTH * 0.85));
+        const index = Math.round(offsetX / (SCREEN_WIDTH * 0.9));
         setCurrentIndex(index);
     };
 
-    return (
-        <View style={styles.carouselWrapper}>
-            <FlatList
-                data={dataToRender}
-                keyExtractor={(item, idx) => `${item}-${idx}`}
-                ref={flatListRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onScroll={onScroll}
-                renderItem={({ item }) => {
-                    // Check if the item is a string (a valid URL) or a local image (placeholder)
-                    return (
-                        <Image
-                            source={typeof item === 'string' ? { uri: item } : item}
-                            style={styles.carouselImage}
-                        />
-                    );
-                }}
-            />
-            {/* Gradient overlay behind action buttons */}
-            <LinearGradient
-                colors={['rgba(0,0,0,0.7)', 'transparent']}
-                start={{ x: 1, y: 0 }}
-                end={{ x: 0, y: 0 }}
-                style={styles.gradientOverlay}
-                pointerEvents="none"
-            />
-            <View style={[styles.overlayTopRight, { backgroundColor: colors.background }]}>
-                {/* Use validPhotos.length so the index reflects only valid images */}
-                <Text style={[styles.indexText, { color: colors.onBackground }]}>
-                    {currentIndex + 1}/{validPhotos.length}
-                </Text>
-            </View>
+    const validPhotos = (photos || []).filter(photo => !!photo);
 
-            {/* Vertical stack of extra action buttons and the heart button */}
-            <View style={styles.overlayBottomRight}>
-                <ExtraActionButtons />
-                <HeartCircleButton
-                    dateId={dateId}
-                    hostId={hostId}
-                    existingRequest={existingRequest}
-                    onSendRequest={onSendRequest}
-                    onCancelRequest={onCancelRequest}
+    const onTapHandler = (event) => {
+        if (event.nativeEvent.state === State.ACTIVE) {
+            Haptics.selectionAsync();
+            if (onPress) {
+                onPress();
+            }
+        }
+    };
+
+    return (
+        <TapGestureHandler
+            onHandlerStateChange={onTapHandler}
+            maxDeltaX={10}
+            maxDeltaY={10}
+        >
+            <View style={[styles.carouselWrapper, { height: carouselHeight }]}>
+                <FlatList
+                    data={
+                        validPhotos.length > 0
+                            ? validPhotos
+                            : [require('../../../assets/avatar-placeholder.png')]
+                    }
+                    keyExtractor={(uri, idx) => `${uri}-${idx}`}
+                    ref={flatListRef}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onScroll={onScroll}
+                    scrollEnabled={photos.length > 1}
+                    renderItem={({ item }) => (
+                        <ZoomableImage
+                            source={typeof item === 'string' ? { uri: item } : item}
+                            style={[styles.carouselImage, { height: carouselHeight }]}
+                            transition={0}
+                        />
+                    )}
                 />
+                <LinearGradient
+                    colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0)']}
+                    start={{ x: 1, y: 0.5 }}
+                    end={{ x: 0, y: 0.5 }}
+                    style={styles.gradientBar}
+                    pointerEvents="none"
+                />
+                <View style={[styles.overlayTopRight, { backgroundColor: colors.overlay }]}>
+                    <Text style={[styles.indexText, { color: colors.onBackground }]}>
+                        {currentIndex + 1}/{validPhotos.length}
+                    </Text>
+                </View>
+                <View style={styles.overlayBottomRight}>
+                    <HeartCircleButton
+                        userId={userId}
+                        isRequested={isRequested}
+                        onInvitePress={onInvitePress}
+                        onCancelInvite={onCancelInvite}
+                    />
+                </View>
             </View>
-        </View>
+        </TapGestureHandler>
     );
 }
 
-/**
- * A circular heart button that toggles between:
- *   - "heart" (not yet requested => send request)
- *   - "heart-dislike" (request pending => can cancel request)
- * With a Reanimated "heart explosion" on send.
- */
-function HeartCircleButton({
-    dateId,
-    hostId,
-    existingRequest,
-    onSendRequest,
-    onCancelRequest,
-}) {
+function HeartCircleButton({ userId, isRequested, onInvitePress, onCancelInvite }) {
     const { colors } = useTheme();
-    const [requested, setRequested] = useState(!!existingRequest);
     const [exploding, setExploding] = useState(false);
     const progress = useSharedValue(0);
 
-    React.useEffect(() => {
-        setRequested(!!existingRequest);
-    }, [existingRequest]);
-
-    const send = async () => {
-        try {
-            await onSendRequest(dateId, hostId);
-            setExploding(true);
-            progress.value = withTiming(
-                1,
-                { duration: 800, easing: Easing.ease },
-                (isFinished) => {
-                    if (isFinished) {
-                        runOnJS(setExploding)(false);
-                        progress.value = 0;
-                    }
-                }
-            );
-        } catch (error) {
-            console.error('Error sending request:', error);
-        }
-    };
-
-    const cancel = async (requestId) => {
-        try {
-            await onCancelRequest(requestId);
-        } catch (error) {
-            console.error('Error canceling request:', error);
-        }
-    };
-
     const handlePress = async () => {
         try {
-            if (!requested) {
-                await send();
+            if (!isRequested) {
+                onInvitePress(userId);
+                setExploding(true);
+                progress.value = withTiming(
+                    1,
+                    { duration: 800, easing: Easing.ease },
+                    (isFinished) => {
+                        if (isFinished) {
+                            runOnJS(setExploding)(false);
+                            progress.value = 0;
+                        }
+                    }
+                );
             } else {
-                if (existingRequest && existingRequest.id) {
-                    await cancel(existingRequest.id);
-                } else {
-                    console.error('Existing request is missing or invalid:', existingRequest);
-                }
+                onCancelInvite(userId);
             }
         } catch (error) {
-            console.error('Error in HeartCircleButton handlePress:', error);
             Alert.alert('Error', 'Something went wrong. Please try again.');
+            console.error('HeartCircleButton error:', error);
         }
     };
 
-    const iconName = requested ? 'heart-dislike' : 'heart';
-    const backgroundColor = requested
-        ? (colors.elevation?.level2 ?? '#888')
-        : colors.primary;
+    const iconName = isRequested ? 'mail-open' : 'mail';
 
     return (
-        <View>
-            <TouchableOpacity
-                style={[styles.heartButton, { backgroundColor: colors.background }]}
-                onPress={handlePress}
-                activeOpacity={0.8}
-            >
-                <Ionicons name={iconName} size={24} color={colors.primary} />
-            </TouchableOpacity>
-            {exploding && <HeartsExplosion progress={progress} />}
-        </View>
+        <TapGestureHandler
+            onHandlerStateChange={(event) => {
+                if (event.nativeEvent.state === State.ACTIVE) {
+                    handlePress();
+                }
+            }}
+        >
+            <View>
+                <TouchableOpacity
+                    style={[styles.heartButton, { backgroundColor: colors.background }]}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name={iconName} size={24} color={colors.primary} />
+                </TouchableOpacity>
+                {exploding && <HeartsExplosion progress={progress} />}
+            </View>
+        </TapGestureHandler>
     );
 }
 
-/**
- * A collection of hearts that float away as progress goes from 0 to 1.
- */
 function HeartsExplosion({ progress }) {
-    // We'll create an array of hearts
     const hearts = Array.from({ length: HEART_COUNT }, (_, i) => ({
         key: i,
         angle: (Math.random() * 2 - 1) * Math.PI * 0.6,
@@ -484,28 +475,32 @@ function HeartsExplosion({ progress }) {
     );
 }
 
-/**
- * A single heart that floats away based on the shared progress value.
- */
 function FloatingHeart({ progress, angle, distance, scale }) {
     const animatedStyle = useAnimatedStyle(() => {
-        // Fade in quickly from 0 -> 0.05, then fade out toward 1
         const opacity = interpolate(
             progress.value,
             [0, 0.05, 1],
             [0, 1, 0],
             Extrapolate.CLAMP
         );
-        const x = interpolate(progress.value, [0, 1], [0, distance * Math.cos(angle)]);
-        const y = interpolate(progress.value, [0, 1], [0, -distance * Math.sin(angle)]);
-        const _scale = interpolate(progress.value, [0, 1], [scale, scale * 0.8]);
+        const x = interpolate(
+            progress.value,
+            [0, 1],
+            [0, distance * Math.cos(angle)]
+        );
+        const y = interpolate(
+            progress.value,
+            [0, 1],
+            [0, -distance * Math.sin(angle)]
+        );
+        const _scale = interpolate(
+            progress.value,
+            [0, 1],
+            [scale, scale * 0.8]
+        );
 
         return {
-            transform: [
-                { translateX: x },
-                { translateY: y },
-                { scale: _scale },
-            ],
+            transform: [{ translateX: x }, { translateY: y }, { scale: _scale }],
             opacity,
         };
     });
@@ -518,81 +513,52 @@ function FloatingHeart({ progress, angle, distance, scale }) {
 }
 
 const styles = StyleSheet.create({
-    //----------------------------------
-    // Card Container
-    //----------------------------------
-    cardContainer: {
-        height: CARD_HEIGHT,
-        marginHorizontal: 2,
-        borderRadius: 20,
-        overflow: 'hidden',
-        paddingHorizontal: 25,
-        paddingBottom: 12,
-        marginTop: CARD_SPACING, // This should match the spacing used in snapToInterval.
-    },
-    //----------------------------------
-    // Header
-    //----------------------------------
-    header: {
-        flexDirection: 'row',
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        marginVertical: 15,
     },
-    profilePic: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 10,
+    cardContainer: {
+        overflow: 'hidden',
+        paddingHorizontal: 15,
     },
-    hostName: {
-        fontWeight: '600',
-        fontSize: 16,
-    },
-    //----------------------------------
-    // Carousel
-    //----------------------------------
     carouselWrapper: {
         position: 'relative',
-        width: SCREEN_WIDTH * 0.85,
-        height: SCREEN_WIDTH * 0.85,
+        width: SCREEN_WIDTH * 0.9,
         borderRadius: 16,
         alignSelf: 'center',
         overflow: 'hidden',
-        marginBottom: 12,
+    },
+    gradientBar: {
+        position: 'absolute',
+        top: 0,
+        right: -1,
+        height: '100%',
+        width: 65,
+        zIndex: 1,
     },
     carouselImage: {
-        width: SCREEN_WIDTH * 0.85,
-        height: SCREEN_WIDTH * 0.85,
+        width: SCREEN_WIDTH * 0.9,
         resizeMode: 'cover',
     },
     overlayTopRight: {
         position: 'absolute',
         top: 10,
         right: 10,
-        backgroundColor: 'rgba(0,0,0,0.7)',
         paddingHorizontal: 10,
         paddingVertical: 1,
         borderRadius: 12,
-    },
-    gradientOverlay: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        width: 120,          // Adjust this value if needed.
-        height: '100%',       // This covers the bottom 40% of the carousel.
-        borderTopLeftRadius: 16,  // Match the carousel's top-left radius.
+        zIndex: 2,
     },
     indexText: {
         fontSize: 10,
         fontWeight: '300',
     },
-    //----------------------------------
-    // Heart Button (bottom-right)
-    //----------------------------------
     overlayBottomRight: {
         position: 'absolute',
         bottom: 10,
         right: 10,
+        zIndex: 2,
     },
     heartButton: {
         width: 44,
@@ -601,9 +567,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    //----------------------------------
-    // Hearts explosion
-    //----------------------------------
     heartsContainer: {
         position: 'absolute',
         bottom: 22,
@@ -611,31 +574,6 @@ const styles = StyleSheet.create({
         width: 0,
         height: 0,
     },
-    floatingHeart: {
-        position: 'absolute',
-    },
-    //----------------------------------
-    // Footer
-    //----------------------------------
-    footer: {
-        marginTop: 8,
-    },
-    dateTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-    footerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    location: {
-        fontSize: 14,
-    },
-    dateCategory: {
-        fontSize: 14,
-    },
-    // ----- MODAL STYLES -----
     modalBackdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.8)',
@@ -663,14 +601,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 8,
     },
-    checkboxLabel: {
-        marginLeft: 8,
-        fontSize: 14,
-    },
-    buttonRow: {
-        marginVertical: 16,
-        alignItems: 'center',
-    },
     reportButton: {
         width: '60%',
         borderRadius: 20,
@@ -680,5 +610,8 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 14,
         textDecorationLine: 'underline',
+    },
+    floatingHeart: {
+        position: 'absolute',
     },
 });

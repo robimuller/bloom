@@ -53,10 +53,6 @@ export default function MenHomeScreen() {
         fetchDateConcepts();
     }, [currentUser]);
 
-    const handleCategorySelect = (categoryId) => {
-        navigation.navigate('MenFeed', { selectedCategory: categoryId });
-    };
-
     // Prefetch images for performance
     useEffect(() => {
         if (womenProfiles && womenProfiles.length > 0) {
@@ -116,7 +112,7 @@ export default function MenHomeScreen() {
         : [];
 
     // Newcomers (joined within last 2 days)
-    const newcomers = getNewcomers(womenProfiles, 2);
+    const newcomers = getNewcomers(womenProfiles, 30);
 
     // Reanimated fade in
     const containerOpacity = useSharedValue(0);

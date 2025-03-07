@@ -1,14 +1,67 @@
-// src/components/CreateDateLayout.js
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Text, IconButton, useTheme } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import {
+    View,
+    StyleSheet,
+    TouchableOpacity,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    TouchableWithoutFeedback,
+    Keyboard
+} from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import GradientProgressBar from './GradientProgressBar';
 import ShootingLightButton from './ShootingLightButton';
 import PromotionSummaryBanner from './PromotionSummaryBanner';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
+// ----- Custom Error Toast Component -----
+const CustomErrorToast = ({ text1, hideToast }) => {
+    const theme = useTheme();
+    return (
+        <View style={toastStyles.container}>
+            <Text style={toastStyles.text}>{text1}</Text>
+            <Ionicons
+                onPress={() => {
+                    Toast.hide();
+                    if (hideToast) hideToast();
+                }}
+                name="close-outline"
+                size={24}
+                color={theme.colors.background}
+                style={{ backgroundColor: theme.colors.primary, borderRadius: 48 }}
+            />
+        </View>
+    );
+};
+
+const toastStyles = StyleSheet.create({
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'black',
+        borderRadius: 25,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginHorizontal: 16,
+    },
+    text: {
+        flex: 1,
+        color: 'white',
+        fontSize: 16,
+    },
+});
+
+const toastConfig = {
+    custom_error: ({ text1, hideToast, ...rest }) => (
+        <CustomErrorToast text1={text1} hideToast={hideToast} {...rest} />
+    ),
+};
+
+// ----- CreateDateLayout Component -----
 export default function CreateDateLayout({
     step = 1,
     totalSteps = 5,
@@ -17,7 +70,8 @@ export default function CreateDateLayout({
     hostAge,
     title = 'Create Date',
     subtitle,
-    errorComponent,
+    errorMessage, // New prop for error toast message (string)
+    errorComponent, // Optional additional error component
     canGoBack = false,
     onBack,
     onNext,
@@ -30,87 +84,130 @@ export default function CreateDateLayout({
 }) {
     const navigation = useNavigation();
     const theme = useTheme();
-    const handleBack = onBack ? onBack : () => navigation.navigate('MenHome');
+    const handleBack = onBack ? onBack : () => navigation.goBack();
     const progress = step / totalSteps;
 
+    // Track keyboard height so we can offset the toast when needed.
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+            setKeyboardHeight(e.endCoordinates.height);
+        });
+        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardHeight(0);
+        });
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (errorMessage) {
+            // Hide any existing toast first.
+            Toast.hide();
+            // Then re-show the toast with an updated bottomOffset.
+            Toast.show({
+                type: 'custom_error',
+                text1: errorMessage,
+                position: 'bottom',
+                bottomOffset: keyboardHeight > 0 ? keyboardHeight + 200 : 200,
+                autoHide: false,
+            });
+        }
+    }, [errorMessage, keyboardHeight]);
+
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            {/* HEADER */}
-            <View style={styles.header}>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{title}</Text>
-            </View>
-
-            {/* Persistent Promotion Summary Banner */}
-            {/* Persistent Promotion Summary Banner */}
-            {selectedPromotion && (
-                <PromotionSummaryBanner
-                    promotion={selectedPromotion}
-                    onRemove={onEditPromotion}   // Pass your removal callback here using onRemove
-                    onPressBanner={onPressBanner}  // Your existing onPressBanner callback
-                />
-            )}
-
-            {/* TOP SECTION */}
-            <View style={styles.topSection}>
-                {subtitle && (
-                    <Text variant="bodySmall" style={[styles.subtitle, { color: theme.colors.secondary }]}>
-                        {subtitle}
-                    </Text>
-                )}
-                <View style={{ marginTop: 8 }}>
-                    <GradientProgressBar progress={progress} />
-                </View>
-                {errorComponent}
-            </View>
-
-            {/* MIDDLE CARD SECTION */}
-            <View style={styles.cardSection}>
-                <View style={[styles.card, { backgroundColor: theme.colors.cardBackground }]}>
-                    <ScrollView contentContainerStyle={styles.cardContent}>
-                        {children}
-                    </ScrollView>
-                </View>
-            </View>
-
-            {/* BOTTOM NAVIGATION */}
-            <View style={styles.bottomNav}>
-                {canGoBack ? (
-                    <TouchableOpacity
-                        onPress={handleBack}
-                        style={[styles.outlinedBtn, { borderColor: theme.colors.primary }]}
-                    >
-                        <IconButton
-                            icon="arrow-left"
-                            size={20}
-                            iconColor={theme.colors.primary}
-                            style={{ margin: 0, marginRight: 4 }}
-                        />
-                        <Text style={[styles.outlinedBtnText, { color: theme.colors.primary }]}>{backLabel}</Text>
-                    </TouchableOpacity>
-                ) : (
-                    <View style={styles.buttonPlaceholder} />
-                )}
-                <ShootingLightButton label={nextLabel} icon="arrow-right" onPress={onNext} />
-            </View>
-        </View>
+        <KeyboardAvoidingView
+            style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+            <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                    <View style={{ flex: 1 }}>
+                        {/* HEADER */}
+                        <View style={styles.headerContainer}>
+                            {canGoBack && (
+                                <TouchableOpacity onPress={handleBack} style={styles.headerBackButton}>
+                                    <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+                                </TouchableOpacity>
+                            )}
+                            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{title}</Text>
+                        </View>
+                        {/* Persistent Promotion Summary Banner */}
+                        {selectedPromotion && (
+                            <PromotionSummaryBanner
+                                promotion={selectedPromotion}
+                                onRemove={onEditPromotion}
+                                onPressBanner={onPressBanner}
+                            />
+                        )}
+                        {/* TOP SECTION */}
+                        <View style={styles.topSection}>
+                            {subtitle && (
+                                <Text variant="bodySmall" style={[styles.subtitle, { color: theme.colors.secondary }]}>
+                                    {subtitle}
+                                </Text>
+                            )}
+                            <View style={{ marginTop: 8 }}>
+                                <GradientProgressBar progress={progress} />
+                            </View>
+                        </View>
+                        {/* MIDDLE CARD SECTION */}
+                        <View style={styles.cardSection}>
+                            <View style={[styles.card, { backgroundColor: theme.colors.background }]}>
+                                <View style={styles.cardContent}>
+                                    {children}
+                                </View>
+                            </View>
+                        </View>
+                        {/* BOTTOM NAVIGATION */}
+                        <View style={styles.bottomNav}>
+                            <ShootingLightButton
+                                label={nextLabel}
+                                icon="arrow-right"
+                                onPress={onNext}
+                                style={styles.shootingLightButton}
+                            />
+                        </View>
+                        <Toast config={toastConfig} />
+                    </View>
+                </TouchableWithoutFeedback>
+            </SafeAreaView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
         flex: 1,
     },
+    container: {
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+    },
     /* HEADER STYLES */
-    header: {
+    headerContainer: {
+        position: 'relative',
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 12,
     },
+    headerBackButton: {
+        padding: 8,
+        zIndex: 2,
+    },
     headerTitle: {
-        flex: 1,
+        position: 'absolute',
+        left: 0,
+        right: 0,
         textAlign: 'center',
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 20,
+        fontWeight: '700',
+        zIndex: 1,
     },
     /* TOP SECTION */
     topSection: {
@@ -128,15 +225,10 @@ const styles = StyleSheet.create({
     card: {
         flex: 1,
         borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
     },
     cardContent: {
         flexGrow: 1,
-        padding: 16,
+        paddingVertical: 16,
     },
     /* BOTTOM NAVIGATION */
     bottomNav: {
@@ -145,21 +237,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingBottom: 16,
     },
-    buttonPlaceholder: {
-        width: 120,
-        height: 48,
-    },
-    outlinedBtn: {
-        minWidth: 120,
-        height: 48,
-        borderWidth: 1,
-        borderRadius: 25,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    outlinedBtnText: {
-        fontSize: 16,
+    shootingLightButton: {
+        width: '100%',
     },
 });

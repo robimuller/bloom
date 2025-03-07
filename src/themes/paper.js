@@ -24,6 +24,18 @@ const extendedFonts = {
         fontSize: 28, // Example value; adjust as needed
         letterSpacing: 0,
     },
+    labelLarge: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        fontSize: 28, // Example value; adjust as needed
+        letterSpacing: 0,
+    },
+    bodyLarge: {
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        fontSize: 20, // Example value; adjust as needed
+        letterSpacing: 0,
+    },
     bodySmall: {
         fontFamily: 'System',
         fontWeight: 'normal',

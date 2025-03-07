@@ -8,15 +8,15 @@ export const ProfilesContext = createContext();
 export const ProfilesProvider = ({ children }) => {
     const [womenProfiles, setWomenProfiles] = useState([]);
     const [loadingWomen, setLoadingWomen] = useState(true);
+    const [menProfiles, setMenProfiles] = useState([]);
+    const [loadingMen, setLoadingMen] = useState(true);
 
     useEffect(() => {
-        // 1) Reference the 'users' collection
         const usersRef = collection(db, 'users');
-        // 2) Filter where gender == 'female'
-        const q = query(usersRef, where('gender', '==', 'female'));
 
-        // 3) Subscribe in real-time
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        // Query for women profiles
+        const qWomen = query(usersRef, where('gender', '==', 'female'));
+        const unsubscribeWomen = onSnapshot(qWomen, (snapshot) => {
             const data = snapshot.docs.map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
@@ -25,13 +25,27 @@ export const ProfilesProvider = ({ children }) => {
             setLoadingWomen(false);
         });
 
-        // 4) Cleanup subscription on unmount
-        return () => unsubscribe();
+        // Query for men profiles
+        const qMen = query(usersRef, where('gender', '==', 'male'));
+        const unsubscribeMen = onSnapshot(qMen, (snapshot) => {
+            const data = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setMenProfiles(data);
+            setLoadingMen(false);
+        });
+
+        // Cleanup both subscriptions on unmount
+        return () => {
+            unsubscribeWomen();
+            unsubscribeMen();
+        };
     }, []);
 
     return (
         <ProfilesContext.Provider
-            value={{ womenProfiles, loadingWomen }}
+            value={{ womenProfiles, loadingWomen, menProfiles, loadingMen }}
         >
             {children}
         </ProfilesContext.Provider>

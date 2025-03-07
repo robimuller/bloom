@@ -423,7 +423,6 @@ export default function SettingsScreen() {
                     <TouchableOpacity onPress={handleLogout} style={styles.touchableButton}>
                         <Text style={styles.buttonText}>Log Out</Text>
                     </TouchableOpacity>
-                    <View style={{ height: 10 }} />
                     <TouchableOpacity onPress={handleDeleteAccount} style={styles.touchableButton}>
                         <Text style={[styles.buttonText, { color: paperTheme.colors.secondary }]}>
                             Delete my account
@@ -535,8 +534,13 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1 },
-    container: { flex: 1 },
+    safeArea: {
+        flex: 1,
+    },
+    container: {
+        flex: 1,
+        justifyContent: 'flex-start'
+    },
     header: {
         position: 'relative',
         flexDirection: 'row',
@@ -641,10 +645,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     bottomButtons: {
-        height: 100,
-        paddingHorizontal: 16,
-        paddingTop: 10,
-        borderTopWidth: 1,
     },
     touchableButton: { paddingVertical: 6, alignItems: 'center', borderRadius: 6 },
     buttonText: { fontSize: 12, color: '#3C7AD6', fontWeight: '300' },

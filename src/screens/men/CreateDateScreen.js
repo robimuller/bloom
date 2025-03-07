@@ -38,8 +38,7 @@ import { DatesContext } from '../../contexts/DatesContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { classifyDateCategory } from '../../utils/classifyDateCategory';
 import { useRoute } from '@react-navigation/native';
-
-
+import CustomTextInput from '../../components/CustomTextInput';
 
 // We'll need these to measure screen for the carousel
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -54,26 +53,26 @@ const StepOne = memo(function StepOne({ title, setTitle, details, setDetails }) 
     return (
         <View>
             <Text style={styles.stepTitle}>What is the title of your date?</Text>
-            <TextInput
+            <CustomTextInput
                 label="Title"
+                placeholder="Let’s go to a movie"
                 mode="outlined"
                 value={title}
                 onChangeText={setTitle}
                 style={styles.input}
                 outlineColor="#252525"
-                theme={{ roundness: 25 }}
             />
-            <Text style={styles.stepTitle}>Tell us more?</Text>
-            <TextInput
-                label="Details"
-                placeholder="Let’s go to a movie"
-                mode="outlined"
-                value={details}
-                onChangeText={setDetails}
-                style={styles.input}
-                outlineColor="#252525"
-                theme={{ roundness: 25 }}
-            />
+            <View style={styles.inputGroup}>
+
+                <Text style={styles.stepTitle}>Tell us more?</Text>
+                <CustomTextInput
+                    label="Details"
+                    placeholder="Who wants to go watch Star Wars with me?"
+                    mode="outlined"
+                    value={details}
+                    onChangeText={setDetails}
+                />
+            </View>
             <Text style={[styles.inspirationText, { color: paperTheme.colors.secondary }]}>
                 Need some inspiration? Try some of our date ideas and save the headache
                 of being creative.{' '}
@@ -415,20 +414,20 @@ export default function CreateDateScreen({ navigation, onClose }) {
 
     const handleNext = useCallback(() => {
         if (currentStep === 1 && !title) {
-            setError('Please enter a title.');
+            setError(`Please enter a title. ${Date.now()}`);
             return;
         }
         if (currentStep === 2 && !location) {
-            setError('Please enter a location.');
+            setError(`Please enter a location. ${Date.now()}`);
             return;
         }
         if (currentStep === 3) {
             if (!date) {
-                setError('Please pick a date.');
+                setError(`Please pick a date. ${Date.now()}`);
                 return;
             }
             if (!time) {
-                setError('Please pick a time.');
+                setError(`Please pick a time. ${Date.now()}`);
                 return;
             }
         }
@@ -470,11 +469,11 @@ export default function CreateDateScreen({ navigation, onClose }) {
 
     const handleCreateDate = async () => {
         if (!user) {
-            setError('You must be logged in to create a date.');
+            setError('You must be logged in to create a date. ${Date.now()}');
             return;
         }
         if (!title || !location || !date || !time) {
-            setError('Please fill out all required fields before publishing.');
+            setError('Please fill out all required fields before publishing. ${Date.now()}');
             return;
         }
         setIsPublishing(true);
@@ -578,7 +577,7 @@ export default function CreateDateScreen({ navigation, onClose }) {
     }
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]} edges={['top']}>
+        <View style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]} edges={['top']}>
             <CreateDateLayout
                 step={currentStep}
                 totalSteps={5}
@@ -592,10 +591,10 @@ export default function CreateDateScreen({ navigation, onClose }) {
                 onNext={handleNext}
                 nextLabel={currentStep === 5 ? 'Publish' : 'Next'}
                 backLabel="Back"
-                selectedPromotion={selectedPromotion}  // Pass the state here
+                selectedPromotion={selectedPromotion}
                 onPressBanner={() => navigation.goBack()}
                 onEditPromotion={() => setSelectedPromotion(null)}
-
+                errorMessage={error}    // Pass your error here!
                 errorComponent={
                     error && <Text style={{ marginTop: 8, color: 'red' }}>{error}</Text>
                 }
@@ -609,7 +608,7 @@ export default function CreateDateScreen({ navigation, onClose }) {
                     renderStepContent()
                 )}
             </CreateDateLayout>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -640,6 +639,7 @@ const styles = StyleSheet.create({
     input: {
         marginBottom: 10,
     },
+    inputGroup: { marginBottom: 10 },
     error: {
         marginTop: 8,
     },

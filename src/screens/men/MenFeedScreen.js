@@ -80,7 +80,7 @@ export default function MenFeedScreen({ onScroll }) {
             profile => profile.category === selectedCategory
         );
     } else if (section === 'newcomers') {
-        filteredProfiles = getNewcomers(womenProfiles, 2);
+        filteredProfiles = getNewcomers(womenProfiles, 30);
     } else if (section === 'recommended') {
         filteredProfiles = getRecommendedProfiles(womenProfiles, userDoc);
     }
